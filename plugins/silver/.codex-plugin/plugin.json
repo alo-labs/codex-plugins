@@ -1,0 +1,39 @@
+{
+  "name": "silver",
+  "version": "0.32.0",
+  "description": "Silver Bullet command surface for Codex. Routes `/silver:*` entry points to the Silver Bullet workflow package.",
+  "author": {
+    "name": "Alo Labs",
+    "email": "info@alolabs.dev"
+  },
+  "homepage": "https://github.com/alo-exp/silver-bullet",
+  "repository": "https://github.com/alo-exp/silver-bullet.git",
+  "license": "MIT",
+  "keywords": [
+    "silver-bullet",
+    "commands",
+    "workflow",
+    "codex",
+    "orchestration"
+  ],
+  "commands": "./commands/",
+  "interface": {
+    "displayName": "Silver Bullet Commands",
+    "shortDescription": "Slash-command surface for Silver Bullet workflows",
+    "longDescription": "Provides Codex slash commands that route into the Silver Bullet workflow package. The command layer stays thin and delegates behavior to the SB skills package.",
+    "developerName": "Alo Labs",
+    "category": "Development",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/alo-exp/silver-bullet",
+    "defaultPrompt": [
+      "Start a Silver Bullet workflow.",
+      "Route this task through Silver Bullet.",
+      "Use Silver Bullet to manage this change."
+    ],
+    "brandColor": "#0F172A"
+  }
+}

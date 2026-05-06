@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/alo-exp/sidekick.git",
-        "ref": "d21e6e73da6f2afc487ab11f066abc9c3b982b0e"
+        "ref": "3bb809803be008e66db074e046c9e266cb3ed952"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -22,6 +22,18 @@
       "source": {
         "source": "local",
         "path": "./plugins/silver-bullet"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "silver",
+      "source": {
+        "source": "local",
+        "path": "./plugins/silver"
       },
       "policy": {
         "installation": "AVAILABLE",

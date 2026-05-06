@@ -6,11 +6,11 @@
   "plugins": [
     {
       "name": "sidekick",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/alo-exp/sidekick.git",
-        "ref": "c82c575717a44d4f3a19a2e7a37f4a4f3a6fe044"
-      },
+        "source": {
+          "source": "url",
+          "url": "https://github.com/alo-exp/sidekick.git",
+          "ref": "15794fa2fb8f89bdd5e98a89193d97f725469261"
+        },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

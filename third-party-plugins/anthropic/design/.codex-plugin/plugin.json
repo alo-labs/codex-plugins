@@ -1,0 +1,29 @@
+{
+  "name": "design",
+  "version": "1.2.0",
+  "description": "Accelerate design workflows — critique, design system management, UX writing, accessibility audits, research synthesis, and dev handoff. From exploration to pixel-perfect specs.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "homepage": "https://github.com/anthropics/knowledge-work-plugins",
+  "repository": "https://github.com/anthropics/knowledge-work-plugins.git",
+  "license": "Apache-2.0",
+  "skills": "./upstream/skills/",
+  "interface": {
+    "displayName": "Design",
+    "shortDescription": "Critique designs, manage systems, write UX copy, and audit accessibility",
+    "longDescription": "Thin Codex packaging for Anthropic's design workflows. Upstream plugin content is fetched into ./upstream/ during installation so Codex can use the skills without vendoring the source tree here.",
+    "developerName": "Anthropic",
+    "category": "Design",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/anthropics/knowledge-work-plugins",
+    "defaultPrompt": [
+      "Critique a design or write UX copy."
+    ],
+    "brandColor": "#0EA5E9"
+  }
+}

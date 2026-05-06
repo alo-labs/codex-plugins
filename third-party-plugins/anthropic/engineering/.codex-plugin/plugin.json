@@ -1,0 +1,29 @@
+{
+  "name": "engineering",
+  "version": "1.2.0",
+  "description": "Streamline engineering workflows — standups, code review, architecture decisions, incident response, debugging, and technical documentation. Works with your existing tools or standalone.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "homepage": "https://github.com/anthropics/knowledge-work-plugins",
+  "repository": "https://github.com/anthropics/knowledge-work-plugins.git",
+  "license": "Apache-2.0",
+  "skills": "./upstream/skills/",
+  "interface": {
+    "displayName": "Engineering",
+    "shortDescription": "Standups, code review, debugging, architecture, docs, and deploy checklists",
+    "longDescription": "Thin Codex packaging for Anthropic's engineering workflows. Upstream plugin content is fetched into ./upstream/ during installation so Codex can use the skills without vendoring the source tree here.",
+    "developerName": "Anthropic",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/anthropics/knowledge-work-plugins",
+    "defaultPrompt": [
+      "Review code, debug an issue, or create a deployment checklist."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "product-management",
+  "version": "1.2.0",
+  "description": "Write feature specs, plan roadmaps, and synthesize user research faster. Keep stakeholders updated and stay ahead of the competitive landscape.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "homepage": "https://github.com/anthropics/knowledge-work-plugins",
+  "repository": "https://github.com/anthropics/knowledge-work-plugins.git",
+  "license": "Apache-2.0",
+  "skills": "./upstream/skills/",
+  "interface": {
+    "displayName": "Product Management",
+    "shortDescription": "Brainstorm product ideas, write specs, and plan roadmaps",
+    "longDescription": "Thin Codex packaging for Anthropic's product-management workflows. The upstream plugin content is fetched into ./upstream/ during installation so Codex can load the skills without vendoring the source tree here.",
+    "developerName": "Anthropic",
+    "category": "Product",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/anthropics/knowledge-work-plugins",
+    "defaultPrompt": [
+      "Brainstorm a product idea or write a spec."
+    ],
+    "brandColor": "#7C3AED"
+  }
+}

@@ -15,8 +15,7 @@ codex plugin marketplace add alo-labs/codex-plugins
 | Package | Description | Notes |
 |---------|-------------|-------|
 | Sidekick | Sidekick workflows for Codex, including Forge and Codex sidekick orchestration. | Thin wrapper over `alo-exp/sidekick`; the package is pinned to a release commit and loaded from the shared Sidekick repo. |
-| Silver Bullet | Agentic process orchestrator for AI-native software engineering and DevOps. | SB-owned Codex package only. |
-| Silver Bullet Commands | Slash-command surface for Silver Bullet workflows. | Thin command wrapper that routes `/silver:*` entry points into the Silver Bullet workflow package. |
+| Silver Bullet | Agentic process orchestrator for AI-native software engineering and DevOps. | SB-owned Codex package only. The command surface lives inside the same package and uses `silver:`-prefixed command names. |
 | Product Management | Product planning, roadmap, and research workflows for Codex. | Thin wrapper over `anthropics/knowledge-work-plugins`; upstream skills are fetched at install time. |
 | Engineering | Coding workflow support for Codex. | Thin wrapper over `anthropics/knowledge-work-plugins`; upstream skills are fetched at install time. |
 | Design | Design workflow support for Codex. | Thin wrapper over `anthropics/knowledge-work-plugins`; upstream skills are fetched at install time. |

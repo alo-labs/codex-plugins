@@ -30,18 +30,6 @@
       "category": "Development"
     },
     {
-      "name": "silver",
-      "source": {
-        "source": "local",
-        "path": "./plugins/silver"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Development"
-    },
-    {
       "name": "product-management",
       "source": {
         "source": "local",

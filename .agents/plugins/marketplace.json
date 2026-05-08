@@ -1,16 +1,16 @@
 {
   "name": "alo-labs-codex",
   "interface": {
-    "displayName": "Ālo Labs Codex Marketplace"
+    "displayName": "\u0100lo Labs Codex Marketplace"
   },
   "plugins": [
     {
       "name": "sidekick",
-        "source": {
-          "source": "url",
-          "url": "https://github.com/alo-exp/sidekick.git",
-          "ref": "df4d31161a2a67b62b448414b565850b8e59a79a"
-        },
+      "source": {
+        "source": "url",
+        "url": "https://github.com/alo-exp/sidekick.git",
+        "ref": "e439ee561d3d987b24fcf5dc136c1737d32a97f7"
+      },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

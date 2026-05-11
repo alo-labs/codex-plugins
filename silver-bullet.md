@@ -1,7 +1,7 @@
 <!-- This file is managed by Silver Bullet. Do not edit manually. -->
 <!-- To update: run /silver:init in your project. -->
 
-# Silver Bullet — Enforcement Instructions for {{PROJECT_NAME}}
+# Silver Bullet — Enforcement Instructions for silver-bullet
 
 > **Always adhere strictly to this file — it overrides all defaults.**
 
@@ -117,7 +117,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 The active workflow is loaded from `docs/workflows/`. Claude MUST read
 the active workflow file before starting any non-trivial task.
 
-**Active**: `docs/workflows/{{ACTIVE_WORKFLOW}}.md`
+**Active**: `docs/workflows/full-dev-cycle.md`
 
 **Skill not found rule**: If a skill listed in the workflow cannot be
 invoked or its dependency plugin is unavailable, STOP and notify the
@@ -221,6 +221,10 @@ state — never from the SB state file.
 - Session mode (`~/.claude/.silver-bullet/mode`)
 - Session init sentinel (`~/.claude/.silver-bullet/session-init`)
 
+**Sidekick quality-gate file (`~/.claude/.sidekick/quality-gate-state`) is ONLY for:**
+- Quality gate stage markers (`quality-gate-stage-1` through `quality-gate-stage-4`)
+- Full-test-suite rerun marker (`full-test-suite-rerun`)
+
 These are SB-specific with no GSD equivalent. Never use the SB state file to determine
 which phase or plan the user is on — that information lives in GSD's STATE.md.
 
@@ -316,7 +320,7 @@ Silver Bullet workflows are composed from a catalog of 18 flows (FLOW 0-17). Eac
 | `silver:ui` | "UI", "frontend", "component", "screen", "design", "interface" | silver:intel → product-brainstorming → silver:brainstorm → gsd-ui-phase |
 | `silver:devops` | "infra", "CI/CD", "deploy", "pipeline", "terraform", "IaC", "cloud" | silver:intel → silver:blast-radius → silver:devops-skill-router |
 | `silver:research` | "how should we", "which technology", "compare X vs Y", "spike" | silver:explore → MultAI research → silver:brainstorm |
-| `silver:release` | "release", "publish", "version", "go live", "cut a release", "tag v" | silver:quality-gates → `/verify-tests` → gsd-audit-uat → gsd-audit-milestone |
+| `silver:release` | "release", "publish", "version", "go live", "cut a release", "tag v" | silver:quality-gates → gsd-audit-uat → gsd-audit-milestone |
 | `silver:fast` | "trivial", "quick fix", "typo", "one-liner", "config value" | 3-tier complexity triage: Tier 1 (trivial) → gsd-fast, Tier 2 (medium) → gsd-quick with flags, Tier 3 (complex) → escalate to silver-feature |
 
 **Workflow enforcement rules:**
@@ -324,7 +328,7 @@ Silver Bullet workflows are composed from a catalog of 18 flows (FLOW 0-17). Eac
 - `silver:security` is always mandatory — cannot be skipped via §9
 - `silver:devops` uses 7 IaC-adapted dimensions (silver:devops-quality-gates) instead of the standard 9
 - TDD enforcement (`silver:tdd`) applies to implementation plans only; config/infra/doc plans skip TDD
-- `/testing-strategy` runs after spec approval and before `silver:writing-plans` so test requirements are baked into the plan; `/verify-tests` runs before final delivery so the test gate is fresh
+- `/testing-strategy` runs after spec approval and before `silver:writing-plans` so test requirements are baked into the plan
 - Code review always uses the Superpowers framing pair: `silver:request-review` before and `silver:receive-review` after
 - Cross-AI review (`gsd-review --all`) triggers automatically for architecturally significant changes
 - `gsd-ship` inside any workflow = phase-level merge (push → PR). `silver:release` = milestone-level publish. These are different levels — SB disambiguates at routing time.
@@ -352,7 +356,7 @@ Each workflow composes from these 18 flows. See `docs/composable-flows-contracts
 | FLOW 5 | PLAN | Phase planning — discuss-phase, writing-plans, gsd-plan-phase |
 | FLOW 6 | DESIGN CONTRACT | UI/UX design — design-system, ux-copy, gsd-ui-phase |
 | FLOW 7 | EXECUTE | Implementation — gsd-execute-phase with TDD as-needed |
-| FLOW 8 | UI QUALITY | UI review — design-critique, gsd-ui-review, accessibility-review |
+| FLOW 8 | UI QUALITY | UI review — design-critique, gsd-ui-review, design:accessibility-review |
 | FLOW 9 | REVIEW | Code review — 3 parallel layers with triage + fix |
 | FLOW 10 | SECURE | Security audit — SENTINEL, gsd-secure-phase, gsd-validate-phase |
 | FLOW 11 | VERIFY | Verification — gsd-verify-work, verification-before-completion |
@@ -788,77 +792,242 @@ If a third-party skill's behavior needs adjustment, implement the change as:
 
 ---
 
+## 9. Pre-Release Quality Gate
+
+Before ANY release (`/silver-create-release`), the following four-stage quality gate MUST
+be completed in order. Each stage has its own completion criteria. Skipping a stage
+or declaring it complete without meeting the criteria violates Section 3.
+
+**IMPORTANT**: This gate runs AFTER the normal workflow finalization steps (testing,
+documentation, branch cleanup, deploy checklist) and BEFORE `/silver-create-release`.
+The `/silver-create-release` skill will not be invoked until all four stages pass.
+
+### Stage 1 — Code Review Triad
+
+Run all three review skills in sequence, then fix all issues. Repeat until clean.
+
+1. Invoke `/code-review` (Engineering) — structured quality review: security, performance, correctness, maintainability
+2. Invoke `/requesting-code-review` — dispatches `superpowers:code-reviewer` automated reviewer
+3. Invoke `/receiving-code-review` — triage combined feedback from steps 1-2
+4. Fix all accepted issues
+5. **Loop**: repeat steps 1-4 until `/receiving-code-review` produces zero accepted items
+6. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+   Running verification commands manually is NOT a substitute for invoking this skill.
+   You need BOTH: (a) run the actual verification commands, AND (b) invoke the skill so
+   `record-skill.sh` tracks it. If you ran tests/CI/checks but did not invoke the skill,
+   you have NOT completed this step. Do NOT record the stage marker until BOTH are done.
+7. Record stage completion: `echo "quality-gate-stage-1" >> ~/.claude/.sidekick/quality-gate-state`
+
+### Stage 2 — Big-Picture Consistency Audit
+
+Review the entire plugin for cross-file inconsistencies, redundancies, and contradictions.
+
+1. Dispatch parallel Explore agents across five dimensions:
+   - Workflows (full-dev-cycle.md vs devops-cycle.md vs silver-bullet.md)
+   - Skills (all SKILL.md files — obsolete references, redundant work, contradictions)
+   - Hooks + config (.sh files, hooks.json, .silver-bullet.json, templates)
+   - Help site + README (HTML pages, search.js, README.md — step counts, paths, versions) **+ New-Feature Documentation Inventory:** for each workflow, skill, enforcement layer, or major feature added in this release, verify: (a) a dedicated help page exists under `site/help/`, (b) the page is linked from `site/help/index.html` or the appropriate section hub, (c) the page appears in `site/help/reference/index.html` or the relevant concept page. Missing pages = this dimension fails and Stage 2 loops.
+   - Cross-plugin consistency (read 100% of skill content from all 4 dependency plugins — GSD: ~/.claude/get-shit-done/ workflows/references/templates; Superpowers: ~/.claude/plugins/cache/*/superpowers/*/skills/*/SKILL.md; Engineering: ~/.claude/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/*/SKILL.md; Design: ~/.claude/plugins/cache/*/knowledge-work-plugins/*/design/skills/*/SKILL.md — check for contradictions, conflicts, inconsistencies, or redundancies between Silver Bullet instructions and upstream plugin skills)
+2. Fix all genuine issues found
+3. **Loop**: repeat until two consecutive audit passes find zero issues
+4. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+   Do NOT record the stage marker without invoking this skill first.
+5. Record stage completion: `echo "quality-gate-stage-2" >> ~/.claude/.sidekick/quality-gate-state`
+
+### Stage 3 — Public-Facing Content Refresh
+
+Verify and update all user-visible surfaces to reflect the current state.
+
+1. Build a **Feature-to-Documentation Coverage Matrix** before touching any files:
+
+   | Feature | Type | Added in v{N} | Help page exists | Linked from nav | Linked from reference | Status |
+   |---------|------|---------------|------------------|-----------------|-----------------------|--------|
+   | [feature] | Workflow/Skill/Enforcement | ✓ | ✓ | ✓ | ✓ | PASS |
+
+   Every feature added in this release needs a row. Any blank cell or FAIL = Stage 3 is not complete until fixed.
+
+2. Audit for factual accuracy:
+   - GitHub repo description and topics (`gh repo edit`)
+   - README.md (version, step counts, enforcement layers, state paths, architecture)
+   - Landing page (`site/index.html`) — **both visible content AND `<head>` metadata:**
+     - Visible: hero section, workflow section, pills, feature cards all reflect current product state
+     - Meta tags: `grep 'og:description\|twitter:description\|meta.*description' site/index.html` — verify no stale references (e.g. old workflow counts, old version numbers)
+     - Consistency: if visible content says "7 workflows", meta tags must too — contradictions between `<head>` and `<body>` are a failure
+   - All help pages (`site/help/*/index.html`)
+   - Search index (`site/help/search.js`)
+   - Compare page (`site/compare/index.html`) if it exists
+4. Fix all discrepancies
+5. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+   Do NOT record the stage marker without invoking this skill first.
+6. Push and confirm CI green
+7. Record stage completion: `echo "quality-gate-stage-3" >> ~/.claude/.sidekick/quality-gate-state`
+
+### Stage 4 — Security Audit (SENTINEL)
+
+Run the SENTINEL v2.3 adversarial security audit against the full plugin.
+
+1. Invoke `/anthropic-skills:audit-security-of-skill` targeting the plugin root
+2. Fix all findings (Critical, High, Medium; Low at discretion)
+3. Re-run the audit
+4. **Loop**: repeat until two consecutive audit passes find zero issues
+5. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+   Do NOT record the stage marker without invoking this skill first.
+6. Record stage completion: `echo "quality-gate-stage-4" >> ~/.claude/.sidekick/quality-gate-state`
+
+## Mandatory Full Test Suite Rerun
+
+After all four stages pass in the current session, rerun the full test suite
+before release finalization:
+
+1. Run `bash tests/run-all-tests.sh`
+2. Record the rerun marker: `echo "full-test-suite-rerun" >> ~/.claude/.sidekick/quality-gate-state`
+3. Do not invoke `/silver-create-release` until the rerun marker is present
+
+`hooks/completion-audit.sh` blocks release creation until the sidekick file
+contains the four stage markers plus `full-test-suite-rerun`.
+
+### Pre-Release Gate Enforcement
+
+The completion audit hook (`hooks/completion-audit.sh`) blocks `gh release create`
+until all required workflow skills AND quality gate markers are recorded in the
+sidekick file (`~/.claude/.sidekick/quality-gate-state`). Required markers:
+- Stage 1: `quality-gate-stage-1` (recorded per instructions above)
+- Stage 2: `quality-gate-stage-2` (recorded per instructions above)
+- Stage 3: `quality-gate-stage-3` (recorded per instructions above)
+- Stage 4: `quality-gate-stage-4` (recorded per instructions above)
+- Full-suite rerun: `full-test-suite-rerun` (recorded after `bash tests/run-all-tests.sh`)
+
+**Session reset:** The `session-start` hook clears the sidekick quality-gate file at
+the start of every session. This means gate progress never leaks across sessions.
+
+> **Anti-Skip:** You are violating this rule if you release without running all 4 stages
+> in the current release cycle and rerunning the full test suite afterward. Switching
+> branches resets all markers.
+
+If any stage surfaces a blocker that cannot be resolved (e.g., upstream dependency
+issue, ambiguous design decision), log it under "Needs human review" and surface
+to the user before proceeding to the next stage.
+
+> **Anti-Skip:** You are violating this rule if you attempt /silver-create-release without all four quality-gate-stage-N markers and the full-test-suite-rerun marker in the sidekick state file. completion-audit.sh will block the release. Each stage requires explicit /superpowers:verification-before-completion invocation — the marker alone is insufficient.
+
+---
+
 <!--
   NUMBERING NOTE (closes #59):
-  This template uses §9.* for User Workflow Preferences and §10 for Multi-Agent
-  Coordination. Silver Bullet's *own* live silver-bullet.md uses §10.* / §11
-  because it has an Ālo-internal §9 "Pre-Release Quality Gate" section that is
-  intentionally NOT stamped into downstream projects. Skills reference
-  `silver-bullet.md §10b` (live) AND `templates/silver-bullet.md.base §9b`
-  (template) explicitly — this asymmetry is by design and must stay.
+  This live silver-bullet.md uses §10.* for User Workflow Preferences (and §11
+  for Multi-Agent Coordination) because §9 above is the Ālo-internal
+  Pre-Release Quality Gate. The companion `templates/silver-bullet.md.base`
+  shifts these down by one (§9.* / §10) — it does NOT carry §9. Skills
+  reference both: `silver-bullet.md §10b` (live) AND
+  `templates/silver-bullet.md.base §9b` (template). This asymmetry is by design
+  and must stay.
 -->
-## 9. User Workflow Preferences
+## 10. User Workflow Preferences
 
 This section is written and committed by SB whenever the user expresses a workflow preference.
 Initially empty — all workflow defaults apply. Read at every relevant decision point.
 
 Last updated: 2026-05-06
 
-### 9a. Routing Preferences
+### 10a. Routing Preferences
 | Work type | Override route | Since |
 |-----------|---------------|-------|
 
-### 9b. Step Skip Preferences
+### 10b. Step Skip Preferences
 | Workflow | Step skipped | Condition | Since |
 |----------|-------------|-----------|-------|
 
-### 9c. Tool Preferences
+### 10c. Tool Preferences
 | Decision point | Preferred tool | Since |
 |----------------|---------------|-------|
 
-### 9d. MultAI Preferences
+### 10d. MultAI Preferences
 | Trigger | Disposition | Since |
 |---------|-------------|-------|
 
-### 9e. Mode Preferences
+### 10e. Mode Preferences
 | Setting | Value | Since |
 |---------|-------|-------|
+| Default session mode | autonomous | 2026-04-16 |
+| PR branch | ask | (set at first use) |
+| TDD enforcement | per-plan-type | (default) |
 
 ---
 
-## 10. Multi-Agent Coordination (v0.29.0+)
+## 11. Multi-Agent Coordination (v0.29.0+)
 
 Any number of SB-bearing coding agents (Claude-SB, Forge-SB, Codex-SB, OpenCode-SB, …) may cooperate on the same project folder. The invariant is **one phase = one runtime at a time**.
 
 ### Runtime contract for the main agent
 
-- **Session start.** Surface any informational `OTHER-RUNTIME-LOCK:` lines emitted by session-init to the user so they know other runtimes are in flight.
+- **Session start.** When other-runtime locks are detected at session start, the session-init hook (Claude) or `forge-session-init` agent (Forge) emits an informational `OTHER-RUNTIME-LOCK:` line for each non-self lock. Surface these to the user so they know other runtimes are in flight.
 
 - **Phase entry.** Before editing any file under `.planning/phases/<NNN>/`:
-  - Claude-SB: `hooks/phase-lock-claim.sh` (PreToolUse) auto-claims. On conflict, Claude Code blocks the edit and surfaces the owner's identity.
-  - Forge-SB: the parent silver-* skill invokes `forge-claim-phase`. On `BLOCKED:`, the skill stops and asks the user.
+  - Claude-SB: `hooks/phase-lock-claim.sh` (PreToolUse) auto-claims via `phase-lock.sh claim <NNN> claude "<intent>"`. On conflict (helper exit 2), Claude Code blocks the edit and surfaces the owner's identity.
+  - Forge-SB: parent silver-* skill explicitly invokes `forge-claim-phase`. On `BLOCKED:`, the skill stops and asks the user.
 
-- **During work.** Heartbeats refresh `last_heartbeat_at` so the lock doesn't expire under stale-TTL (default 1800s).
+- **During work.** Heartbeats refresh `last_heartbeat_at` so the lock doesn't expire under stale-TTL (default 1800s):
+  - Claude-SB: `hooks/phase-lock-heartbeat.sh` (PostToolUse, throttled to once per 5 min per phase).
+  - Forge-SB: parent skill invokes `forge-heartbeat-phase` periodically (every wave / verify pass / >5 min op).
 
-- **Phase exit.** Release the lock so other runtimes can claim.
+- **Phase exit.** Release the lock so other runtimes can claim:
+  - Claude-SB: `hooks/phase-lock-release.sh` (Stop / SubagentStop) walks the session manifest and releases each entry.
+  - Forge-SB: parent skill invokes `forge-release-phase` after `gsd-ship` for the phase.
 
 ### Delegation exception (`/forge-delegate`)
 
-When the runtime holding a lock wants to delegate implementation work to a sibling runtime **underneath** its existing claim, use `/forge-delegate`. The skill packages phase context into a JSON envelope, spawns the target runtime with `SB_PHASE_LOCK_INHERITED=true`, integrates the structured result. The lock stays with the parent throughout.
+When the runtime holding a lock wants to delegate implementation work to a sibling runtime **underneath** its existing claim, use `/forge-delegate`. The skill packages the phase context into a JSON envelope, spawns the target runtime with `SB_PHASE_LOCK_INHERITED=true` in env, integrates the structured result back into the parent phase's working SUMMARY. The lock stays with the parent throughout.
 
 See `docs/multi-agent-coordination.md` for the full diagram and configuration reference.
 
 ---
 
-## 11. Runtime Compatibility
+## 12. Runtime Compatibility (closes #48, #50)
 
-Silver Bullet's enforcement is built on the Claude Code hook protocol (PostToolUse / PreToolUse / SessionStart / Stop / SubagentStop). Hooks fire by default in the **Claude Code CLI**. They do **not** fire by default in the Claude Agent SDK or claude.ai/code web sessions.
+Silver Bullet's enforcement model is built on Claude Code's **PostToolUse / PreToolUse / SessionStart / Stop / SubagentStop** hook protocol. Hooks fire in the **Claude Code CLI** runtime. They do **not** fire today in:
 
-In those runtimes by default:
-- Skills are not recorded to state (PostToolUse/Skill does not fire)
-- `gh release create` / `gh pr create` / `deploy` are not gated (PreToolUse/Bash does not fire)
-- `Stop` may still fire and see an empty state, blocking the session
+- **Claude Agent SDK** sessions (programmatic runtimes that use the Anthropic SDK directly)
+- **claude.ai/code** web sessions (the hosted web UI)
+- Any other runtime that does not implement the Claude Code hook protocol
 
-**Enabling hooks in an Agent SDK session.** The SDK does implement these hook events; they are first-class on `HookEvent` in `query()` options. To turn them on, either pass `settingSources: ['user']` to load the same `~/.claude/settings.json` block the CLI uses, or pass `hooks` programmatically on `query()` options. The CLI remains the canonical SB runtime; this is a clarification, not a substitute path. The `claude.ai/code` web UI is a separate runtime and is not addressed here.
+### What breaks in those runtimes
 
-**Workaround for unenabled SDK / web sessions:** Run release-class actions from the Claude Code CLI. SB enforcement is advisory in those runtimes until hooks are explicitly enabled.
+- `PostToolUse/Skill` does not fire → `record-skill.sh` is never invoked → state file stays empty
+- `PreToolUse/Bash` does not fire → `completion-audit.sh` does not gate `gh release create` / `gh pr create` / `deploy`
+- `Stop` may or may not fire depending on the runtime; when it does, it sees an empty state file and blocks; when it doesn't, no enforcement
+
+This is the same root cause for the previously open issues #48 and #50. The reported symptom of #50 (a release tag created before review skills ran) is a direct consequence: in agent-mode, the gate logic in `completion-audit.sh` is bypassed because the hook protocol is never invoked.
+
+### Workarounds
+
+1. **Run releases from the Claude Code CLI.** This is the canonical SB-supported runtime. All hooks fire and gates work as intended.
+2. **Manually record skills in agent-mode sessions.** When forced to run inside an Agent SDK / web session, an agent may invoke each required skill and then explicitly write its name to `~/.claude/.silver-bullet/state` via a Bash command. This is brittle and not recommended for releases.
+3. **Detect agent-mode and refuse delivery actions.** A future SB version may add a startup probe that detects the absence of hook-protocol support and warns / blocks `gh release create` from agent-mode sessions outright. Filed as a follow-up; see the seed file for design constraints.
+
+### Enabling hooks in SDK sessions
+
+The Claude Agent SDK does implement the same hook events SB relies on — `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`, `SubagentStop`, and others — they are first-class on `HookEvent` in `query()` options. The reason they "do not fire today" in the bullet above is that the SDK does not load `~/.claude/settings.json` unless asked, and does not register programmatic hooks unless passed. Two paths re-enable enforcement inside an SDK session:
+
+1. **Load the user-scoped `~/.claude/settings.json` block** (where `silver:init` writes SB's hook config) by passing `settingSources: ['user']` on `query()` options. An SDK session then picks up the same hook config as the CLI.
+2. **Pass hooks programmatically** on `query()` options:
+
+   ```ts
+   query({
+     prompt: '...',
+     options: {
+       hooks: {
+         PreToolUse: [{ hooks: [async (input) => ({ continue: true })] }],
+       },
+     },
+   })
+   ```
+
+Either path makes SB's enforcement gates fire inside an SDK session. The CLI is still the canonical SB runtime; this is a clarification, not a substitute path.
+
+Reference: `@anthropic-ai/claude-agent-sdk` CHANGELOG documents `settingSources` (initial introduction at v0.1.x) and ongoing fixes for SDK-mode hook delivery (PreToolUse with `permissionDecision: 'ask'`, PermissionRequest, Stop, stream-mode failures). The `claude.ai/code` web UI is a separate runtime and is not addressed here.
+
+### Detection (advisory)
+
+`silver:init` can probe runtime capability by checking for the presence of the Claude Code hook config (`~/.claude/settings.json`). If absent, it emits an informational warning that enforcement gates will not fire.
+
+If you need to run SB-bearing workflows inside an Agent SDK session today, treat all enforcement output as advisory and run release gates manually from the CLI before publishing.

@@ -1,20 +1,20 @@
 ---
-name: silver-review-stats
+name: silver:review-stats
 description: This skill should be used to read .planning/review-analytics.jsonl and produces summary reports showing pass rates, average rounds, and common findings by artifact type
 argument-hint: "[--since YYYY-MM-DD] [--type artifact-type]"
 version: 0.1.0
 ---
 
-# silver-review-stats
+# silver:review-stats
 
 Produces summary reports from review analytics data. Reads `.planning/review-analytics.jsonl` (and archived files in `.planning/archive/review-analytics-*.jsonl` if `--since` spans archived data) and aggregates metrics by artifact type.
 
 ## Usage
 
 ```
-/silver-review-stats
-/silver-review-stats --since 2026-04-01
-/silver-review-stats --type SPEC.md
+/silver:review-stats
+/silver:review-stats --since 2026-04-01
+/silver:review-stats --type SPEC.md
 ```
 
 ## Orchestration Steps

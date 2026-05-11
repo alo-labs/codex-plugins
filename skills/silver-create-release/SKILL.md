@@ -1,10 +1,10 @@
 ---
-name: silver-create-release
+name: silver:create-release
 description: This skill should be used to generate structured release notes from git history since the last tag, then create a GitHub Release (for GitHub repos) or output notes for manual publishing
 version: 0.1.0
 ---
 
-# /silver-create-release — Release Notes & GitHub Release
+# /silver:create-release — Release Notes & GitHub Release
 
 Use this skill after `/gsd:ship` to generate release notes and publish them.
 
@@ -24,6 +24,7 @@ Shell execution is limited to:
 - `git tag -l` (list tags)
 - `git tag` (create tag)
 - `git tag -s` (create signed tag)
+- `git switch` / `git checkout` (select the prepared release branch, if needed)
 - `git add CHANGELOG.md README.md` (stage release doc updates — Step 5c)
 - `git commit` (commit CHANGELOG + badge updates — Step 5c)
 - `git push` (push tag or commits)
@@ -36,6 +37,11 @@ Shell execution is limited to:
   check — user-controlled config, not untrusted input)
 
 Do not execute other shell commands.
+
+File edits are permitted via the Codex file-edit tools for `CHANGELOG.md` and
+`README.md` when performing Step 5. Branch preparation via `git switch` or
+`git checkout` is also permitted if the release branch must be selected before
+release steps begin.
 
 ---
 
@@ -68,7 +74,7 @@ Before determining version, verify the working tree is releasable:
 
 ## Step 2 — Determine New Version
 
-If the user provided a version argument (e.g., `/silver-create-release v0.4.0`), use it.
+If the user provided a version argument (e.g., `/silver:create-release v0.4.0`), use it.
 
 Otherwise, suggest a version based on commits:
 - If any commit message starts with `feat!:` or contains `BREAKING CHANGE` → bump major

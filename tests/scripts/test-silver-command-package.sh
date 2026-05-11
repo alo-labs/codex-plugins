@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-PLUGIN_ROOT="$REPO_ROOT/plugins/silver"
+PLUGIN_ROOT="$REPO_ROOT/plugins/silver-bullet"
 MANIFEST="$PLUGIN_ROOT/.codex-plugin/plugin.json"
 MARKETPLACE="$REPO_ROOT/.agents/plugins/marketplace.json"
 
@@ -29,9 +29,9 @@ assert_jq() {
 }
 
 assert_file "Silver command plugin manifest" "$MANIFEST"
-assert_jq '.name == "silver"' "$MANIFEST"
+assert_jq '.name == "silver-bullet"' "$MANIFEST"
 assert_jq '.commands == "./commands/"' "$MANIFEST"
-assert_jq '.plugins[] | select(.name == "silver") | .source.path == "./plugins/silver"' "$MARKETPLACE"
+assert_jq '.plugins[] | select(.name == "silver-bullet") | .source.path == "./plugins/silver-bullet"' "$MARKETPLACE"
 
 COMMANDS=(
   add
@@ -52,6 +52,7 @@ COMMANDS=(
   research
   review-stats
   scan
+  ensure-docs
   spec
   ui
   update

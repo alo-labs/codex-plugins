@@ -9,9 +9,9 @@
       "source": {
         "source": "url",
         "url": "https://github.com/alo-exp/sidekick.git",
-    "ref": "0e57b91117ecb65ca0a39f902eb6da74dc16912a"
+        "ref": "d0543d747f9d4e4b398dcbff0a79505800a698c2"
       },
-      "version": "0.5.4",
+      "version": "0.5.5",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
@@ -33,7 +33,14 @@
       "homepage": "https://github.com/alo-labs/topgun",
       "repository": "https://github.com/alo-labs/topgun",
       "license": "MIT",
-      "keywords": ["topgun", "skills", "discovery", "security-audit", "registry", "installation"],
+      "keywords": [
+        "topgun",
+        "skills",
+        "discovery",
+        "security-audit",
+        "registry",
+        "installation"
+      ],
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

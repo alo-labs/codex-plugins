@@ -9,9 +9,9 @@
       "source": {
         "source": "url",
         "url": "https://github.com/alo-exp/sidekick.git",
-        "ref": "fd62ba5d96da1fbe84a8309fbe9654e37779dacf"
+        "ref": "2ae1887335741a541e9e5324db6589cbc95eebd0"
       },
-      "version": "0.5.8",
+      "version": "0.6.0",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

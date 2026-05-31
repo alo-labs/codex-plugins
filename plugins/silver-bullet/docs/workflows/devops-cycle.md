@@ -1,6 +1,6 @@
 # DevOps Cycle Workflow
 
-> **ENFORCED** -- Silver Bullet hooks track Skill tool invocations for quality gates
+> **ENFORCED** -- Silver Bullet hooks track supported skill invocation events/receipts for quality gates
 > and gap-filling skills. GSD's own hooks (workflow guard, context monitor) enforce
 > GSD step compliance independently. Both enforcement layers run in parallel.
 >
@@ -17,7 +17,7 @@
 | What | How to invoke |
 |------|---------------|
 | GSD workflow steps (`/gsd:*`) | Slash command -- type `/gsd:new-project`, `/gsd:discuss-phase`, etc. |
-| Silver Bullet skills | Skill tool -- `/silver:blast-radius`, `/devops-quality-gates`, `/silver:forensics`, etc. |
+| Silver Bullet skills | runtime-native skill invocation channel -- `/silver:blast-radius`, `/devops-quality-gates`, `/silver:forensics`, etc. |
 
 Use `/gsd:next` at any point to auto-advance to the next GSD step if unsure of current state.
 
@@ -62,9 +62,9 @@ Ask:
 > - **Interactive** (default) -- I pause at decision points and phase gates
 > - **Autonomous** -- I drive start to finish, surface blockers at the end
 
-Write choice to `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/mode`:
+Write choice to `~/.codex/.silver-bullet/mode`:
 ```bash
-echo "interactive" > ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/mode   # or "autonomous"
+echo "interactive" > ~/.codex/.silver-bullet/mode   # or "autonomous"
 ```
 
 **If autonomous was chosen**, ask one follow-up before proceeding:
@@ -81,7 +81,7 @@ Write answers into the `## Pre-answers` section of the session log immediately. 
 `- Agent Teams: <value>`
 
 Omit any key the user left blank (default applies). Read pre-answers mid-session from the log
-at `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/session-log-path`, stripping the leading `- ` before splitting on `:`.
+at `~/.codex/.silver-bullet/session-log-path`, stripping the leading `- ` before splitting on `:`.
 Log each applied pre-answer under "Autonomous decisions" with note `(pre-answered at Step 0)`.
 
 **Fallback**: if the session log or `## Pre-answers` section is unreadable at any point,
@@ -220,8 +220,8 @@ before proceeding.
 task to surface relevant capabilities before work begins.
 
 Scan installed skills from two sources:
-1. `${SB_RUNTIME_HOME_ROOT}/skills/` -- flat `.md` files
-2. `${SB_RUNTIME_HOME_ROOT}/plugins/cache/` -- glob `*/*/*/skills/*/SKILL.md` (layout: publisher/plugin/version/skills/skill-name)
+1. `~/.codex/skills/` -- flat `.md` files
+2. `~/.codex/plugins/cache/` -- glob `*/*/*/skills/*/SKILL.md` (layout: publisher/plugin/version/skills/skill-name)
 
 Cross-reference the combined list against `all_tracked` in `.silver-bullet.json` and the
 current task description. Surface candidates:
@@ -254,7 +254,7 @@ Typical duration: 5-10 minutes.
 
 **Produces:** `.planning/phases/{phase}-CONTEXT.md`
 
-**Conditional sub-steps** (invoke via Skill tool if applicable):
+**Conditional sub-steps** (invoke through the active runtime's SB-recognized skill invocation channel if applicable):
 - If this phase introduces a **new service or major component**: `/system-design`
 - If this phase introduces an **architectural decision**: write an ADR inline
   (structure: title, status, context, decision, consequences) before moving to blast radius.
@@ -603,10 +603,10 @@ Minimum required files:
   Virtual cost complexity tiers: simple < 5 files / < 300 lines changed;
   medium 5-15 files or 300-1000 lines; complex > 15 files or architectural.
   Host execution tier is the base rate; host high/top tiers are progressively more expensive.
-- Complete the session log: read path from `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/session-log-path`,
+- Complete the session log: read path from `~/.codex/.silver-bullet/session-log-path`,
   edit that file to fill in Task, Approach, Files changed, Skills invoked,
   Active Intent Ledger, Agent Teams dispatched, Autonomous decisions, Outcome, knowledge/lessons additions,
-  Model, Virtual cost. If `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/session-log-path` is missing,
+  Model, Virtual cost. If `~/.codex/.silver-bullet/session-log-path` is missing,
   create `docs/sessions/<today>-manual.md` from the session log template.
 - Documentation agents writing to `docs/` run in the **main worktree only**
   (no `isolation: "worktree"`). Only implementation-touching agents use worktree isolation.
@@ -714,8 +714,8 @@ Check that `gh` CLI is authenticated and the PR has been merged.
 
 **Autonomous completion cleanup** (run after outputting structured summary):
 ```bash
-rm -f ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/timeout ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/sentinel-pid \
-      ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/session-start-time ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/timeout-warn-count
+rm -f ~/.codex/.silver-bullet/timeout ~/.codex/.silver-bullet/sentinel-pid \
+      ~/.codex/.silver-bullet/session-start-time ~/.codex/.silver-bullet/timeout-warn-count
 ```
 This clears the timeout sentinel so `timeout-check.sh` stops warning.
 
@@ -788,7 +788,7 @@ Every review loop in this workflow (spec review, plan review, code review, verif
 - **GSD steps** are enforced by instruction (this file + the host project instruction file) and GSD's own hooks.
   GSD steps MUST follow DISCUSS -> BLAST RADIUS -> QUALITY GATES -> PLAN -> EXECUTE -> VERIFY -> CODE REVIEW -> POST-REVIEW EXECUTION order per phase.
 - **Silver Bullet skills** (silver-blast-radius, devops-quality-gates, requesting-code-review, etc.) are enforced
-  by PostToolUse hooks that track Skill tool invocations. "I already covered this" is NOT valid.
+  by PostToolUse hooks that track supported skill invocation events/receipts. "I already covered this" is NOT valid.
 - Phase order is a hard constraint: do NOT start PLAN before `/devops-quality-gates` completes.
 - **.yml/.yaml files are infrastructure code** -- they are NOT exempt from this workflow.
 - For ANY bug or unexpected state encountered: use `/gsd:debug`.

@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.37.12] — 2026-06-01
+
+## Bug Fixes
+
+- `fix(codex): add native skill invocation adapter`
+- `fix(codex): sanitize Codex packages and marketplace snapshots for runtime-native tool wording`
+
+## Tests
+
+- `test(codex): reject Claude-only tool requirements from Codex package surfaces`
+- `test(codex): verify invoke-skill receipts before recording completed skills`
+
+## Chores
+
+- `chore(release): prepare v0.37.12`
+
+---
+
 ## [0.37.11] — 2026-06-01
 
 ## Bug Fixes
@@ -507,7 +525,7 @@
 
 ## Versions bumped
 
-`package.json`, `.silver-bullet.json`, `templates/silver-bullet.config.json.default`, `forge/templates/silver-bullet.config.json.default`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, README badge — all → `0.31.0`.
+`package.json`, `.silver-bullet.json`, `templates/silver-bullet.config.json.default`, `forge/templates/silver-bullet.config.json.default`, `.codex-plugin/plugin.json`, `.codex-plugin/marketplace.json`, README badge — all → `0.31.0`.
 
 ## [0.30.0] — 2026-04-28
 
@@ -518,7 +536,7 @@
 ## Bug fixes
 
 - **#86** — `count_complete_flow_rows` now treats `skipped` as terminal alongside `complete`. Workflows with legitimately-skipped flows (e.g. FLOW 8 UI QUALITY for a CLI-only tool) no longer block `gh release create` indefinitely. Fix applied to `hooks/lib/workflow-utils.sh` and three inline fallbacks. 3 regression tests (`WF-PASS2-I/J/K`).
-- **#88** — HOOK-14 filters porcelain output through a transient-path allowlist. Built-in defaults: `.claude/scheduled_tasks.lock`, `.claude/settings.local.json`, `.superpowers/`, `.planning/workflows/`, `REVIEW.md`. Project-configurable via `.silver-bullet.json` `hooks.stop_check.transient_path_ignore_patterns`. Closes the post-release infinite-loop where Stop kept blocking after a successful push because runtime artifacts kept the tree "dirty". 3 regression tests (`#88-A/B/C`).
+- **#88** — HOOK-14 filters porcelain output through a transient-path allowlist. Built-in defaults: `.codex/scheduled_tasks.lock`, `.codex/settings.local.json`, `.superpowers/`, `.planning/workflows/`, `REVIEW.md`. Project-configurable via `.silver-bullet.json` `hooks.stop_check.transient_path_ignore_patterns`. Closes the post-release infinite-loop where Stop kept blocking after a successful push because runtime artifacts kept the tree "dirty". 3 regression tests (`#88-A/B/C`).
 - **#85** — Stop hook applies the `required_planning` floor only (typically `silver-quality-gates`, or `silver-blast-radius` + `devops-quality-gates` for devops). The full `required_deploy` list remains enforced by `completion-audit.sh` at delivery commands per the documented two-tier model. Ad-hoc skill-file additions no longer demand `deploy-checklist` / `create-release` / `testing-strategy` / `documentation` / `tech-debt`. 3 regression tests (`#85-A/B/C`).
 - **#87** — SessionStart reads the `source` field from stdin (`startup`/`resume`/`clear`/`compact`). Only `startup` and `clear` mutate state; `resume` and `compact` are benign and no longer wipe `gsd-*` markers mid-feature. Branch-mismatch wipe path now requires BOTH `current_branch` and `stored_branch` non-empty, closing the Bug 3 data-loss path. Branch-file writes are verified post-write. 9 regression tests (`#87-A/B/C/D`).
 
@@ -546,7 +564,7 @@ Seven items deferred to future milestones via `.planning/seeds/`: SEED-001 (#68 
 
 ## Other
 
-- `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` bumped to 0.30.0 (were stale at 0.26.0).
+- `.codex-plugin/plugin.json` and `.codex-plugin/marketplace.json` bumped to 0.30.0 (were stale at 0.26.0).
 - Backlog issue #90 filed for follow-up regex-shape validation on `transient_path_ignore_patterns`.
 - `.planning/milestones/v0.30.0-{REQUIREMENTS,ROADMAP}.md` and `.planning/workflows/<id>.md` document the milestone scope and composed-workflow tracker.
 
@@ -786,7 +804,7 @@ bash silver-bullet/forge-sb-install.sh
 
 ### Skills — Update & Forensics (UPD / FORN)
 
-- **UPD-01/UPD-02** (Phase 53): `silver-update` overhauled — `claude mcp install silver-bullet@alo-labs` replaces git clone as sole install mechanism. Step 6 atomically removes stale `silver-bullet@silver-bullet` registry entry and cache directory post-install.
+- **UPD-01/UPD-02** (Phase 53): `silver-update` overhauled — `bash "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current/scripts/install-codex.sh" --purge-legacy-skills` replaces git clone as sole install mechanism. Step 6 atomically removes stale `silver-bullet@silver-bullet` registry entry and cache directory post-install.
 - **FORN-01/FORN-02** (Phase 52): `silver-forensics` audited against gsd-forensics across 6 functional dimensions. 13 gaps identified and fixed: scope-drift detection, stuck-loop file-frequency analysis, regression grep, evidence gathering expanded to 8 items, artifact completeness matrix, output-side redaction (path stripping, API key scrubbing, diff truncation).
 
 ### Bug Fixes (pre-release review)
@@ -889,7 +907,7 @@ bash silver-bullet/forge-sb-install.sh
 
 ### Hooks — dev-cycle-check.sh
 
-- **DC-01**: The fallback self-protection pattern `/silver-bullet[^/]*/hooks/` (used when `CLAUDE_PLUGIN_ROOT` is unset) also matched the silver-bullet source repo's own `hooks/` directory, blocking legitimate hook edits during development. Restricted the fallback to paths provably inside `${SB_RUNTIME_HOME_ROOT}/` (the installed plugin location only).
+- **DC-01**: The fallback self-protection pattern `/silver-bullet[^/]*/hooks/` (used when `CLAUDE_PLUGIN_ROOT` is unset) also matched the silver-bullet source repo's own `hooks/` directory, blocking legitimate hook edits during development. Restricted the fallback to paths provably inside `~/.codex/` (the installed plugin location only).
 
 ## [0.23.8] — 2026-04-20
 
@@ -946,7 +964,7 @@ bash silver-bullet/forge-sb-install.sh
 - **UPD-02**: Replaced fragile `curl | grep | sed` tag parse with `jq -r '.tag_name' | sed 's/^v//'` (jq is already a project prerequisite).
 - **UPD-03**: Bound `$LATEST`, `$NEW_CACHE`, `$COMMIT_SHA`, `$NOW` as real shell variables. Removed unquoted/unresolved `<latest-version>` placeholders from executable commands.
 - **UPD-04**: Atomic registry write — `mktemp` + `mv` with a concrete `jq --arg` expression that updates `version`, `installPath`, `lastUpdated`, `gitCommitSha`. Prevents mid-write corruption.
-- **UPD-05**: Cancel-path `rm -rf` guarded by `${SB_RUNTIME_HOME_ROOT}/plugins/cache/` prefix match.
+- **UPD-05**: Cancel-path `rm -rf` guarded by `~/.codex/plugins/cache/` prefix match.
 
 ### silver-migrate
 - **MIG-01**: Description updated with explicit `/silver:migrate` trigger + pre-v0.20.0 context.
@@ -961,14 +979,14 @@ bash silver-bullet/forge-sb-install.sh
 **Marketplace hardening.** Fixes version drift, modernizes the marketplace `source` schema, and introduces a dedicated marketplace repo so future Ālo Labs plugins can be cataloged together.
 
 ### Marketplace
-- **MKTP-01**: Fixed stale version in `.claude-plugin/marketplace.json` (`0.13.1` → `0.23.4`). Was 10 releases out of date.
+- **MKTP-01**: Fixed stale version in `.codex-plugin/marketplace.json` (`0.13.1` → `0.23.4`). Was 10 releases out of date.
 - **MKTP-02**: Modernized `source` schema from the older nested `{"source":"url","url":"..."}` form to the current `"source": "github:alo-exp/silver-bullet"` shorthand.
 - **MKTP-03**: Created dedicated marketplace repo [alo-labs/claude-plugins](https://github.com/alo-labs/claude-plugins). End-users can now install via:
   ```
   /plugin marketplace add alo-labs/claude-plugins
   /plugin install silver-bullet@alo-labs
   ```
-  (The self-listed `.claude-plugin/marketplace.json` in this repo remains for direct-repo installs: `/plugin marketplace add alo-exp/silver-bullet`.)
+  (The self-listed `.codex-plugin/marketplace.json` in this repo remains for direct-repo installs: `/plugin marketplace add alo-exp/silver-bullet`.)
 - **MKTP-04**: Added `scripts/sync-marketplace-version.sh` — bumps the in-repo marketplace.json to match plugin.json and prints the remote-sync command for the alo-labs/claude-plugins repo.
 - **MKTP-05**: Added CI guard in `.github/workflows/ci.yml` that fails the build if `plugin.json.version ≠ marketplace.json.plugins[silver-bullet].version`. Prevents future drift.
 
@@ -1034,9 +1052,9 @@ Cleanroom multi-pass audit introduced: scan → fix → re-scan until two consec
 **plugin-dev compliance milestone.** Retroactively aligns 100% of Silver Bullet against the official Anthropic `plugin-dev` plugin standards — manifest, hooks, skills, and writing style.
 
 ### Plugin-dev Compliance (Phase 1 — Manifest & Hooks)
-- **PLUGIN-01**: Added `"hooks": "./hooks/hooks.json"` field to `.claude-plugin/plugin.json` per plugin-dev `plugin-structure` standard.
+- **PLUGIN-01**: Added `"hooks": "./hooks/hooks.json"` field to `.codex-plugin/plugin.json` per plugin-dev `plugin-structure` standard.
 - **PLUGIN-02**: Added explicit `timeout` fields to all 24 hook entries in `hooks/hooks.json` (values: 5–30s per hook criticality).
-- **PLUGIN-03**: Bumped `.claude-plugin/plugin.json` version to `0.23.0`.
+- **PLUGIN-03**: Bumped `.codex-plugin/plugin.json` version to `0.23.0`.
 
 ### plugin-dev Compliance (Phase 2 — Skill Descriptions & Versions)
 - **SKILL-DESC**: Fixed 9 skill descriptions from bare "Use when..." to plugin-dev standard "This skill should be used when..." format: `ai-llm-safety`, `extensibility`, `modularity`, `reliability`, `reusability`, `scalability`, `security`, `testability`, `usability`.
@@ -1087,7 +1105,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 - **CONS-02** (P37, `0b86dc6`): reconciled `hooks.json` / `settings.json` schema drift; every hook entry now matches the Claude Code manifest schema and the registered hook script actually exists on disk.
 
 ### Ignore
-- **IGNORE-01** (P38, this release, closes [#20](https://github.com/alo-exp/silver-bullet/issues/20)): narrowed the project `.gitignore` blanket `.claude/` rule to runtime-only subpaths (`projects/`, `local/`, `.silver-bullet/`, `settings.local.json`, `worktrees/`). Committed plugin config (`.claude/settings.json`, `.claude/commands/`) now tracked. Supersedes the interim fix in `c8b161a`.
+- **IGNORE-01** (P38, this release, closes [#20](https://github.com/alo-exp/silver-bullet/issues/20)): narrowed the project `.gitignore` blanket `.codex/` rule to runtime-only subpaths (`projects/`, `local/`, `.silver-bullet/`, `settings.local.json`, `worktrees/`). Committed plugin config (`.codex/settings.json`, `.codex/commands/`) now tracked. Supersedes the interim fix in `c8b161a`.
 
 ### Docs
 - **DOC-02** (P38, this release, closes [#23](https://github.com/alo-exp/silver-bullet/issues/23)): public-surface refresh across every user-visible file.
@@ -1267,12 +1285,12 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
   `hooks/record-skill.sh`, `hooks/ci-status-check.sh`,
   `hooks/dev-cycle-check.sh`. Prevents first-install failures from
   surfacing nonzero hook exits that cause Claude to reject the plugin.
-- Restored `"hooks": "./hooks/hooks.json"` to `.claude-plugin/plugin.json`
+- Restored `"hooks": "./hooks/hooks.json"` to `.codex-plugin/plugin.json`
   so the marketplace registers hooks automatically on install.
 
 ### Added
 - `silver:init` Phase 3 step 3.7.5: after project scaffolding, merges SB
-  hook entries from `hooks/hooks.json` into `${SB_RUNTIME_HOME_ROOT}/settings.json` using
+  hook entries from `hooks/hooks.json` into `~/.codex/settings.json` using
   `python3`. Hook commands are registered with the actual install path
   substituted for `${CLAUDE_PLUGIN_ROOT}`. Idempotent — re-running init
   does not add duplicate entries. Also runs during update mode (step 5a).
@@ -1285,7 +1303,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 - docs/workflows/full-dev-cycle.md MODEL ROUTING section updated to match; removed manual prompt flow
 
 ### Added
-- `hooks/ensure-model-routing.sh` — self-healing session-start hook that reapplies `model:` directives to all 24 GSD agent files if a GSD update wipes them. Canary-guarded (~2ms no-op when correct, <50ms when patching). Bash 3.2 compatible. Audit trail written to `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/model-routing-patch.log`.
+- `hooks/ensure-model-routing.sh` — self-healing session-start hook that reapplies `model:` directives to all 24 GSD agent files if a GSD update wipes them. Canary-guarded (~2ms no-op when correct, <50ms when patching). Bash 3.2 compatible. Audit trail written to `~/.codex/.silver-bullet/model-routing-patch.log`.
 
 ### Fixed
 - All "8 dimensions" references updated to "9 dimensions" across site/index.html (3 occurrences), site/help/index.html, site/help/dev-workflow/index.html, site/help/search.js (3 occurrences), and docs/workflows/full-dev-cycle.md (4 occurrences total)
@@ -1385,13 +1403,13 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 - PreToolUse → PostToolUse in landing page HARD STOP gate description
 - Broken relative link in compare page footer (help/ → ../help/)
 - Stale /tmp/ references in help reference page, search index, and silver:init skill
-- Test files updated from /tmp/.silver-bullet-* to ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/ paths
+- Test files updated from /tmp/.silver-bullet-* to ~/.codex/.silver-bullet/ paths
 - session-log-init sentinel subshell fully detached from pipeline (fixes test hangs)
 - session-log-init grep pattern updated to match new mode file path
 - SENTINEL audit doc updated: 8→7 layers, post-remediation note added
 - context.md updated: stale step counts, version, and branding
 - Missing Required badge on step 9 (/requesting-code-review) in dev cycle table
-- Stale worktree .claude/worktrees/agent-ad2bff3d removed
+- Stale worktree .codex/worktrees/agent-ad2bff3d removed
 - mkdir -p defense-in-depth added to completion-audit.sh
 - Plugin boundary check changed from substring grep to prefix match
 

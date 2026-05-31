@@ -1020,11 +1020,11 @@ In the `#### 3.6 Create placeholder docs` section, add after the last existing p
 ```markdown
 **`docs/KNOWLEDGE.md`**:
 
-Read `${PLUGIN_ROOT}/templates/KNOWLEDGE.md.base` using the Read tool. Replace `{{PROJECT_NAME}}` with the confirmed project name and `{{GIT_REPO}}` with the confirmed repo URL. Write to `docs/KNOWLEDGE.md`.
+Read `${PLUGIN_ROOT}/templates/KNOWLEDGE.md.base` using the active runtime file-reading mechanism. Replace `{{PROJECT_NAME}}` with the confirmed project name and `{{GIT_REPO}}` with the confirmed repo URL. Write to `docs/KNOWLEDGE.md`.
 
 **`docs/CHANGELOG.md`** (task log — distinct from root-level CHANGELOG.md if present):
 
-Read `${PLUGIN_ROOT}/templates/CHANGELOG-project.md.base` using the Read tool. Write as-is to `docs/CHANGELOG.md`.
+Read `${PLUGIN_ROOT}/templates/CHANGELOG-project.md.base` using the active runtime file-reading mechanism. Write as-is to `docs/CHANGELOG.md`.
 
 **`docs/sessions/` directory:**
 

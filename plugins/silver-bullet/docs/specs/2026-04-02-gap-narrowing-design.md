@@ -193,7 +193,7 @@ If Opus permitted → the active runtime switches to claude-opus-4-6 automatical
 
 ### Agent Teams throughout the workflow
 
-Agent Teams (Agent tool with `isolation: "worktree"`) are used wherever steps are independent:
+Agent Teams (active runtime delegation mechanism with `isolation: "worktree"`) are used wherever steps are independent:
 
 **Planning — Steps 9–16 (quality gates)**
 All 8 quality dimensions dispatched as a single parallel Agent Team wave:

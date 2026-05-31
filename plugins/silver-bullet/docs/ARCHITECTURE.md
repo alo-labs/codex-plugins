@@ -5,7 +5,7 @@ Detailed phase-level designs live in `docs/specs/YYYY-MM-DD-<topic>-design.md`.
 
 ## System Overview
 
-Silver Bullet ships two first-class plugin surfaces: a Claude Code plugin (`.claude-plugin/`)
+Silver Bullet ships two first-class plugin surfaces: a Claude Code plugin (`.codex-plugin/`)
 and a Codex bundle (`plugins/silver-bullet/`). Both are composed of shell hook scripts, slash-command
 markdown files, skill markdown files, JSON configuration, and workflow documentation. SB wraps GSD
 as the lifecycle authority and calls Superpowers, Engineering, Design, and other helper plugins only
@@ -17,14 +17,14 @@ is synchronized from the repo root. Third-party plugins that do not publish Code
 represented by thin wrappers in the shared `alo-labs/codex-plugins` marketplace, which fetches
 upstream content at install time instead of vendoring it here.
 
-No server, no database — all state lives in flat files under `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/`.
+No server, no database — all state lives in flat files under `~/.codex/.silver-bullet/`.
 
 ## Core Components
 
 | Component | Path | Responsibility |
 |-----------|------|----------------|
 | Hook scripts | `hooks/*.sh` | PostToolUse/PreToolUse enforcement — fire on every tool call |
-| Skill files | `skills/*/SKILL.md` | Declarative workflow instructions loaded via the Skill tool |
+| Skill files | `skills/*/SKILL.md` | Declarative workflow instructions loaded through the active runtime's SB-recognized skill invocation channel |
 | Workflow docs | `docs/workflows/` | Full per-session step-by-step procedures (active copies) |
 | Commands | `commands/` | `/silver:*` slash-command wrappers shipped inside the SB Codex bundle |
 | Templates | `templates/` | Bootstrap files copied during `/silver:init` setup |
@@ -33,14 +33,14 @@ No server, no database — all state lives in flat files under `${SB_RUNTIME_HOM
 | Shared Codex marketplace | `https://github.com/alo-labs/codex-plugins` | Thin wrappers for third-party plugins that lack native Codex packaging |
 | Live runtime matrix | `tests/live/` | Shared Claude/Codex E2E harness with runtime adapters |
 | Config | `.silver-bullet.json` | Project-level list of tracked/required skills |
-| State file | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state` | Flat file recording invoked skills in this session |
-| Trivial flag | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` | Legacy compatibility marker. Codex agents should route trivial work through `/silver:fast` instead of using the touch-file bypass. |
+| State file | `~/.codex/.silver-bullet/state` | Flat file recording invoked skills in this session |
+| Trivial flag | `~/.codex/.silver-bullet/trivial` | Legacy compatibility marker. Codex agents should route trivial work through `/silver:fast` instead of using the touch-file bypass. |
 
 ### Key hooks
 
 | Hook | Trigger | Behavior |
 |------|---------|----------|
-| `record-skill.sh` | PostToolUse (Skill tool) | Appends normalized skill name to state file |
+| `record-skill.sh` | PostToolUse (runtime-native skill invocation channel) | Appends normalized skill name to state file |
 | `record-requested-skill.sh` | UserPromptSubmit | Records requested SB/GSD route markers before the next turn starts |
 | `dev-cycle-check.sh` | PreToolUse (Edit/Write/Bash) | 4-stage gate: blocks source edits if planning incomplete |
 | `compliance-status.sh` | PostToolUse (all tools) | Emits live progress score per tool call |
@@ -49,8 +49,8 @@ No server, no database — all state lives in flat files under `${SB_RUNTIME_HOM
 | `ci-status-check.sh` | PostToolUse (Bash) | Warns on commit/push if CI is failing |
 | `prompt-reminder.sh` | UserPromptSubmit | Re-injects missing skills list before every user message and surfaces current workflow context |
 | `stop-check.sh` | Stop / SubagentStop | Requires `required_planning` skills (planning floor) before session ends. Full `required_deploy` is enforced by `completion-audit.sh` at delivery commands |
-| *(hooks.json entry)* | SessionStart | Clears any stale `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` marker at session start; does not auto-create it |
-| *(hooks.json entry)* | PostToolUse (Write\|Edit\|MultiEdit) | Clears `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` when files are modified |
+| *(hooks.json entry)* | SessionStart | Clears any stale `~/.codex/.silver-bullet/trivial` marker at session start; does not auto-create it |
+| *(hooks.json entry)* | PostToolUse (Write\|Edit\|MultiEdit) | Clears `~/.codex/.silver-bullet/trivial` when files are modified |
 
 ### Fast Path
 
@@ -77,7 +77,7 @@ Codex entry point.
 
 ### Packaging Boundaries
 
-- `/.planning/`, `/.claude/`, and `/.forge/` are project-instance artifacts, not plugin content.
+- `/.planning/`, `/.codex/`, and `/.forge/` are project-instance artifacts, not plugin content.
 - `silver-bullet.md` is the project copy; `templates/silver-bullet.md.base` is the source template.
 - `plugins/silver-bullet/` is a curated Codex snapshot, not a mirror of the whole repository.
 - `commands/` ships inside the SB bundle so Codex sees one Silver Bullet plugin, not a split command plugin.
@@ -89,7 +89,7 @@ Codex entry point.
 |----------|--------|-----------|
 | Language | Bash | Pure Bash hooks and scripts; `jq` for JSON parsing (no Node.js runtime required) |
 | Config format | JSON | Machine-readable by hooks and CI; human-readable for customization |
-| Skill format | Markdown | Loaded natively by Claude Code's Skill tool |
+| Skill format | Markdown | Loaded natively by Claude Code's runtime-native skill invocation channel |
 | State format | Line-delimited text | `grep -q` lookups; append-only; trivially auditable |
 | CI | GitHub Actions | Target audience is GitHub repos; `gh` CLI integrates release workflow |
 | Codex packaging | Thin wrapper + install-time fetch | Keeps SB bundle SB-only while supporting third-party plugins that lack native Codex packaging |

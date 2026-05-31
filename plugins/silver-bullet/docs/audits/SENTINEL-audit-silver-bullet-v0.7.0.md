@@ -57,8 +57,8 @@ All are prompt-injection surfaces since they become part of the LLM context. Key
 
 ### Config files
 
-- `.claude-plugin/plugin.json` -- plugin metadata
-- `.claude-plugin/marketplace.json` -- marketplace listing
+- `.codex-plugin/plugin.json` -- plugin metadata
+- `.codex-plugin/marketplace.json` -- marketplace listing
 - `hooks/hooks.json` -- hook registration
 
 ---
@@ -120,9 +120,9 @@ A malicious `.silver-bullet.json` could set `state_file` to an arbitrary path (e
 **Patch plan**:
 ```
 All hooks reading state.state_file / state.trivial_file:
-After expanding the path, validate it stays within ${SB_RUNTIME_HOME_ROOT}/ or $SB_STATE_DIR:
+After expanding the path, validate it stays within ~/.codex/ or $SB_STATE_DIR:
   case "$state_file" in
-    "$HOME"/.claude/*) ;; # allowed
+    "$HOME"/.codex/*) ;; # allowed
     *) state_file="${SB_STATE_DIR}/state" ;; # fallback to default
   esac
 Apply the same validation to trivial_file.
@@ -147,7 +147,7 @@ Any process that can set environment variables (e.g., a malicious CI job, a comp
 ```
 Same path validation as SB-002. After the env var override line, add:
   case "$state_file" in
-    "$HOME"/.claude/*) ;;
+    "$HOME"/.codex/*) ;;
     *) state_file="${SB_STATE_DIR}/state" ;;
   esac
 ```
@@ -195,7 +195,7 @@ For full safety, use a PID+starttime check or a lockfile.)
 **Category**: Path confusion / supply chain
 
 ```bash
-sp_file=$(ls ${SB_RUNTIME_HOME_ROOT}/plugins/cache/*/superpowers/*/skills/using-superpowers/SKILL.md 2>/dev/null | head -1)
+sp_file=$(ls ~/.codex/plugins/cache/*/superpowers/*/skills/using-superpowers/SKILL.md 2>/dev/null | head -1)
 ```
 
 This glob matches any directory structure under the plugin cache. If a malicious plugin registers a directory named `superpowers` inside the cache, it could inject its own SKILL.md into the session context.
@@ -209,7 +209,7 @@ Validate the matched file's parent plugin.json to confirm it belongs
 to the expected "superpowers" plugin (source: obra/superpowers):
   if [[ -n "$sp_file" ]]; then
     plugin_dir=$(dirname "$(dirname "$(dirname "$(dirname "$sp_file")")")")
-    if ! jq -e '.name == "superpowers"' "$plugin_dir/.claude-plugin/plugin.json" >/dev/null 2>&1; then
+    if ! jq -e '.name == "superpowers"' "$plugin_dir/.codex-plugin/plugin.json" >/dev/null 2>&1; then
       sp_file=""
     fi
   fi
@@ -309,7 +309,7 @@ No immediate action required. If strengthening is desired:
 **Files**: All templates in `templates/`
 **Category**: Secret detection
 
-Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_NAME}}`, `{{TECH_STACK}}`, etc.) or documented default paths under `${SB_RUNTIME_HOME_ROOT}/`. No hardcoded API keys, tokens, passwords, or credentials found.
+Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_NAME}}`, `{{TECH_STACK}}`, etc.) or documented default paths under `~/.codex/`. No hardcoded API keys, tokens, passwords, or credentials found.
 
 ---
 
@@ -318,7 +318,7 @@ Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_N
 **File**: `templates/silver-bullet.config.json.default`
 **Category**: Unsafe defaults
 
-Default state paths are `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state` and `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` -- both under the user's home directory. The `umask 0077` in hooks ensures files are created with user-only permissions.
+Default state paths are `~/.codex/.silver-bullet/state` and `~/.codex/.silver-bullet/trivial` -- both under the user's home directory. The `umask 0077` in hooks ensures files are created with user-only permissions.
 
 ---
 

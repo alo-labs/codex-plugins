@@ -8,14 +8,14 @@ This reference expands the steps summarized in `SKILL.md` Phase 3. Follow the su
 
 If Phase 0 determined this is an update:
 
-1. Invoke `superpowers:using-superpowers` via the Skill tool to activate Superpowers skills.
+1. Invoke `superpowers:using-superpowers` through the active runtime's SB-recognized skill invocation channel to activate Superpowers skills.
 2. Overwrite `silver-bullet.md` from `${PLUGIN_ROOT}/templates/silver-bullet.md.base` with placeholder replacements. Read `.silver-bullet.json` first for `project.name` and other values. This is safe — Silver Bullet owns this file.
    - Replace `{{PROJECT_NAME}}` with the project name from `.silver-bullet.json`
    - Replace `{{ACTIVE_WORKFLOW}}` with the active workflow name from `.silver-bullet.json` (default: `full-dev-cycle`)
 3. If the project already has a project instruction file (`CLAUDE.md` in Claude, `AGENTS.md` in Codex), strip any SB-owned sections from it (migration from pre-v0.7.0). Check for headings matching `## N. <Known SB Title>` where N is 0–9 (titles: Session Startup, Automated Enforcement, Active Workflow, NON-NEGOTIABLE, Review Loop, Session Mode, Model Routing, GSD, File Safety, Third-Party, Pre-Release). If found, remove these sections (from heading to next `## ` or EOF), preserving all non-SB content. Also remove old-style reference lines that do not mention silver-bullet.md.
 4. If the project instruction file already exists, verify it contains a reference line mentioning "silver-bullet.md". If not, add at the very top of the file: `> **Always adhere strictly to this file and silver-bullet.md — they override all defaults.**`
 5. Run conflict detection (same as step 3.1c below).
-5a. Run step 3.7.5 to re-register or refresh SB hooks in `~/.claude/settings.json`.
+5a. Run step 3.7.5 to re-register or refresh SB hooks in `~/.codex/settings.json`.
 6. Output: "Silver Bullet updated. silver-bullet.md refreshed. All skills active."
 
 ### Template refresh (only when user explicitly requests it)
@@ -72,7 +72,7 @@ If sections found:
 1. Read the project instruction file fully
 2. Identify each SB section (from `## N.` heading to just before the next `## ` heading or EOF)
 3. Also remove the old-style enforcement reference line if present: `> **Always adhere strictly to this file — it overrides all defaults.**` (note: this is the pre-separation version that does NOT mention silver-bullet.md)
-4. Remove these sections using the Edit tool, preserving all non-SB content (project overview, project-specific rules, user-added sections)
+4. Remove these sections using the active runtime file-editing mechanism, preserving all non-SB content (project overview, project-specific rules, user-added sections)
 5. Clean up any resulting double-blank-lines to single-blank-lines
 
 **Step 2 — Add reference line:**
@@ -95,14 +95,14 @@ Scan the project instruction file for patterns that conflict with `silver-bullet
 4. **Workflow overrides**: regex `(override|replace|ignore).*(workflow|silver.bullet)` on directive-like lines (conflicts with SB Section 2)
 5. **Session mode overrides**: regex `(always|default|must).*(interactive|autonomous).*mode` on directive-like lines (conflicts with SB Section 4)
 
-For each match found, present it to the user interactively using AskUserQuestion:
+For each match found, present it to the user directly:
 - Question: "Potential conflict found in the project instruction file:\n  Line {N}: {matched text}\n  This may conflict with Silver Bullet's {section name}. Remove this line?"
 - Options:
   - "A. Yes, remove this line"
   - "B. No, keep it"
   - "C. Skip all remaining conflict checks"
 
-If user selects A, use Edit tool to remove the line. If user selects B, leave it. If user selects C, stop checking further conflicts.
+If user selects A, use active runtime file-editing mechanism to remove the line. If user selects B, leave it. If user selects C, stop checking further conflicts.
 
 ### 3.2 Create directories
 
@@ -143,7 +143,7 @@ Copy both workflow templates to `docs/workflows/`, backing up any existing file 
 
 `silver:init` no longer performs direct docs migration/scaffolding.
 
-Invoke via the Skill tool:
+Invoke through the active runtime's SB-recognized skill invocation channel:
 ```text
 silver:ensure-docs --bootstrap
 ```
@@ -197,7 +197,7 @@ Merges the SB hook entries from `hooks/hooks.json` into the user's global host s
 ```bash
 INSTALL_PATH=$(python3 -c "
 import json, os, sys
-reg = os.path.expanduser('~/.claude/plugins/installed_plugins.json')
+reg = os.path.expanduser('~/.codex/plugins/installed_plugins.json')
 with open(reg) as f:
     data = json.load(f)
 plugins = data.get('plugins', {})
@@ -227,7 +227,7 @@ Idempotent — re-running `/silver:init` adds no duplicate entries.
 
 ### 3.8 Activate plugins
 
-Invoke `superpowers:using-superpowers` via the Skill tool. GSD commands (`/gsd:*`) and Design plugin skills (`/design:*`) are available immediately — no activation needed.
+Invoke `superpowers:using-superpowers` through the active runtime's SB-recognized skill invocation channel. GSD commands (`/gsd:*`) and Design plugin skills (`/design:*`) are available immediately — no activation needed.
 
 ### 3.9 Done
 

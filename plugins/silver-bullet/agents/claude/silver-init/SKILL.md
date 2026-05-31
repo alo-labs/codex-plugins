@@ -1,5 +1,6 @@
 ---
 name: silver:init
+title: Silver: /silver:init - Init
 description: This skill should be used to initialize Silver Bullet enforcement for a project — checks dependencies, auto-detects project, scaffolds silver-bullet.md + config + workflow files, and reconciles any existing project instruction file in place without creating one
 version: 0.1.0
 ---
@@ -13,7 +14,7 @@ This skill initializes Silver Bullet enforcement for a project. Follow each phas
 **This skill MUST NOT destroy existing project content.** Rules:
 - **Never overwrite existing docs** (`docs/*.md`) — only create if absent
 - **Backup before overwrite** — if an existing project instruction file (`CLAUDE.md` in Claude, `AGENTS.md` in Codex) or workflow files must be replaced (update mode), copy the original to `*.backup` first
-- **Never delete files or directories** in the project (only `~/.claude/.silver-bullet/` state files are deleted)
+- **Never delete files or directories** in the project (only `~/.codex/.silver-bullet/` state files are deleted)
 - **Never run `git clean`, `git checkout --`, `git reset --hard`**, or any command that discards uncommitted work
 - **Config is preserved** — in update mode, `.silver-bullet.json` customizations are read first and carried forward
 
@@ -23,10 +24,10 @@ This skill initializes Silver Bullet enforcement for a project. Follow each phas
 
 ## Phase −1: Session Init
 
-Run this phase exactly once per session. Skip if the session state file `~/.claude/.silver-bullet/session-init` already exists.
+Run this phase exactly once per session. Skip if the session state file `~/.codex/.silver-bullet/session-init` already exists.
 
 ```bash
-test -f ~/.claude/.silver-bullet/session-init && echo "ALREADY_DONE" || echo "NEEDED"
+test -f ~/.codex/.silver-bullet/session-init && echo "ALREADY_DONE" || echo "NEEDED"
 ```
 
 If `ALREADY_DONE` → skip to Phase 0.
@@ -35,7 +36,7 @@ If `NEEDED`:
 
 ### −1.1 Load project context
 
-Use the Read tool to read each of the following files **if they exist** (check with Bash `test -f` first):
+Use the active runtime file-reading mechanism to read each of the following files **if they exist** (check with Bash `test -f` first):
 
 1. `README.md` — project overview and usage
 2. `CONTEXT.md` — project-specific context
@@ -55,16 +56,16 @@ If it exists, use the Glob tool to find all markdown files:
 docs/**/*.md
 ```
 
-Read each file found using the Read tool.
+Read each file found using the active runtime file-reading mechanism.
 
 ### −1.3 Compact context
 
 Use the Bash tool to run:
 ```bash
-touch ~/.claude/.silver-bullet/session-init
+touch ~/.codex/.silver-bullet/session-init
 ```
 
-Then invoke `/compact` via the Skill tool to compact the loaded context before proceeding.
+Then summarize the loaded context and continue without relying on context compaction.
 
 ---
 
@@ -94,7 +95,7 @@ If the command fails (exit code non-zero):
 Output:
 > ❌ **jq is not installed.** Silver Bullet requires jq for JSON processing.
 
-Then use AskUserQuestion:
+Then ask the user directly:
 - Question: "Please install jq in a terminal, then come back and I'll continue.\n\n**macOS:** `brew install jq`\n**Linux:** `sudo apt install jq`\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed jq — continue"
@@ -107,11 +108,11 @@ If B: STOP.
 
 Use the Glob tool to search for:
 ```
-~/.claude/plugins/cache/*/superpowers/*/skills/brainstorming/SKILL.md
+~/.codex/plugins/cache/*/superpowers/*/skills/brainstorming/SKILL.md
 ```
 Expand `~` to the user's home directory (use `$HOME` via Bash if needed).
 
-If no files found, use AskUserQuestion:
+If no files found, ask the user directly:
 - Question: "❌ **Superpowers plugin is not installed.**\n\nPlease run this command inside your host coding agent to repair or reinstall it, then come back:\n\n```\n/plugin install obra/superpowers\n```\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed it — continue"
@@ -123,12 +124,12 @@ If B: STOP.
 ### 1.3 Design plugin
 
 Use the Glob tool to search for Design plugin skills in these paths:
-- `~/.claude/plugins/cache/*/design/*/skills/design-system/SKILL.md`
-- `~/.claude/plugins/cache/*/knowledge-work-plugins/*/design/skills/design-system/SKILL.md`
+- `~/.codex/plugins/cache/*/design/*/skills/design-system/SKILL.md`
+- `~/.codex/plugins/cache/*/knowledge-work-plugins/*/design/skills/design-system/SKILL.md`
 
 Expand `~` to the user's home directory.
 
-If no files found in any of those patterns, try invoking `/design:design-system` via the Skill tool as a fallback check. If that also fails, use AskUserQuestion:
+If no files found in any of those patterns, try invoking `/design:design-system` through the active runtime's SB-recognized skill invocation channel as a fallback check. If that also fails, ask the user directly:
 - Question: "❌ **Design plugin is not installed.**\n\nPlease run this command inside your host coding agent to repair or reinstall it, then come back:\n\n```\n/plugin install anthropics/knowledge-work-plugins/tree/main/design\n```\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed it — continue"
@@ -140,14 +141,14 @@ If B: STOP.
 ### 1.4 Engineering plugin
 
 Use the Glob tool to search for Engineering plugin skills in these paths:
-- `~/.claude/plugins/cache/*/engineering/*/skills/documentation/SKILL.md`
-- `~/.claude/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/documentation/SKILL.md`
-- `~/.claude/plugins/cache/engineering/skills/`
-- `~/.claude/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/`
+- `~/.codex/plugins/cache/*/engineering/*/skills/documentation/SKILL.md`
+- `~/.codex/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/documentation/SKILL.md`
+- `~/.codex/plugins/cache/engineering/skills/`
+- `~/.codex/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/`
 
 Expand `~` to the user's home directory.
 
-If no files found in any of those patterns, try invoking `/engineering:documentation` via the Skill tool as a fallback check. If that also fails, use AskUserQuestion:
+If no files found in any of those patterns, try invoking `/engineering:documentation` through the active runtime's SB-recognized skill invocation channel as a fallback check. If that also fails, ask the user directly:
 - Question: "❌ **Engineering plugin is not installed.**\n\nPlease run this command inside your host coding agent to repair or reinstall it, then come back:\n\n```\n/plugin install anthropics/knowledge-work-plugins/tree/main/engineering\n```\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed it — continue"
@@ -160,10 +161,10 @@ If B: STOP.
 
 Use the Bash tool to check if GSD is installed (checks both legacy and current install paths):
 ```bash
-{ test -f "~/.claude/get-shit-done/workflows/new-project.md" || test -f "~/.claude/get-shit-done/bin/gsd-tools.cjs" || test -f "~/.claude/commands/gsd/new-project.md"; } && echo "EXISTS" || echo "NOT_FOUND"
+{ test -f "~/.codex/get-shit-done/workflows/new-project.md" || test -f "~/.codex/get-shit-done/bin/gsd-tools.cjs" || test -f "~/.codex/commands/gsd/new-project.md"; } && echo "EXISTS" || echo "NOT_FOUND"
 ```
 
-If `NOT_FOUND`, use AskUserQuestion:
+If `NOT_FOUND`, ask the user directly:
 - Question: "❌ **GSD plugin is not installed.** GSD is a hard requirement — Silver Bullet wraps GSD's planning and execution commands and cannot function without it.\n\nPlease run this command in your terminal to repair or reinstall it, then come back:\n\n```\nnpx get-shit-done-cc@latest\n```\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed GSD — continue"
@@ -184,7 +185,7 @@ Keep bootstrap terminology aligned to the current runtime:
 
 ### 1.7 v1 incompatibility check
 
-Use the Read tool to read `.claude/settings.json` in the project root. If the file does not exist, skip this check.
+Use the active runtime file-reading mechanism to read `.codex/settings.json` in the project root. If the file does not exist, skip this check.
 
 If the file exists, inspect its contents for any references to:
 - `record-skill.sh`
@@ -192,25 +193,25 @@ If the file exists, inspect its contents for any references to:
 - `/tmp/.wyzr-workflow-state`
 
 If any of these strings are found, output:
-> ⚠️ Incompatible v1 Silver Bullet hooks detected in `.claude/settings.json`.
+> ⚠️ Incompatible v1 Silver Bullet hooks detected in `.codex/settings.json`.
 > Found references to: [list the matched strings]
 >
 > These must be removed before Silver Bullet v2 can be installed.
 
-Use AskUserQuestion:
-- Question: "Remove these incompatible v1 hook entries from .claude/settings.json?"
+Ask the user directly:
+- Question: "Remove these incompatible v1 hook entries from .codex/settings.json?"
 - Options:
   - "A. Yes, remove them"
   - "B. No, stop init"
 
-If user selects A, use the Edit tool to remove the offending hook entries from `.claude/settings.json`. If user selects B, STOP.
+If user selects A, use the active runtime file-editing mechanism to remove the offending hook entries from `.codex/settings.json`. If user selects B, STOP.
 
 ### 1.8 MultAI plugin
 
 Use the Glob tool to search for:
-`~/.claude/plugins/cache/multai/skills/orchestrator/SKILL.md`
+`~/.codex/plugins/cache/multai/skills/orchestrator/SKILL.md`
 
-If no file found, use AskUserQuestion:
+If no file found, ask the user directly:
 - Question: "⚠️ **MultAI plugin is not installed.** MultAI is optional — Silver Bullet research works without it. Install it only if you want optional multi-AI / second-opinion perspectives.\n\nInstall command (inside your host coding agent):\n```\n/plugin install\n```\n(search for MultAI in the marketplace)\n\nWould you like to install it now, or continue without it?"
 - Options:
   - "A. I'll install it now — pause and wait"
@@ -222,12 +223,12 @@ If B: continue without stopping.
 ### 1.9 Anthropic Product Management plugin
 
 Use the Glob tool to search for:
-`~/.claude/plugins/cache/*/product-management/*/upstream/skills/write-spec/SKILL.md`
-and `~/.claude/plugins/cache/*/product-management/*/skills/write-spec/SKILL.md`
-and `~/.claude/plugins/cache/*/product-management/skills/`
+`~/.codex/plugins/cache/*/product-management/*/upstream/skills/write-spec/SKILL.md`
+and `~/.codex/plugins/cache/*/product-management/*/skills/write-spec/SKILL.md`
+and `~/.codex/plugins/cache/*/product-management/skills/`
 in supported Codex cache roots
 
-If no directory found in any supported cache root, use AskUserQuestion:
+If no directory found in any supported cache root, ask the user directly:
 - Question: "❌ **Anthropic Product Management plugin is not installed.**\n\nPlease run this command inside your host coding agent to repair or reinstall it, then come back:\n\n```\n/plugin install anthropics/knowledge-work-plugins/tree/main/product-management\n```\n\nReady to continue?"
 - Options:
   - "A. Yes, I've installed it — continue"
@@ -246,7 +247,7 @@ Run this phase only after all Phase 1 presence checks pass. For each dependency,
 
 Read installed version:
 ```bash
-cat "~/.claude/plugins/installed_plugins.json" | jq -r '.plugins["silver-bullet@silver-bullet"][0].version // "unknown"'
+cat "~/.codex/plugins/installed_plugins.json" | jq -r '.plugins["silver-bullet@silver-bullet"][0].version // "unknown"'
 ```
 
 Check latest version:
@@ -256,13 +257,13 @@ curl -s https://api.github.com/repos/alo-exp/silver-bullet/releases/latest | gre
 
 Parse both as semver (MAJOR.MINOR.PATCH) and compare numerically.
 
-If installed < latest, use AskUserQuestion:
+If installed < latest, ask the user directly:
 - Question: "Silver Bullet v{installed} is outdated (latest: v{latest}). Update now?"
 - Options:
   - "A. Yes, update now"
   - "B. Skip, continue with current version"
 
-If user selects A: invoke `/silver:update` via the Skill tool. After it completes, output "Silver Bullet updated. Continuing init..." and proceed.
+If user selects A: invoke `/silver:update` through the active runtime's SB-recognized skill invocation channel. After it completes, output "Silver Bullet updated. Continuing init..." and proceed.
 If user selects B: output "Skipping SB update." and proceed.
 If version check fails (curl error, missing file, or either version is "unknown"): output "Could not check SB version (offline?). Continuing..." and proceed.
 
@@ -270,7 +271,7 @@ If version check fails (curl error, missing file, or either version is "unknown"
 
 Read installed version:
 ```bash
-cat "~/.claude/get-shit-done/VERSION" 2>/dev/null || echo "unknown"
+cat "~/.codex/get-shit-done/VERSION" 2>/dev/null || echo "unknown"
 ```
 
 Check latest version:
@@ -280,22 +281,22 @@ npm view get-shit-done-cc version 2>/dev/null || echo "unknown"
 
 Parse both as semver and compare numerically.
 
-If both versions are known and installed < latest, use AskUserQuestion:
+If both versions are known and installed < latest, ask the user directly:
 - Question: "GSD v{installed} is outdated (latest: v{latest}). Update now?"
 - Options:
   - "A. Yes, update now"
   - "B. Skip, continue with current version"
 
-If user selects A: invoke `/gsd-update` via the Skill tool. After it completes, output "GSD updated. Continuing init..." and proceed.
+If user selects A: invoke `/gsd-update` through the active runtime's SB-recognized skill invocation channel. After it completes, output "GSD updated. Continuing init..." and proceed.
 If user selects B: output "Skipping GSD update." and proceed.
 If either version is "unknown": output "Could not determine GSD version. Continuing..." and proceed.
 
 ### 1.5.3 Check Superpowers / Design / Engineering / Product Management plugin versions
 
-Read installed versions from `~/.claude/plugins/installed_plugins.json`. Display the installed version of each plugin found:
+Read installed versions from `~/.codex/plugins/installed_plugins.json`. Display the installed version of each plugin found:
 
 ```bash
-cat "~/.claude/plugins/installed_plugins.json" | jq -r '
+cat "~/.codex/plugins/installed_plugins.json" | jq -r '
   .plugins | to_entries[] |
   select(.key | test("^(superpowers|design|engineering|product-management)@")) |
   "\(.key | split("@")[0]): v\(.value[0].version)"
@@ -312,18 +313,18 @@ No automated update skill exists for these plugins. If the user wants to update 
 
 Read installed version:
 ```bash
-cat "~/.claude/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
+cat "~/.codex/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
 ```
 
 Check latest:
 ```bash
-cat "~/.claude/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
+cat "~/.codex/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
 ```
 
 If installed version appears outdated compared to CHANGELOG, display:
 > MultAI v{installed} may not be the latest. It is optional and only used for explicit multi-AI research requests. To update: `/multai:update`
 
-No AskUserQuestion needed — MultAI update is user-initiated only. Display the notice and continue.
+No interactive user prompt needed — MultAI update is user-initiated only. Display the notice and continue.
 
 ---
 
@@ -340,7 +341,7 @@ git rev-parse --is-inside-work-tree 2>/dev/null && echo "GIT_REPO" || echo "NOT_
 
 If `GIT_REPO` → continue to step 2.1.
 
-If `NOT_GIT`, use AskUserQuestion:
+If `NOT_GIT`, ask the user directly:
 - Question: "This directory is not a git repository. How would you like to proceed?"
 - Options:
   - "A. Clone — provide an existing repo URL to clone here"
@@ -373,15 +374,15 @@ test -d ".planning" && echo "EXISTING" || echo "NEW"
 ```
 
 **If NEW project:**
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "No .planning/ directory found. How would you like to initialize this project?"
 - Options:
   - "A. New project — scaffold with GSD (creates ROADMAP.md, STATE.md, project structure)"
   - "B. Existing codebase — map it first before scaffolding"
   - "C. Skip project initialization — I'll handle it manually"
 
-If A: invoke `/gsd-new-project` via the Skill tool. After it completes, continue.
-If B: invoke `/gsd-map-codebase` via the Skill tool, then `/gsd-scan`. After both complete, offer to run `/gsd-new-project`. Then continue.
+If A: invoke `/gsd-new-project` through the active runtime's SB-recognized skill invocation channel. After it completes, continue.
+If B: invoke `/gsd-map-codebase` through the active runtime's SB-recognized skill invocation channel, then `/gsd-scan`. After both complete, offer to run `/gsd-new-project`. Then continue.
 If C: continue without project initialization.
 
 **If EXISTING project:**
@@ -392,11 +393,11 @@ test -d ".planning/codebase" && echo "INTEL_EXISTS" || echo "NO_INTEL"
 
 If NO_INTEL and project appears brownfield (has source files but no .planning/codebase/):
 Display: "No codebase intelligence found. Running gsd-scan to orient planning..."
-Invoke `/gsd-scan` via the Skill tool. After it completes, continue.
+Invoke `/gsd-scan` through the active runtime's SB-recognized skill invocation channel. After it completes, continue.
 
 ### 2.2 Detect project name
 
-1. Use the Read tool to check for these files in the project root (in order):
+1. Use the active runtime file-reading mechanism to check for these files in the project root (in order):
    `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`,
    `build.gradle.kts`, `Gemfile`, `composer.json`, `mix.exs`, `Package.swift`,
    `*.csproj`, `*.sln`, `pubspec.yaml`.
@@ -462,7 +463,7 @@ Detected:
   Source:   [pattern]
 ```
 
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "Do these detected values look right?"
 - Options:
   - "A. Yes, looks right"
@@ -473,14 +474,14 @@ Use AskUserQuestion:
 
 ### 2.8 Configure permission mode
 
-Check if `.claude/settings.local.json` has a `permissions.defaultMode` set:
+Check if `.codex/settings.local.json` has a `permissions.defaultMode` set:
 ```bash
-test -f .claude/settings.local.json && jq -r '.permissions.defaultMode // "NOT_SET"' .claude/settings.local.json 2>/dev/null || echo "NOT_SET"
+test -f .codex/settings.local.json && jq -r '.permissions.defaultMode // "NOT_SET"' .codex/settings.local.json 2>/dev/null || echo "NOT_SET"
 ```
 
 If `NOT_SET` and the runtime/approval model is still ambiguous:
 
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "Silver Bullet works best with auto-approve permissions. Choose a permission mode:"
 - Options:
   - "A. auto (recommended) — auto-approves most tool calls, prompts only for protected paths"
@@ -489,7 +490,7 @@ Use AskUserQuestion:
 
 If user selects B (bypassPermissions):
 
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "⚠️ Security confirmation: bypassPermissions disables all host runtime permission guardrails permanently for this project. Is this environment fully isolated (container, VM, or dedicated CI runner with no access to production systems, credentials, or sensitive files)?"
 - Options:
   - "A. Yes, environment is fully isolated — proceed with bypassPermissions"
@@ -498,7 +499,7 @@ Use AskUserQuestion:
 Only proceed to write `bypassPermissions` if user selects A. If user selects B, set `auto` instead.
 
 If the runtime already implies a mode or the user chooses `auto` / confirmed `bypassPermissions`:
-- Read `.claude/settings.local.json` (create if absent with `{"permissions":{}}`)
+- Read `.codex/settings.local.json` (create if absent with `{"permissions":{}}`)
 - Use Edit/Write to set `permissions.defaultMode` to the chosen value
 - This persists across sessions — no more repeated permission prompts
 
@@ -512,7 +513,7 @@ Detect from the repo remote and hosting metadata first:
 - GitHub remote or GitHub-hosted repo → `"issue_tracker": "github"`
 - Local-only or non-GitHub repo → `"issue_tracker": "gsd"`
 
-Only use AskUserQuestion if the detection is genuinely ambiguous:
+Only ask the user directly if the detection is genuinely ambiguous:
 - Question: "Which project management system should Silver Bullet use when filing issues and backlog items?"
 - Options:
   - "A. GitHub Issues (this repo) — recommended for GitHub-hosted projects"
@@ -542,7 +543,7 @@ Store the chosen value as `issue_tracker_value` for use in Phase 3.4. Default: `
 
 ### Exit condition
 
-Project has: `silver-bullet.md`, `.silver-bullet.json`, `docs/workflows/*.md`, placeholder `docs/*.md`, an initial git commit, SB hooks registered in `~/.claude/settings.json`, and an activation message printed. If the project already had a project instruction file, it was updated in place; otherwise no new project instruction file was created.
+Project has: `silver-bullet.md`, `.silver-bullet.json`, `docs/workflows/*.md`, placeholder `docs/*.md`, an initial git commit, SB hooks registered in `~/.codex/settings.json`, and an activation message printed. If the project already had a project instruction file, it was updated in place; otherwise no new project instruction file was created.
 
 ### Update mode (`.silver-bullet.json` exists)
 
@@ -553,7 +554,7 @@ See `references/scaffold-steps.md` → "Update mode". Ordered steps:
 3. If the project already has a project instruction file (`CLAUDE.md` in Claude, `AGENTS.md` in Codex), strip any SB-owned sections from it (pre-v0.7.0 migration) and remove the old-style reference line that does not mention `silver-bullet.md`.
 4. If the project instruction file already exists, ensure it has the reference line `> **Always adhere strictly to this file and silver-bullet.md — they override all defaults.**` at top if missing. If no project instruction file exists, skip this step.
 5. Run conflict detection using `references/scaffold-steps.md` → "§3.1c Conflict detection". (Note: this is the reference-file procedure for update mode; fresh setup uses the expanded 3.1c section-inventory procedure in SKILL.md instead.)
-6. Invoke `silver:ensure-docs --bootstrap` via the Skill tool so docs bootstrap/reconciliation is centralized in `silver-ensure-docs`.
+6. Invoke `silver:ensure-docs --bootstrap` through the active runtime's SB-recognized skill invocation channel so docs bootstrap/reconciliation is centralized in `silver-ensure-docs`.
 7. Re-register/refresh SB hooks (step 3.7.5 in the reference).
 8. Output: "Silver Bullet updated. silver-bullet.md refreshed. All skills active."
 
@@ -568,14 +569,14 @@ Execute these steps in order. Full detail for each step is in `references/scaffo
 
 - **3.1c Conflict resolution** (only when an existing project instruction file is present — no silent override guarantee):
 
-  **3.1c-1 Build the section inventory.** Use the Read tool to load `${PLUGIN_ROOT}/templates/CLAUDE.md.base` (the Silver Bullet template). Parse both the existing project instruction file and the template into named sections. A "section" is any `##` or `###` heading and its content. Also treat the preamble (text before the first heading) as a section named "Preamble". For each section, check whether the template contains a corresponding section with the same heading.
+  **3.1c-1 Build the section inventory.** Use the active runtime file-reading mechanism to load `${PLUGIN_ROOT}/templates/CLAUDE.md.base` (the Silver Bullet template). Parse both the existing project instruction file and the template into named sections. A "section" is any `##` or `###` heading and its content. Also treat the preamble (text before the first heading) as a section named "Preamble". For each section, check whether the template contains a corresponding section with the same heading.
 
   **3.1c-2 Categorize each section:**
   - **SB-owned** (same heading exists in both existing and template): potential conflict — needs user decision. If the content is identical, preserve as-is (no prompt needed).
   - **User-owned** (heading exists only in the existing project instruction file, not in template): preserve unconditionally — no user prompt needed.
   - **New from template** (heading exists only in the template, not in existing project instruction file): add automatically — no conflict.
 
-  **3.1c-3 For each SB-owned section that differs**, use AskUserQuestion with three options:
+  **3.1c-3 For each SB-owned section that differs**, ask the user directly with three options:
 
   > Section: **{section-heading}**
   >
@@ -592,7 +593,7 @@ Execute these steps in order. Full detail for each step is in `references/scaffo
   **3.1c-4 Apply decisions in order:**
   - Keep: leave the existing section unchanged.
   - Replace: substitute the existing section content with the template version.
-  - Merge: display both versions in full. Ask the user via AskUserQuestion: "Paste or describe your merged version for the **{section-heading}** section" with options "A. Use existing (same as Keep)  B. Use template (same as Replace)  C. I'll paste the merged text below". If C is selected, read the user's next free-form message as the merged content and write it as the section body.
+  - Merge: display both versions in full. Ask the user directly: "Paste or describe your merged version for the **{section-heading}** section" with options "A. Use existing (same as Keep)  B. Use template (same as Replace)  C. I'll paste the merged text below". If C is selected, read the user's next free-form message as the merged content and write it as the section body.
 
   **3.1c-5 Append user-owned sections** (identified in step 3.1c-2) at the end of the resolved project instruction file, after all SB-owned sections. These sections are never removed.
 
@@ -604,7 +605,7 @@ Execute these steps in order. Full detail for each step is in `references/scaffo
 - **3.3 Write the project instruction file** only when 3.1b found an existing project instruction file that needed reconciliation; otherwise skip this step entirely. Preserve the existing filename (`CLAUDE.md` or `AGENTS.md`) when writing it back out.
 - **3.4 Write `.silver-bullet.json`** from `templates/silver-bullet.config.json.default`, replace `{{PROJECT_NAME}}`, set `src_pattern` to the detected value.
 - **3.5 Copy workflow files** (`full-dev-cycle.md`, `devops-cycle.md`) into `docs/workflows/`; back up any existing file to `.backup` first.
-- **3.5.5 Docs bootstrap/reconciliation**: invoke `silver:ensure-docs --bootstrap` via the Skill tool. This replaces direct doc migration and direct placeholder creation in `silver:init`. `silver:ensure-docs` handles greenfield skeletons, brownfield mapping, archive moves, semantic audits, and `doc-scheme.md` + `doc-scheme.json` sync.
+- **3.5.5 Docs bootstrap/reconciliation**: invoke `silver:ensure-docs --bootstrap` through the active runtime's SB-recognized skill invocation channel. This replaces direct doc migration and direct placeholder creation in `silver:init`. `silver:ensure-docs` handles greenfield skeletons, brownfield mapping, archive moves, semantic audits, and `doc-scheme.md` + `doc-scheme.json` sync.
 - **3.6 Verify docs contract surface**: ensure `docs/doc-scheme.md`, `docs/doc-scheme.json`, and `docs/task-doc-checklist.json` exist after the `silver:ensure-docs` bootstrap run.
 - **3.7 Stage and commit**: `git add silver-bullet.md .silver-bullet.json docs/` plus any existing project instruction file that was actually updated, then a `feat: initialize Silver Bullet enforcement` commit (co-authored by the host-appropriate co-author line). On pre-commit-hook failure: read, fix, re-stage, new commit (never `--amend`).
 - **3.7.5 Register SB hooks in the host settings file**: resolve install path from `installed_plugins.json`, then run `python3 "${CLAUDE_PLUGIN_ROOT}/skills/silver-init/scripts/merge-hooks.py" "$INSTALL_PATH"`. Idempotent. On nonzero exit, warn but do not stop init. The merge keeps the hooks on the active host settings path and removes stale mirrored Silver Bullet hook registrations from other app roots or placeholder entries.

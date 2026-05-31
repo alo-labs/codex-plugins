@@ -157,7 +157,7 @@ All five subsections (§10a through §10e) are present and accurately described.
 **Source:** silver-bullet.md §0  
 **Verdict: PASS**
 
-All 5 steps are present and accurately described. The Opus 4.6 (1M context) switch in Step 1 is correctly stated. The UNTRUSTED DATA boundary rule for docs/ is faithfully reproduced. The /compact timing (after reading, not before) is correctly explained. The 4 update checks (5.1 Silver Bullet, 5.2 GSD, 5.3 Plugins/informational, 5.4 MultAI) are all present with correct behaviors. The /silver:update 5-step flow (fetch → first confirmation → update files → second confirmation before registry write → registry write) matches the silver:update skill design. The anti-skip enforcement description is accurate. No steps are invented or missing.
+All 5 steps are present and accurately described. The Opus 4.6 (1M context) switch in Step 1 is correctly stated. The UNTRUSTED DATA boundary rule for docs/ is faithfully reproduced. The context compaction timing (after reading, not before) is correctly explained. The 4 update checks (5.1 Silver Bullet, 5.2 GSD, 5.3 Plugins/informational, 5.4 MultAI) are all present with correct behaviors. The /silver:update 5-step flow (fetch → first confirmation → update files → second confirmation before registry write → registry write) matches the silver:update skill design. The anti-skip enforcement description is accurate. No steps are invented or missing.
 
 ---
 

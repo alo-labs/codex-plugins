@@ -53,7 +53,7 @@ Before pushing, run CI checks locally:
 
 ```bash
 # Validate JSON
-for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.json \
+for f in .codex-plugin/plugin.json .codex-plugin/marketplace.json hooks/hooks.json \
           templates/silver-bullet.config.json.default package.json; do
   jq empty "$f" && echo "Valid: $f"
 done

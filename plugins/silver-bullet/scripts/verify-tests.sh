@@ -30,10 +30,10 @@ find_repo_root() {
 }
 
 resolve_marker_file() {
-  local default="${SB_RUNTIME_STATE_DIR}/verify-tests-state"
+  local default="~/.codex/.silver-bullet/verify-tests-state"
   local candidate="${SILVER_BULLET_VERIFY_TESTS_STATE_FILE:-$default}"
   case "$candidate" in
-    "${SB_RUNTIME_HOME_ROOT}"/.silver-bullet/*) printf '%s' "$candidate" ;;
+    "~/.codex"/.silver-bullet/*) printf '%s' "$candidate" ;;
     *) printf '%s' "$default" ;;
   esac
 }

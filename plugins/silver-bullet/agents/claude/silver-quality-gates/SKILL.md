@@ -1,5 +1,6 @@
 ---
 name: silver:quality-gates
+title: Silver: /silver:quality-gates - Quality Gates
 description: >
   This skill should be used for dual-mode: design-time checklist (pre-plan) or adversarial audit (pre-ship). Mode auto-detected from artifact state.
 version: 0.1.0
@@ -44,7 +45,7 @@ Use the disambiguation table to determine mode:
 
 ## Step 1: Load quality dimension skills
 
-Use the Read tool to read each of the following files:
+Use the active runtime file-reading mechanism to read each of the following files:
 
 1. `${PLUGIN_ROOT}/skills/modularity/SKILL.md`
 2. `${PLUGIN_ROOT}/skills/reusability/SKILL.md`

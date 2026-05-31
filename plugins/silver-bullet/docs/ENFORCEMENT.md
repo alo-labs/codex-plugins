@@ -6,7 +6,7 @@ Silver Bullet enforces workflow compliance through 12 independent layers. No sin
 
 | # | Layer | Mechanism | Fires On | What It Prevents |
 |---|-------|-----------|----------|-----------------|
-| 1 | **Skill Recording** | `record-skill.sh` (PostToolUse) | Every Skill tool call | Skills invoked but not tracked |
+| 1 | **Skill Recording** | `record-skill.sh` (PostToolUse) | Claude `Skill` tool calls and Codex `silver-bullet invoke-skill` receipts | Skills invoked through a supported channel but not tracked |
 | 2 | **Dev Cycle Gate** | `dev-cycle-check.sh` (PreToolUse) | Edit, Write, MultiEdit, Bash | Code changes before planning is complete. Uses active `.planning/workflows/<id>.md` admission control first, then legacy skill markers when no composed workflow is active. |
 | 3 | **Planning File Guard** | `planning-file-guard.sh` (PreToolUse) | Edit, Write, MultiEdit | Direct edits to GSD-managed planning artifacts (ROADMAP.md, STATE.md, etc.); forces use of owning GSD skill |
 | 4 | **Completion Audit** | `completion-audit.sh` (PostToolUse) | git commit/push/deploy/release | Shipping without required paths/skills. Uses `SB_WORKFLOW_ID`-matched `.planning/workflows/<id>.md` first, then legacy fallback when no composed workflow is active. |
@@ -15,7 +15,7 @@ Silver Bullet enforces workflow compliance through 12 independent layers. No sin
 | 7 | **Phase Archive** | `phase-archive.sh` (PreToolUse) | `gsd-tools phases clear` | Data loss on milestone clear |
 | 8 | **Stop Hook** | `stop-check.sh` (Stop/SubagentStop) | Task-complete declaration | Declaring done before required planning skills are in state |
 | 9 | **Prompt Recorder + Reminder** | `record-requested-skill.sh` + `prompt-reminder.sh` (UserPromptSubmit) | Every user message | Requested SB/GSD routes are recorded before the next turn; missing skills are re-injected |
-| 10 | **Forbidden Skill Gate** | `forbidden-skill-check.sh` (PreToolUse/Skill) | Every Skill invocation | Deprecated/forbidden skills (`executing-plans`, `subagent-driven-development`) |
+| 10 | **Forbidden Skill Gate** | `forbidden-skill-check.sh` (PreToolUse/Skill) | Every Claude Skill invocation | Deprecated/forbidden skills (`executing-plans`, `subagent-driven-development`) |
 | 11 | **ROADMAP Freshness Gate** | `roadmap-freshness.sh` (PreToolUse/Bash) | git commit | Committing SUMMARY.md without ticking the corresponding ROADMAP.md checkbox |
 | 12 | **Redundant Instructions** | `silver-bullet.md` + optional project instruction file (`CLAUDE.md` / `AGENTS.md`, if present) | Every session | Same rules enforced across multiple surfaces for defense-in-depth |
 
@@ -68,15 +68,15 @@ Before any release, 4 stages must pass in the current session:
 
 Each stage requires explicit `superpowers:verification-before-completion` invocation because the release gate document requires it. The quality-gate file is cleared on session start — no stale markers.
 
-For the Silver Bullet plugin repo, the release live matrix wrapper (`scripts/run-release-live-matrix.sh`) and the todo-app live E2E suite (`tests/e2e-live/run-e2e-live-tests.sh`) are additional mandatory release prerequisites. Downstream projects use the generic release profile unless their `.silver-bullet.json` opts into plugin-runtime release matrices. The stage markers and the mandatory post-gate full-suite rerun marker live in `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/quality-gate-state`. The full-suite rerun itself runs through `verify-tests`, which also writes `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/verify-tests-state` so final delivery can detect stale source changes.
+For the Silver Bullet plugin repo, the release live matrix wrapper (`scripts/run-release-live-matrix.sh`) and the todo-app live E2E suite (`tests/e2e-live/run-e2e-live-tests.sh`) are additional mandatory release prerequisites. Downstream projects use the generic release profile unless their `.silver-bullet.json` opts into plugin-runtime release matrices. The stage markers and the mandatory post-gate full-suite rerun marker live in `~/.codex/.silver-bullet/quality-gate-state`. The full-suite rerun itself runs through `verify-tests`, which also writes `~/.codex/.silver-bullet/verify-tests-state` so final delivery can detect stale source changes.
 
 ## Environment Variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `SILVER_BULLET_STATE_FILE` | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state` | Override the state file path used by all hooks. Intended for testing — lets test suites point hooks at a temp file instead of the real state. Must resolve to a path inside `${SB_RUNTIME_HOME_ROOT}/` (security guard enforced by `session-start.sh`). Paths outside `${SB_RUNTIME_HOME_ROOT}/` are rejected and fall back to the default. |
-| `SILVER_BULLET_QUALITY_GATE_STATE_FILE` | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/quality-gate-state` | Override the release-quality-gate marker file used by `completion-audit.sh` and `session-start`. Intended for testing — lets test suites point hooks at a temp file instead of the real gate file. Must resolve to a path inside `${SB_RUNTIME_HOME_ROOT}/` (security guard enforced by `session-start`). Paths outside `${SB_RUNTIME_HOME_ROOT}/` are rejected and fall back to the default. |
-| `SILVER_BULLET_VERIFY_TESTS_STATE_FILE` | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/verify-tests-state` | Override the test-execution freshness marker used by `completion-audit.sh`, `dev-cycle-check.sh`, `session-start`, and `/verify-tests`. Intended for testing — lets test suites point the gate at a temp file instead of the real freshness marker. Must resolve to a path inside `${SB_RUNTIME_HOME_ROOT}/` (security guard enforced by the hooks). Paths outside `${SB_RUNTIME_HOME_ROOT}/` are rejected and fall back to the default. |
+| `SILVER_BULLET_STATE_FILE` | `~/.codex/.silver-bullet/state` | Override the state file path used by all hooks. Intended for testing — lets test suites point hooks at a temp file instead of the real state. Must resolve to a path inside `~/.codex/` (security guard enforced by `session-start.sh`). Paths outside `~/.codex/` are rejected and fall back to the default. |
+| `SILVER_BULLET_QUALITY_GATE_STATE_FILE` | `~/.codex/.silver-bullet/quality-gate-state` | Override the release-quality-gate marker file used by `completion-audit.sh` and `session-start`. Intended for testing — lets test suites point hooks at a temp file instead of the real gate file. Must resolve to a path inside `~/.codex/` (security guard enforced by `session-start`). Paths outside `~/.codex/` are rejected and fall back to the default. |
+| `SILVER_BULLET_VERIFY_TESTS_STATE_FILE` | `~/.codex/.silver-bullet/verify-tests-state` | Override the test-execution freshness marker used by `completion-audit.sh`, `dev-cycle-check.sh`, `session-start`, and `/verify-tests`. Intended for testing — lets test suites point the gate at a temp file instead of the real freshness marker. Must resolve to a path inside `~/.codex/` (security guard enforced by the hooks). Paths outside `~/.codex/` are rejected and fall back to the default. |
 
 ## Bypass Detection
 

@@ -11,7 +11,7 @@ Follow this guide exactly when implementing the skill.
 `/plugin:update` updates any plugin installed via Claude Code's plugin system. It:
 
 1. Resolves which plugin to update (from argument or by prompting)
-2. Reads the installed version from `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`
+2. Reads the installed version from `~/.codex/plugins/installed_plugins.json`
 3. Resolves the GitHub repository URL from the plugin's own `package.json` in the cache
 4. Fetches the latest release from GitHub
 5. Compares versions; exits early if already up to date
@@ -37,7 +37,7 @@ description: "Update any installed Claude Code plugin: check for a new release, 
 
 ## Registry structure
 
-The plugin registry is at `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`. Its shape:
+The plugin registry is at `~/.codex/plugins/installed_plugins.json`. Its shape:
 
 ```json
 {
@@ -46,7 +46,7 @@ The plugin registry is at `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.jso
     "<plugin-name>@<registry-name>": [
       {
         "scope": "user",
-        "installPath": "${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registry-name>/<plugin-name>/<version>",
+        "installPath": "~/.codex/plugins/cache/<registry-name>/<plugin-name>/<version>",
         "version": "1.2.3",
         "installedAt": "2026-01-01T00:00:00.000Z",
         "lastUpdated": "2026-01-01T00:00:00.000Z",
@@ -59,9 +59,9 @@ The plugin registry is at `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.jso
 
 Key facts:
 - The registry key is `<plugin-name>@<registry-name>` (e.g. `silver-bullet@silver-bullet`).
-- `installPath` encodes the pattern: `${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registry-name>/<plugin-name>/<version>`.
+- `installPath` encodes the pattern: `~/.codex/plugins/cache/<registry-name>/<plugin-name>/<version>`.
 - The new cache path for an update is the same pattern with the new version:
-  `${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registry-name>/<plugin-name>/<new-version>`.
+  `~/.codex/plugins/cache/<registry-name>/<plugin-name>/<new-version>`.
 - The `plugins` value is an array; always read/write `[0]` (the first and only entry).
 
 ---
@@ -104,7 +104,7 @@ If the user provided a plugin name as an argument (e.g. `/plugin:update silver-b
 use that name to find the matching registry key (find the key whose prefix before `@`
 matches the argument).
 
-If no argument was provided, list all installed plugins and use AskUserQuestion:
+If no argument was provided, list all installed plugins and ask the user directly:
 - Question: "Which plugin do you want to update?"
 - Options: one option per registry key, showing `<plugin-name> (v<version>)`, plus "Cancel"
 
@@ -221,7 +221,7 @@ plugin registry. Your project files are never touched — only the plugin cache
 is updated.
 ```
 
-Use AskUserQuestion:
+Ask the user directly:
 - Question: `Proceed with updating <plugin-name> to v<latest>?`
 - Options:
   - `"Yes, update now"` — proceed to install
@@ -236,7 +236,7 @@ Construct the new cache path by replacing the version segment in the existing
 expects absolute paths (e.g. `/Users/alice/...`), never `~`-prefixed paths:
 
 ```bash
-NEW_CACHE="${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registryName>/<pluginName>/<latestVersion>"
+NEW_CACHE="~/.codex/plugins/cache/<registryName>/<pluginName>/<latestVersion>"
 ```
 
 Clone:
@@ -266,7 +266,7 @@ git -C "$NEW_CACHE" rev-parse HEAD
 
 ### Step 8 — Update the plugin registry
 
-Read `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`. Update only the matching
+Read `~/.codex/plugins/installed_plugins.json`. Update only the matching
 `registryKey` entry at index `[0]`:
 
 | Field | New value |
@@ -279,7 +279,7 @@ Read `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`. Update only the m
 Preserve all other fields (`scope`, `installedAt`, etc.) unchanged.
 Preserve all other registry entries unchanged.
 
-Write the updated JSON back to `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`.
+Write the updated JSON back to `~/.codex/plugins/installed_plugins.json`.
 
 **Do NOT delete the old cache directory.** The old version remains at its original
 `installPath` untouched. This allows manual rollback by reverting the registry entry.
@@ -294,8 +294,8 @@ Only the `installPath` pointer in the registry changes — no files are removed.
 
 ⚠️  Restart Claude Desktop to pick up the new skills and hooks.
 
-Old cache: ${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registryName>/<pluginName>/<installed>
-New cache: ${SB_RUNTIME_HOME_ROOT}/plugins/cache/<registryName>/<pluginName>/<latest>
+Old cache: ~/.codex/plugins/cache/<registryName>/<pluginName>/<installed>
+New cache: ~/.codex/plugins/cache/<registryName>/<pluginName>/<latest>
 
 [View full changelog](https://github.com/<org>/<repo>/blob/main/CHANGELOG.md)
 ```

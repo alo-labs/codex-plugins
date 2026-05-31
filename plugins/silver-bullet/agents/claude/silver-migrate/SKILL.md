@@ -1,5 +1,6 @@
 ---
 name: silver:migrate
+title: Silver: /silver:migrate - Migrate
 description: This skill should be used when the user runs `/silver:migrate` or asks to migrate an older Silver Bullet project from the retired single-file WORKFLOW.md model to per-instance `.planning/workflows/<id>.md` tracking.
 version: 0.2.0
 ---
@@ -64,10 +65,10 @@ if [[ -x scripts/workflows.sh ]]; then
 else
   SB_WORKFLOWS_BIN="$(
     for root in \
-      "$HOME/.claude/plugins/cache/alo-labs-codex/silver-bullet/current" \
-      "~/.claude/plugins/cache/alo-labs/silver-bullet/current" \
-      "$HOME/.claude/plugins/cache/alo-labs-codex/silver-bullet"/* \
-      "~/.claude/plugins/cache/alo-labs/silver-bullet"/*; do
+      "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current" \
+      "~/.codex/plugins/cache/alo-labs/silver-bullet/current" \
+      "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet"/* \
+      "~/.codex/plugins/cache/alo-labs/silver-bullet"/*; do
       if [[ -x "$root/scripts/workflows.sh" ]]; then
         printf "%s\n" "$root/scripts/workflows.sh"
         break

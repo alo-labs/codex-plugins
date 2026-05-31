@@ -1,5 +1,6 @@
 ---
 name: silver:release
+title: Silver: /silver:release - Release
 description: >
   This skill should be used for SB-orchestrated milestone release: silver:quality-gates → audit → gap-closure (max 2x) → docs → GSD ship/complete milestone → silver:create-release
 argument-hint: "<version or release description, e.g. v1.2.0>"
@@ -99,10 +100,10 @@ if [[ -x scripts/workflows.sh ]]; then
 else
   SB_WORKFLOWS_BIN="$(
     for root in \
-      "$HOME/.claude/plugins/cache/alo-labs-codex/silver-bullet/current" \
-      "~/.claude/plugins/cache/alo-labs/silver-bullet/current" \
-      "$HOME/.claude/plugins/cache/alo-labs-codex/silver-bullet"/* \
-      "~/.claude/plugins/cache/alo-labs/silver-bullet"/*; do
+      "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current" \
+      "~/.codex/plugins/cache/alo-labs/silver-bullet/current" \
+      "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet"/* \
+      "~/.codex/plugins/cache/alo-labs/silver-bullet"/*; do
       if [[ -x "$root/scripts/workflows.sh" ]]; then
         printf "%s\n" "$root/scripts/workflows.sh"
         break
@@ -155,21 +156,21 @@ When the user requests skipping any step:
 
 ## Step 0: Pre-Release Quality Gates
 
-Invoke `silver:quality-gates` via the Skill tool. Purpose: full 8-core-dimension sweep before any release audit begins, plus conditional AI/LLM safety and DevOps gates where applicable. Non-skippable.
+Invoke `silver:quality-gates` through the active runtime's SB-recognized skill invocation channel. Purpose: full 8-core-dimension sweep before any release audit begins, plus conditional AI/LLM safety and DevOps gates where applicable. Non-skippable.
 
 ## Step 1: Cross-Phase UAT
 
-Invoke `gsd-audit-uat` via the Skill tool. Purpose: cross-phase UAT — surface all outstanding gaps before release. This gives a complete picture of the milestone state before deciding whether to ship.
+Invoke `gsd-audit-uat` through the active runtime's SB-recognized skill invocation channel. Purpose: cross-phase UAT — surface all outstanding gaps before release. This gives a complete picture of the milestone state before deciding whether to ship.
 
 ## Step 2: Milestone Completion Audit
 
-Invoke `gsd-audit-milestone` via the Skill tool. Purpose: compare milestone completion vs original intent — are all committed features shipped?
+Invoke `gsd-audit-milestone` through the active runtime's SB-recognized skill invocation channel. Purpose: compare milestone completion vs original intent — are all committed features shipped?
 
 **After audit:** check for gaps.
 
 ## Step 2a: Security Hard Gate
 
-Invoke `security` via the Skill tool. Purpose: independent pre-release security review — mandatory regardless of §10 preferences. Non-skippable. Runs after milestone audit (Step 2) so it covers the full set of changes being released.
+Invoke `security` through the active runtime's SB-recognized skill invocation channel. Purpose: independent pre-release security review — mandatory regardless of §10 preferences. Non-skippable. Runs after milestone audit (Step 2) so it covers the full set of changes being released.
 
 ## FLOW DESIGN HANDOFF — Milestone UI handoff
 
@@ -181,7 +182,7 @@ ls .planning/phases/*/UI-SPEC.md .planning/phases/*/UI-REVIEW.md 2>/dev/null | g
 
 **Trigger note:** Activated when milestone has UI phases (detected by UI-SPEC.md or UI-REVIEW.md in any phase directory) AND currently in release flow. Runs inside FLOW RELEASE only — never in the per-phase sequence.
 
-**Steps** (all via Skill tool):
+**Steps** (all through the active runtime's SB-recognized skill invocation channel):
 1. `design:design-handoff` (Always in this path — produce handoff package)
 2. `design:design-system` (As-needed — final component inventory, design token reconciliation)
 
@@ -195,7 +196,7 @@ ls .planning/phases/*/UI-SPEC.md .planning/phases/*/UI-REVIEW.md 2>/dev/null | g
 
 Track iteration count (starts at 0).
 
-**Iteration gate:** If iteration count reaches 2 and gaps remain, do NOT start another iteration. Instead, present to user using AskUserQuestion:
+**Iteration gate:** If iteration count reaches 2 and gaps remain, do NOT start another iteration. Instead, present to the user directly:
 
 > Release gap limit reached (2 gap-closure iterations completed). Remaining gaps:
 > {list gaps from gsd-audit-milestone output}
@@ -208,33 +209,33 @@ Wait for user selection. If A: proceed to Step 3a with gaps documented. If B or 
 
 **When iteration count < 2:**
 
-1. Invoke `gsd-plan-milestone-gaps` via the Skill tool. Purpose: plan the gap closure phases.
-2. Invoke `silver:feature` via the Skill tool for each gap phase.
+1. Invoke `gsd-plan-milestone-gaps` through the active runtime's SB-recognized skill invocation channel. Purpose: plan the gap closure phases.
+2. Invoke `silver:feature` through the active runtime's SB-recognized skill invocation channel for each gap phase.
 3. After gap phases complete, return to Step 0 (full quality gate sweep again).
 4. Increment iteration count.
 5. Re-run Steps 1–2 to check if gaps are resolved.
 
 ## Step 3a: Verify Existing Documentation
 
-Invoke `gsd-docs-update` via the Skill tool. Purpose: verify all existing docs are accurate against current codebase — correct any outdated content before generating new docs.
+Invoke `gsd-docs-update` through the active runtime's SB-recognized skill invocation channel. Purpose: verify all existing docs are accurate against current codebase — correct any outdated content before generating new docs.
 
 ## Step 3b: Generate/Update Documentation
 
-After gsd-docs-update completes (accuracy verified), invoke `documentation` via the Skill tool when available. Purpose: generate/update GitHub README, user guide, website help section, and project page. Runs AFTER gsd-docs-update so it generates new content on top of verified accuracy — never generates on stale foundation.
+After gsd-docs-update completes (accuracy verified), invoke `documentation` through the active runtime's SB-recognized skill invocation channel when available. Purpose: generate/update GitHub README, user guide, website help section, and project page. Runs AFTER gsd-docs-update so it generates new content on top of verified accuracy — never generates on stale foundation.
 
 ## Step 4: Milestone Summary
 
-Invoke `gsd-milestone-summary` via the Skill tool. Purpose: generate milestone narrative for release notes.
+Invoke `gsd-milestone-summary` through the active runtime's SB-recognized skill invocation channel. Purpose: generate milestone narrative for release notes.
 
 ## Step 5: PR Branch (ask user)
 
-Ask using AskUserQuestion:
+Ask the user directly:
 
 > Would you like a clean PR branch (strips .planning/ commits)?
 >
 > A. Yes — run gsd-pr-branch  B. No — release as-is  C. Save as permanent preference
 
-If A: invoke `gsd-pr-branch` via the Skill tool.
+If A: invoke `gsd-pr-branch` through the active runtime's SB-recognized skill invocation channel.
 If C: record in silver-bullet.md §10e and templates/silver-bullet.md.base §9e, commit both.
 
 ## Step 6: Cross-Artifact Consistency Review
@@ -247,17 +248,17 @@ Do NOT proceed to Step 7 (Ship) until cross-artifact review reports clean pass. 
 
 ## Step 6b: Pre-Ship Deployment Checklist
 
-Invoke `deploy-checklist` via the Skill tool when available. Purpose: verify all pre-deployment conditions are met before gsd-ship executes — infrastructure, environment config, rollback plan, monitoring. Non-skippable when the release includes deployment.
+Invoke `deploy-checklist` through the active runtime's SB-recognized skill invocation channel when available. Purpose: verify all pre-deployment conditions are met before gsd-ship executes — infrastructure, environment config, rollback plan, monitoring. Non-skippable when the release includes deployment.
 
 ## Step 6c: Mandatory Full Test Suite Rerun
 
-Invoke `verify-tests` after the pre-release quality gate has completed and before any ship/release step. Purpose: re-run the full local test suite in the current release session so the release gate is based on fresh verification, not stale results. After the suite passes, `verify-tests` writes its freshness marker and the release flow records `full-test-suite-rerun` in `~/.claude/.silver-bullet/quality-gate-state`. Non-skippable.
+Invoke `verify-tests` after the pre-release quality gate has completed and before any ship/release step. Purpose: re-run the full local test suite in the current release session so the release gate is based on fresh verification, not stale results. After the suite passes, `verify-tests` writes its freshness marker and the release flow records `full-test-suite-rerun` in `~/.codex/.silver-bullet/quality-gate-state`. Non-skippable.
 
 **Enforcement:** Do not proceed to Step 7 until the full suite rerun has completed and the marker is recorded.
 
 ## Step 7: Ship — Deploy, CI Green
 
-Invoke `gsd-ship` via the Skill tool. Purpose: deploy, ensure CI is green, push the branch. This MUST succeed before milestone is archived.
+Invoke `gsd-ship` through the active runtime's SB-recognized skill invocation channel. Purpose: deploy, ensure CI is green, push the branch. This MUST succeed before milestone is archived.
 
 **Enforcement:** Do not proceed to Step 8 until gsd-ship confirms CI green and deploy succeeded.
 
@@ -265,7 +266,7 @@ Invoke `gsd-ship` via the Skill tool. Purpose: deploy, ensure CI is green, push 
 
 **Only after Step 7 (gsd-ship) confirms success:**
 
-Invoke `gsd-complete-milestone` via the Skill tool. Purpose: archive milestone and prepare for the next version. Produces archival commits (ROADMAP, MILESTONES, STATE, RETROSPECTIVE). In the SB release composition, GSD completion must not be followed by a second GSD-owned public tag; `silver:create-release` owns the final public release tag/GitHub Release step.
+Invoke `gsd-complete-milestone` through the active runtime's SB-recognized skill invocation channel. Purpose: archive milestone and prepare for the next version. Produces archival commits (ROADMAP, MILESTONES, STATE, RETROSPECTIVE). In the SB release composition, GSD completion must not be followed by a second GSD-owned public tag; `silver:create-release` owns the final public release tag/GitHub Release step.
 
 ## Step 9: Create Release
 
@@ -279,12 +280,12 @@ bash scripts/sync-release-marketplace-versions.sh
 
 This step is required before the final release tag because the release commit must carry the marketplace manifest versions that match the new plugin version and both upstream marketplace repos must be pushed at the same version.
 
-Invoke `silver:create-release` via the Skill tool. Purpose: SB-owned release creation — updates CHANGELOG.md and README version badge, commits those changes, creates the version tag, and publishes the GitHub Release. Tag is placed LAST so it captures all archival commits.
+Invoke `silver:create-release` through the active runtime's SB-recognized skill invocation channel. Purpose: SB-owned release creation — updates CHANGELOG.md and README version badge, commits those changes, creates the version tag, and publishes the GitHub Release. Tag is placed LAST so it captures all archival commits.
 
-The release commit also stages `.claude-plugin/marketplace.json` and `plugins/silver-bullet/.claude-plugin/plugin.json` so both marketplace entries ship with the release version, and the marketplace sync wrapper must already have committed and pushed both upstream marketplace repo bumps:
+The release commit also stages `.codex-plugin/marketplace.json` and `plugins/silver-bullet/.codex-plugin/plugin.json` so both marketplace entries ship with the release version, and the marketplace sync wrapper must already have committed and pushed both upstream marketplace repo bumps:
 
 ```bash
-git add CHANGELOG.md README.md .claude-plugin/marketplace.json plugins/silver-bullet/.claude-plugin/plugin.json
+git add CHANGELOG.md README.md .codex-plugin/marketplace.json plugins/silver-bullet/.codex-plugin/plugin.json
 ```
 
 > **Why last?** Creating the tag before milestone archival causes the archival commits to appear after the tag, requiring an immediate patch release. The tag must be the final commit in the release.

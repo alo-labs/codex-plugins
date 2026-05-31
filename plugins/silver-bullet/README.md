@@ -1,6 +1,6 @@
 # Silver Bullet
 
-[![version](https://img.shields.io/badge/version-v0.37.11-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.11)
+[![version](https://img.shields.io/badge/version-v0.37.12-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.12)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Agentic Process Orchestrator for AI-native Software Engineering and DevOps.**
@@ -233,6 +233,8 @@ The installer:
 - keeps `/silver` and `/silver:*` in the main Silver Bullet package
 - includes the packaged `scripts/workflows.sh` helper used by composed workflow
   tracking
+- includes the `scripts/silver-bullet invoke-skill <name>` Codex adapter so
+  required skills can be invoked and recorded without a Claude-only `Skill` tool
 - enables SB only when the current working directory is an actual SB project
   root (`.silver-bullet.json` plus `silver-bullet.md`)
 - purges stale SB user-level hook entries so unrelated Codex projects do not get
@@ -292,7 +294,7 @@ It will:
 - copy workflow docs into `docs/workflows/`
 - scaffold the documentation scheme and durable knowledge/lessons folders
 - initialize or connect GSD planning artifacts
-- set up enforcement state paths under `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/`
+- set up enforcement state paths under `~/.codex/.silver-bullet/`
 
 After that, use `/silver` for normal work.
 
@@ -330,6 +332,10 @@ Logical route names may appear differently by host. For example, a Codex plugin
 install may expose `silver-bullet:silver-feature`, while generated command
 surfaces may expose `silver:feature`. The workflow contracts use logical names;
 the host adapter chooses the equivalent exposed name.
+
+In Codex, use `silver-bullet invoke-skill <name>` when SB requires a recorded
+skill invocation and the runtime has no callable `Skill` tool. Directly reading
+`SKILL.md` is loaded-only metadata and does not satisfy workflow gates.
 
 ## Configuration
 
@@ -374,14 +380,14 @@ Minimal shape:
     ]
   },
   "state": {
-    "state_file": "${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state",
-    "trivial_file": "${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial"
+    "state_file": "~/.codex/.silver-bullet/state",
+    "trivial_file": "~/.codex/.silver-bullet/trivial"
   },
   "release": {
     "profile": "generic",
     "require_plugin_runtime_matrix": true,
     "require_pre_release_quality_gate": true,
-    "quality_gate_state_file": "${SB_RUNTIME_HOME_ROOT}/.silver-bullet/quality-gate-state"
+    "quality_gate_state_file": "~/.codex/.silver-bullet/quality-gate-state"
   }
 }
 ```
@@ -496,12 +502,12 @@ site/                             Public website and Help Center
 plugins/silver-bullet/            Codex package surface, mostly symlinks to source
 forge/                            Forge runtime port
 tests/                            Unit, integration, live, and E2E harnesses
-.claude-plugin/                   Claude plugin marketplace metadata
+.codex-plugin/                   Claude plugin marketplace metadata
 .planning/                        GSD project lifecycle artifacts for this repo
 ```
 
 The Codex package mostly symlinks source-owned assets into `plugins/silver-bullet/`, but materializes the picker-facing `skills/` tree as real files.
-Project-instance artifacts such as `.planning/`, `.claude/`, `.forge/`, and
+Project-instance artifacts such as `.planning/`, `.codex/`, `.forge/`, and
 runtime state are not treated as plugin package content.
 
 ## Troubleshooting
@@ -519,7 +525,7 @@ runtime state are not treated as plugin package content.
 | Hooks not firing | Confirm `.silver-bullet.json` and `silver-bullet.md` both exist in the project root |
 | Too many files trigger enforcement | Adjust `project.src_pattern` and `project.src_exclude_pattern` |
 | YAML/JSON edits are unexpectedly gated | In `devops-cycle`, YAML/JSON/TOML are infrastructure code and intentionally gated |
-| CI is red and you need to push a fix | Commit normally; for push use the explicit CI override marker only when fixing CI: `touch ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/ci-red-override` |
+| CI is red and you need to push a fix | Commit normally; for push use the explicit CI override marker only when fixing CI: `touch ~/.codex/.silver-bullet/ci-red-override` |
 | Want to refresh templates | Re-run `/silver:init`; it detects existing config and preserves project-owned content |
 | Want to start fresh | Remove `.silver-bullet.json` and `silver-bullet.md`, then rerun `/silver:init` |
 

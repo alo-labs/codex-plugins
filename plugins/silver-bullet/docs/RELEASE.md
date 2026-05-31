@@ -78,7 +78,7 @@ Release closure is mandatory only after the following have succeeded:
 ## Plugin Update Mechanism
 
 Users update via `/silver:update` which:
-1. Reads installed version from `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json`
+1. Reads installed version from `~/.codex/plugins/installed_plugins.json`
 2. Resolves GitHub repo from `package.json` in the cache
 3. Fetches latest release, compares versions
 4. Clones new release into plugin cache

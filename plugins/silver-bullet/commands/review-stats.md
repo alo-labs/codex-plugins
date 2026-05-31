@@ -1,5 +1,6 @@
 ---
 name: silver:review-stats
+title: Silver: /silver:review-stats - Review Stats
 description: Summarize Silver Bullet review statistics
 argument-hint: <scope or time range>
 ---

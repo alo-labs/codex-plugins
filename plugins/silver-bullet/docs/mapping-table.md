@@ -2,15 +2,15 @@
 
 | Claude Code Primitive | Forge Equivalent | Notes |
 |---|---|---|
-| Skill tool invocation (`Skill({skill: "tdd"})`) | Trigger phrase in prompt ("TDD", "test-driven") | Forge's skill engine detects via YAML `trigger` field |
+| supported skill invocation (`Skill({skill: "tdd"})`) | Trigger phrase in prompt ("TDD", "test-driven") | Forge's skill engine detects via YAML `trigger` field |
 | `TodoWrite` | Session log checkboxes in `docs/sessions/YYYY-MM-DD.md` | Manual tracking |
-| `AskUserQuestion` | Inline prose question in skill body (wait for response) | Same behavior |
+| `direct user interaction` | Inline prose question in skill body (wait for response) | Same behavior |
 | `PreToolUse` hook | AGENTS.md "Before every action" section | Applied globally, not per-call |
 | `PostToolUse` hook | AGENTS.md "After every action" section | Applied globally |
 | `SessionStart` hook | AGENTS.md "On Session Start" section | Runs at session init |
 | Plugin MANIFEST.json | `forge-sb-install.sh` bootstrap script | Manual install |
-| `${SB_RUNTIME_HOME_ROOT}plugins.json` | `~/forge/AGENTS.md` + `~/forge/skills/` | Global user config |
-| Project `.claudeplugins.json` | `.forge/skills/` + project `AGENTS.md` | Per-project config |
+| `~/.codexplugins.json` | `~/forge/AGENTS.md` + `~/forge/skills/` | Global user config |
+| Project `.codexplugins.json` | `.forge/skills/` + project `AGENTS.md` | Per-project config |
 | `silver-bullet.md §10` preferences | AGENTS.md standing instructions | Baked in, not per-session |
 | Episodic memory MCP | Session logs + AGENTS.md mentoring loop | Manual extraction |
 | Multi-AI review (`multai`) | Inline "get second opinion" instruction in review skills | Simulated via prompt |
@@ -51,7 +51,7 @@ Forge: User types "silver feature" → `silver` skill detects trigger → routes
 1. **No plugin system**: Skills are plain files, no manifest registration
 2. **No hooks.json**: AGENTS.md replaces hook-based enforcement
 3. **No state machine**: Session logs replace TodoWrite tracking
-4. **No automatic skill recording**: Trigger detection replaces Skill tool calls
+4. **No automatic skill recording**: Trigger detection replaces supported skill invocation events/receipts
 5. **No subagent tracking**: AGENTS.md responsibilities replace hooks
 
 ## Source Material

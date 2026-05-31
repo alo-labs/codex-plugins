@@ -105,7 +105,7 @@ Non-skippable gates: `security`, `silver:quality-gates` pre-ship, `gsd-verify-wo
 *silver:bugfix (triage → 3 paths per spec §4.2):*
 | Step | Action | Tool/Skill |
 |------|--------|-----------|
-| 0 | Triage: classify symptom type | AskUserQuestion: A. Known symptom  B. Unknown cause  C. Failed GSD workflow |
+| 0 | Triage: classify symptom type | direct user interaction: A. Known symptom  B. Unknown cause  C. Failed GSD workflow |
 | 1A | Known symptom, unknown fix → investigation | superpowers:systematic-debugging → gsd-debug → write fix plan |
 | 1B | Unknown cause → reconstruction | silver:forensics → reconstruct session → then path 1A |
 | 1C | Failed GSD workflow → GSD-specific forensics | gsd-forensics → reconstruct → then path 1A |
@@ -145,7 +145,7 @@ Expected: §2g exists in both files; § 3 follows it.
 
 - [ ] **Step 2: Insert §2h into silver-bullet.md** after the `---` separator that closes §2g (before `## 3. NON-NEGOTIABLE RULES`)
 
-Use the Edit tool. The insertion point is the `---` line just before `## 3. NON-NEGOTIABLE RULES`.
+Use the active runtime file-editing mechanism. The insertion point is the `---` line just before `## 3. NON-NEGOTIABLE RULES`.
 
 - [ ] **Step 3: Insert identical §2h into templates/silver-bullet.md.base** at the same logical position
 
@@ -335,7 +335,7 @@ Replace the existing "Step 2: Match intent against routing table" section with:
 ```markdown
 ### Step 3: Handle ambiguous input
 
-If input matches two or more destinations with similar confidence, use AskUserQuestion:
+If input matches two or more destinations with similar confidence, ask the user directly:
 
 > I'm not sure which workflow to use. Which of these best matches what you want to do?
 >
@@ -398,7 +398,7 @@ git commit -m "feat: expand /silver router with 6-workflow table, disambiguation
 
 Use the Glob tool to search for:
 ```
-${SB_RUNTIME_HOME_ROOT}/plugins/cache/multai/skills/orchestrator/SKILL.md
+~/.codex/plugins/cache/multai/skills/orchestrator/SKILL.md
 ```
 
 If no file found, output exactly:
@@ -415,18 +415,18 @@ STOP. Do not proceed.
 
 Read installed version:
 ```bash
-cat "${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
+cat "~/.codex/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
 ```
 
 Check latest: visit MultAI marketplace or check local CHANGELOG.md:
 ```bash
-cat "${SB_RUNTIME_HOME_ROOT}/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
+cat "~/.codex/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
 ```
 
 If installed version appears outdated compared to CHANGELOG, display:
 > MultAI v{installed} may not be the latest. To update: `/multai:update`
 
-No AskUserQuestion needed — MultAI update is user-initiated only. Just display the notice and continue.
+No interactive user prompt needed — MultAI update is user-initiated only. Just display the notice and continue.
 ```
 
 **A4.3 — Add Anthropic Engineering plugin check** (as new §1.7 after §1.6 MultAI check):
@@ -436,7 +436,7 @@ No AskUserQuestion needed — MultAI update is user-initiated only. Just display
 
 Use the Glob tool to search for:
 ```
-${SB_RUNTIME_HOME_ROOT}/plugins/cache/engineering/skills/
+~/.codex/plugins/cache/engineering/skills/
 ```
 
 If no directory found, display:
@@ -453,7 +453,7 @@ Continue without stopping.
 
 Use the Glob tool to search for:
 ```
-${SB_RUNTIME_HOME_ROOT}/plugins/cache/product-management/skills/
+~/.codex/plugins/cache/product-management/skills/
 ```
 
 If no directory found, display:
@@ -463,7 +463,7 @@ If no directory found, display:
 Continue without stopping.
 ```
 
-**A4.5 — Add gsd-autonomous note to mode selection in Phase 2** (insert after the Interactive/Autonomous AskUserQuestion):
+**A4.5 — Add gsd-autonomous note to mode selection in Phase 2** (insert after the Interactive/Autonomous direct user interaction):
 
 ```markdown
 > **Note on Autonomous mode:** If the user selects Autonomous, SB will invoke `gsd-autonomous` at workflow execution steps rather than `gsd-execute-phase`. `gsd-autonomous` handles full phase execution without checkpoints. This preference is stored in §10e.
@@ -480,15 +480,15 @@ test -d ".planning" && echo "EXISTING" || echo "NEW"
 ```
 
 **If NEW project:**
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "No .planning/ directory found. How would you like to initialize this project?"
 - Options:
   - "A. New project — scaffold with GSD (creates ROADMAP.md, STATE.md, project structure)"
   - "B. Existing codebase — map it first before scaffolding"
   - "C. Skip project initialization — I'll handle it manually"
 
-If A: invoke `/gsd-new-project` via the Skill tool. After it completes, continue with Silver Bullet init.
-If B: invoke `/gsd-map-codebase` via the Skill tool, then invoke `/gsd-scan` via the Skill tool. After both complete, offer to run `/gsd-new-project` to scaffold. Then continue.
+If A: invoke `/gsd-new-project` through the active runtime's SB-recognized skill invocation channel. After it completes, continue with Silver Bullet init.
+If B: invoke `/gsd-map-codebase` through the active runtime's SB-recognized skill invocation channel, then invoke `/gsd-scan` through the active runtime's SB-recognized skill invocation channel. After both complete, offer to run `/gsd-new-project` to scaffold. Then continue.
 If C: continue without project initialization.
 
 **If EXISTING project:**
@@ -499,7 +499,7 @@ test -d ".planning/codebase" && echo "INTEL_EXISTS" || echo "NO_INTEL"
 
 If NO_INTEL and project appears brownfield (has source files but no .planning/codebase/):
 Display: "No codebase intelligence found. Running gsd-scan to orient planning..."
-Invoke `/gsd-scan` via the Skill tool. After it completes, continue.
+Invoke `/gsd-scan` through the active runtime's SB-recognized skill invocation channel. After it completes, continue.
 ```
 
 - [ ] **Step 1: Read current Phase 1, 1.5, and Phase 2 sections**
@@ -516,7 +516,7 @@ grep -n "^## Phase 1\|^### 1\.\|^## Phase 2\|^### 2\." skills/silver-init/SKILL.
 
 - [ ] **Step 5: Add §1.5.4 MultAI version freshness** after existing §1.5.3 Superpowers/Design/Engineering block
 
-- [ ] **Step 6: Add gsd-autonomous note** after the Interactive/Autonomous mode AskUserQuestion in Phase 2
+- [ ] **Step 6: Add gsd-autonomous note** after the Interactive/Autonomous mode direct user interaction in Phase 2
 
 - [ ] **Step 7: Add §2.1 project type detection** after existing §2.0 git repo check
 
@@ -562,7 +562,7 @@ Confirm: identify the exact line containing the auto-update or version check bul
 
 Find the line that references auto-update or version check in §0. Add:
 ```
-- Check if MultAI has updates available: read `${SB_RUNTIME_HOME_ROOT}/plugins/installed_plugins.json` for `multai@multai` version; compare to CHANGELOG. If outdated, offer to run `/multai:update` before starting session.
+- Check if MultAI has updates available: read `~/.codex/plugins/installed_plugins.json` for `multai@multai` version; compare to CHANGELOG. If outdated, offer to run `/multai:update` before starting session.
 ```
 
 - [ ] **Step 3: Apply same change to templates/silver-bullet.md.base**
@@ -599,13 +599,13 @@ git commit -m "feat: add MultAI update check to §0 session startup"
 
 The skill orchestrates steps 0–17 from spec Section 4.1. It:
 1. Displays a `SILVER BULLET ► FEATURE WORKFLOW` banner
-2. Runs each step in order, invoking skills via the Skill tool
-3. Presents AskUserQuestion at conditional branch points (fuzzy? → explore; arch-sig? → multai)
+2. Runs each step in order, invoking skills through the active runtime's SB-recognized skill invocation channel
+3. Presents direct user interaction at conditional branch points (fuzzy? → explore; arch-sig? → multai)
 4. Records any step-skip decisions to §10 of silver-bullet.md
 
 ```markdown
 ---
-name: silver-feature
+name: silver:feature
 description: "Full SB-orchestrated feature development workflow: intel → product-brainstorm → brainstorm → quality-gates → GSD plan/execute/verify → ship"
 argument-hint: "<feature description>"
 ---
@@ -615,7 +615,7 @@ argument-hint: "<feature description>"
 [Full step orchestration per spec Section 4.1]
 ```
 
-- [ ] **Step 1: Write skills/silver-feature/SKILL.md** with full step orchestration following spec Section 4.1 exactly, including all conditional branches and AskUserQuestion points
+- [ ] **Step 1: Write skills/silver-feature/SKILL.md** with full step orchestration following spec Section 4.1 exactly, including all conditional branches and direct user interaction points
 
 - [ ] **Step 2: Verify file exists and covers all major step groups**
 

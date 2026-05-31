@@ -36,7 +36,7 @@
 
 **Actual state found (line 131):**
 ```bash
-printf '%s' "$command_str" | grep -qE '\.claude/[^/]+/(state|branch|trivial|mode)' && \
+printf '%s' "$command_str" | grep -qE '\.codex/[^/]+/(state|branch|trivial|mode)' && \
 ```
 
 The pattern now covers `state`, `branch`, `trivial`, and `mode`. **Correctly implemented.**
@@ -47,13 +47,13 @@ The pattern now covers `state`, `branch`, `trivial`, and `mode`. **Correctly imp
 
 ### Fix 3: F7-01 / F3-01 — Commit SHA display + second confirmation in silver:update Step 5
 
-**Claimed fix:** Display the cloned commit SHA to the user and require a second AskUserQuestion before proceeding to registry update.
+**Claimed fix:** Display the cloned commit SHA to the user and require a second direct user interaction before proceeding to registry update.
 
 **Actual state found in skills/silver-update/SKILL.md Step 5:**
 
 1. After clone, the skill runs `git -C "$NEW_CACHE" rev-parse HEAD` to retrieve the SHA.
 2. Displays a security check message including the full SHA and a link to verify on GitHub.
-3. Issues a second `AskUserQuestion`: *"Proceed with installing v<latest-version> at commit <short-sha>?"* with Yes/Cancel options.
+3. Issues a second `direct user interaction`: *"Proceed with installing v<latest-version> at commit <short-sha>?"* with Yes/Cancel options.
 4. On cancel: removes `$NEW_CACHE` and exits without modifying the registry.
 
 This is a correctly layered two-confirmation flow (Step 4 = changelog confirmation, Step 5 = post-clone SHA confirmation). **Correctly implemented.**
@@ -88,7 +88,7 @@ The prohibition on writing to §10 without confirmation is also reinforced in th
 | F2-01 | §0 missing UNTRUSTED DATA boundary for docs/ reads | **RESOLVED** | Equivalent security note present in §0 of both silver-bullet.md and template |
 | F2-02 | silver-init Phase −1.1 missing UNTRUSTED DATA boundary | **RESOLVED** | Explicit "UNTRUSTED DATA" blockquote added to SKILL.md Phase −1.1 |
 | F6-01 | Tamper regex missing `mode` field | **RESOLVED** | `mode` added to pattern on line 131 of dev-cycle-check.sh |
-| F7-01 | silver:update installs without SHA disclosure | **RESOLVED** | SHA retrieved, displayed, and second AskUserQuestion gates registry write |
+| F7-01 | silver:update installs without SHA disclosure | **RESOLVED** | SHA retrieved, displayed, and second direct user interaction gates registry write |
 | F3-01 | No second confirmation before registry modification | **RESOLVED** | Second confirmation added in Step 5 (post-clone, pre-registry-write) |
 | F10-01 | §10 preferences written without diff/confirmation | **RESOLVED** | Mandatory diff display and explicit user confirmation language in both files |
 
@@ -100,7 +100,7 @@ The prohibition on writing to §10 without confirmation is also reinforced in th
 | F4-01 | Destructive command warning (rm/mv) is advisory only | **MITIGATED** | Warning is issued but not blocked, by design. The hook notes "Warning only — do not block." This is an accepted trade-off to avoid false positives on legitimate cleanup operations. |
 | F5-01 | src_exclude_pattern ReDoS mitigation only by length | **MITIGATED** | Length cap of 200 chars is present (line 178). Full regex validation is not performed, but this is an acceptable operational mitigation. |
 | F8-01 | Plugin cache boundary bypass via indirect Bash paths | **MITIGATED** | Pattern matching on write-capable commands targeting plugin_cache is in place (lines 62–66). Symlink and PATH tricks remain theoretically possible but require deliberate adversarial action. |
-| F9-01 | Branch mismatch warning is advisory only | **MITIGATED** | Warning output is correct; no block by design. The recommendation to run /compact is shown. Accepted. |
+| F9-01 | Branch mismatch warning is advisory only | **MITIGATED** | Warning output is correct; no block by design. The recommendation to summarize the context is shown. Accepted. |
 
 ### Low / Informational Findings
 
@@ -115,10 +115,10 @@ The prohibition on writing to §10 without confirmation is also reinforced in th
 
 ### 3.1 SHA Confirmation Cancel Path (silver:update Step 5)
 
-The cancel path after the second AskUserQuestion states:
+The cancel path after the second direct user interaction states:
 > *remove `$NEW_CACHE` and exit without modifying the registry*
 
-This is correct. However, the `rm -rf "$NEW_CACHE"` command is implied, not explicitly shown. A malformed `$NEW_CACHE` (e.g., if version parsing returns empty) could result in `rm -rf ${SB_RUNTIME_HOME_ROOT}/plugins/cache/silver-bullet/silver-bullet/` which would be destructive. The skill does not validate that `$NEW_CACHE` is non-empty before the removal. This is a **new Low finding** (see F-NEW-01).
+This is correct. However, the `rm -rf "$NEW_CACHE"` command is implied, not explicitly shown. A malformed `$NEW_CACHE` (e.g., if version parsing returns empty) could result in `rm -rf ~/.codex/plugins/cache/silver-bullet/silver-bullet/` which would be destructive. The skill does not validate that `$NEW_CACHE` is non-empty before the removal. This is a **new Low finding** (see F-NEW-01).
 
 ### 3.2 UNTRUSTED DATA Label Inconsistency
 

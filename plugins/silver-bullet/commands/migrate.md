@@ -1,5 +1,6 @@
 ---
 name: silver:migrate
+title: Silver: /silver:migrate - Migrate
 description: Migrate a project to the current Silver Bullet schema
 argument-hint: <migration target>
 ---

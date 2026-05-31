@@ -1,5 +1,6 @@
 ---
 name: silver:validate
+title: Silver: /silver:validate - Validate
 description: >
   This skill should be used for pre-build gap analysis: validates SPEC.md coverage in PLAN.md, surfaces assumptions, emits machine-readable findings with BLOCK/WARN/INFO severity
 argument-hint: ""
@@ -275,7 +276,7 @@ Automatically proceed to Step 6.
 
 ## Step 6: Write .planning/VALIDATION.md
 
-Write `.planning/VALIDATION.md` using the Write tool with ALL findings in machine-readable format.
+Write `.planning/VALIDATION.md` using the active runtime file-writing mechanism with ALL findings in machine-readable format.
 
 This file is consumed by `pr-traceability.sh` (Plan 02) to populate PR description deferred items.
 

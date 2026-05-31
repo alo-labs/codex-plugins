@@ -45,7 +45,7 @@ GSD is installed. These are the Silver Bullet enforcement layer.
 |------|-------|-----------------|
 | `session-start` | SessionStart | Injects SB `core-rules.md` and contextual Design guidance when present; resets branch-scoped ephemeral gate files |
 | `spec-session-record.sh` | SessionStart | Records spec version at session open for UAT gate staleness detection |
-| `record-skill.sh` | PostToolUse/Skill | Records every skill invocation to the state file; powers compliance display |
+| `record-skill.sh` | PostToolUse/Skill or Codex invoke-skill receipt | Records every skill invocation to the state file; powers compliance display |
 | `dev-cycle-check.sh` | PreToolUse + PostToolUse / Edit, Write, Bash | HARD STOP if planning quality gates are incomplete before source code edits |
 | `compliance-status.sh` | PostToolUse/\* | Displays workflow progress score on every tool use (informational) |
 | `completion-audit.sh` | PreToolUse/Bash + PostToolUse/Bash | Blocks `git commit`, `git push`, `gh pr create`, and `deploy` if workflow is incomplete |
@@ -55,7 +55,7 @@ GSD is installed. These are the Silver Bullet enforcement layer.
 | `forbidden-skill-check.sh` | PreToolUse/Skill | Blocks deprecated or forbidden skills before they execute |
 | `roadmap-freshness.sh` | PreToolUse/Bash | Blocks `git commit` if a phase `SUMMARY.md` is staged but the corresponding ROADMAP.md checkbox is not ticked |
 | `phase-archive.sh` | PreToolUse/Bash | Archives GSD planning artifacts when a git commit includes a phase SUMMARY |
-| `semantic-compress.sh` | PostToolUse/Skill | TF-IDF context compression after skill invocations to manage context window |
+| `semantic-compress.sh` | PostToolUse/Skill or Codex invoke-skill receipt | TF-IDF context compression after skill invocations to manage context window |
 | `session-log-init.sh` | PostToolUse/Bash | Creates a session log file on the first Bash use |
 | `timeout-check.sh` | PostToolUse/* | Monitors for stall conditions and fires an anti-stall warning |
 | `pr-traceability.sh` | PostToolUse/Bash | Appends spec reference, requirement IDs, and deferred items to PR descriptions |

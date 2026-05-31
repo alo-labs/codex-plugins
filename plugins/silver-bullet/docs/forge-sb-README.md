@@ -141,7 +141,7 @@ docs/
 
 | Claude Code | Forge |
 |---|---|
-| Skill tool | Trigger phrase |
+| runtime-native skill invocation channel | Trigger phrase |
 | TodoWrite | Session log |
 | PreToolUse hook | AGENTS.md |
 | SessionStart hook | AGENTS.md |

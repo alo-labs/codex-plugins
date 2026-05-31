@@ -38,7 +38,7 @@ Hook event mapping in `hooks.json`:
 }
 ```
 
-`PostToolUse/Skill` is a secondary candidate: when the executor runs `/gsd:verify-work`, that PostToolUse event could trigger a plan-boundary check. However, `PostToolUse/Skill` fires after the skill runs, not before — this makes it unsuitable for blocking the _start_ of the next plan.
+`PostToolUse/Skill or Codex invoke-skill receipt` is a secondary candidate: when the executor runs `/gsd:verify-work`, that PostToolUse event could trigger a plan-boundary check. However, `PostToolUse/Skill or Codex invoke-skill receipt` fires after the skill runs, not before — this makes it unsuitable for blocking the _start_ of the next plan.
 
 **Recommended hook event:** `PreToolUse/Bash` (already wired, already implements the two-tier model).
 
@@ -49,8 +49,8 @@ The following command patterns indicate that a task or plan is being declared co
 | Signal | Pattern | Practicality |
 |--------|---------|-------------|
 | **git commit** | `git commit ...` | ★★★★★ Already intercepted by completion-audit.sh; natural task boundary in GSD's atomic-commit model |
-| **SUMMARY.md write** | Write/Edit tool targeting `*-SUMMARY.md` | ★★★☆☆ PostToolUse/Write event — reliable but requires a new hook matcher entry |
-| **Explicit verify invocation** | `/gsd:verify-work` Skill call | ★★☆☆☆ PostToolUse/Skill — fires too late to block the action |
+| **SUMMARY.md write** | Write/active runtime file-editing mechanism targeting `*-SUMMARY.md` | ★★★☆☆ PostToolUse/Write event — reliable but requires a new hook matcher entry |
+| **Explicit verify invocation** | `/gsd:verify-work` Skill call | ★★☆☆☆ PostToolUse/Skill or Codex invoke-skill receipt — fires too late to block the action |
 | **Plan finalization commit** | commit message matching `docs(0XX-0Y):` | ★★★★☆ Already present as the final commit per plan — detectable via commit message pattern |
 
 The most practical signal is `git commit` (already intercepted by `completion-audit.sh`). In GSD's execution model, each completed task produces an atomic commit. The plan-completion boundary is naturally marked by the final task commit followed by the SUMMARY.md commit (`docs(0XX-0Y): complete ... plan`).

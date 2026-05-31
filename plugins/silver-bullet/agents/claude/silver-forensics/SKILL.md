@@ -1,5 +1,6 @@
 ---
 name: silver:forensics
+title: Silver: /silver:forensics - Forensics
 description: This skill should be used for root-cause investigation for completed sessions, abandoned sessions, verification failures, or mid-session stalls — classifies failure, walks investigation path, writes report to <project-root>/docs/silver:forensics/
 version: 0.1.0
 ---
@@ -78,7 +79,7 @@ GSD's built-in silver:forensics (`/gsd-forensics`).
 > "This looks like a GSD workflow issue (plan drift / execution anomaly / missing artifacts).
 > GSD has specialized silver:forensics for this. Running `/gsd-forensics` instead."
 
-Invoke `/gsd-forensics` via the Skill tool and stop. Do not proceed to Step 2.
+Invoke `/gsd-forensics` through the active runtime's SB-recognized skill invocation channel and stop. Do not proceed to Step 2.
 
 **If routing to SB silver:forensics:** Continue to Step 2.
 
@@ -102,7 +103,7 @@ Invoke `/gsd-forensics` via the Skill tool and stop. Do not proceed to Step 2.
    Flag any file appearing in 3+ consecutive commits; confidence HIGH if commit messages are
    similar, MEDIUM if varied.
 4. Uncommitted work (crash/interruption signal): `git status --short` and `git diff --stat`
-5. Presence of `~/.claude/.silver-bullet/timeout` (was sentinel triggered?)
+5. Presence of `~/.codex/.silver-bullet/timeout` (was sentinel triggered?)
 6. Phase artifact completeness: for each `.planning/phases/*/`, check which of PLAN.md, SUMMARY.md,
    VERIFICATION.md, CONTEXT.md, and RESEARCH.md are present. Record missing artifacts per phase.
 7. SESSION_REPORT.md: read `.planning/reports/SESSION_REPORT.md` if it exists — extract last
@@ -129,7 +130,7 @@ writing the post-mortem. Then proceed to the matching path section below.
 
 1. Read full session log from `<project-root>/docs/sessions/` — extract Mode, Autonomous
    decisions, Needs human review, Outcome
-2. Check sentinel artifacts: was `~/.claude/.silver-bullet/timeout` set? What was the last
+2. Check sentinel artifacts: was `~/.codex/.silver-bullet/timeout` set? What was the last
    tool use before stall? If the sentinel file is absent, note "No sentinel detected"
    in Evidence Gathered and proceed — absence does not rule out stall; rely on session
    log and git history.

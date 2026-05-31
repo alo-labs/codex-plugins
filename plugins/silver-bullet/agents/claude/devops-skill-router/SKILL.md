@@ -1,5 +1,6 @@
 ---
 name: devops-skill-router
+title: Silver: DevOps Skill Router
 description: This skill should be used for context-aware routing table that maps IaC toolchain, cloud provider, and DevOps context to the best available plugin skill. Used by the devops-cycle workflow at contextual trigger points. Not a workflow step — a lookup utility.
 user-invocable: false
 version: 0.1.0
@@ -121,7 +122,7 @@ C. Switch to a different workflow or stop.
 
 For the highest-priority available skill:
 
-1. Invoke it via the Skill tool. The exact syntax depends on how each plugin
+1. Invoke it through the active runtime's SB-recognized skill invocation channel. The exact syntax depends on how each plugin
    registers its skills. Try these patterns in order:
    - `/<plugin-namespace>:<skill-name>` (e.g., `/hashicorp:terraform-code-generation`)
    - `/<skill-name>@<plugin-name>` (e.g., `/terraform-code-generation@hashicorp`)

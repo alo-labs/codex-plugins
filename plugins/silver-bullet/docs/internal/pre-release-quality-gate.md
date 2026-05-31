@@ -51,7 +51,7 @@ Each review pass produces findings → triages via `superpowers:receiving-code-r
 8. **Loop**: run rounds until **2 consecutive clean rounds across all active
    review steps**. Match the review cycle discipline used in Stages 2 and 4.
 9. **MANDATORY — invoke `/superpowers:verification-before-completion`** via
-   the Skill tool. Running verification commands manually is NOT a substitute
+   the runtime-native skill invocation channel. Running verification commands manually is NOT a substitute
    for invoking the skill. You need BOTH: (a) run the actual verification
    commands (tests, CI status, lint), AND (b) invoke the skill so
    `record-skill.sh` tracks it. If you ran checks but did not invoke the
@@ -79,16 +79,16 @@ Review the entire plugin for cross-file inconsistencies, redundancies, and contr
    - **Hooks + config**: .sh files, hooks.json, .silver-bullet.json, templates
    - **Help site + README**: HTML pages, search.js, README.md — step counts, paths, versions
    - **Cross-plugin consistency**: read 100% of skill content from all 5 dependency plugins —
-     GSD: `${SB_RUNTIME_HOME_ROOT}/get-shit-done/` workflows/references/templates;
-     Superpowers: `${SB_RUNTIME_HOME_ROOT}/plugins/cache/*/superpowers/*/skills/*/SKILL.md`;
-     Engineering: `${SB_RUNTIME_HOME_ROOT}/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/*/SKILL.md`;
-     Design: `${SB_RUNTIME_HOME_ROOT}/plugins/cache/*/knowledge-work-plugins/*/design/skills/*/SKILL.md`;
-     Product Management: `${SB_RUNTIME_HOME_ROOT}/plugins/cache/*/knowledge-work-plugins/*/product-management/skills/*/SKILL.md` —
+     GSD: `~/.codex/get-shit-done/` workflows/references/templates;
+     Superpowers: `~/.codex/plugins/cache/*/superpowers/*/skills/*/SKILL.md`;
+     Engineering: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/*/SKILL.md`;
+     Design: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/design/skills/*/SKILL.md`;
+     Product Management: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/product-management/skills/*/SKILL.md` —
      check for contradictions, conflicts, inconsistencies, or redundancies between Silver Bullet
      instructions and upstream plugin skills
 2. Fix all genuine issues found
 3. **Loop**: repeat until two consecutive audit passes find zero issues
-4. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+4. **MANDATORY — invoke `/superpowers:verification-before-completion`** through the active runtime's SB-recognized skill invocation channel.
 
 ---
 
@@ -104,7 +104,7 @@ Verify and update all user-visible surfaces to reflect the current state.
    - Search index (`site/help/search.js`)
    - Compare page (`site/compare/index.html`) if it exists
 2. Fix all discrepancies
-3. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+3. **MANDATORY — invoke `/superpowers:verification-before-completion`** through the active runtime's SB-recognized skill invocation channel.
 4. Push and confirm CI green
 
 ---
@@ -117,7 +117,7 @@ Run the SENTINEL v2.3 adversarial security audit against the full plugin.
 2. Fix all findings (Critical, High, Medium; Low at discretion)
 3. Re-run the audit
 4. **Loop**: repeat until two consecutive audit passes find zero issues
-5. **MANDATORY — invoke `/superpowers:verification-before-completion`** via the Skill tool.
+5. **MANDATORY — invoke `/superpowers:verification-before-completion`** through the active runtime's SB-recognized skill invocation channel.
 
 ---
 
@@ -127,7 +127,7 @@ After all four stages pass in the current session, rerun the full test suite
 before release finalization:
 
 1. Run `/verify-tests`
-2. Record the rerun marker: `echo "full-test-suite-rerun" >> ${SB_RUNTIME_HOME_ROOT}/.silver-bullet/quality-gate-state`
+2. Record the rerun marker: `echo "full-test-suite-rerun" >> ~/.codex/.silver-bullet/quality-gate-state`
 3. Do not invoke `/silver-release` until both the rerun marker and the `/verify-tests` freshness marker are present
 
 `hooks/completion-audit.sh` blocks release creation until the quality-gate file
@@ -140,9 +140,9 @@ contains the four stage markers plus `full-test-suite-rerun`, and the
 
 Each stage is enforced via the mandatory `/superpowers:verification-before-completion`
 skill invocation. When invoked, it is recorded in the state file
-(`${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state`); `hooks/completion-audit.sh` tracks required skill
+(`~/.codex/.silver-bullet/state`); `hooks/completion-audit.sh` tracks required skill
 invocations to gate `gh release create`. The stage completion markers and the
-full-suite rerun marker live in `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/quality-gate-state`.
+full-suite rerun marker live in `~/.codex/.silver-bullet/quality-gate-state`.
 
 **Session reset:** The `session-start` hook clears the Silver Bullet quality-gate file at
 the beginning of every session. Each release cycle must earn its own gate pass in

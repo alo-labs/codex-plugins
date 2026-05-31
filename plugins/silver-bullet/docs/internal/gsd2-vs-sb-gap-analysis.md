@@ -75,7 +75,7 @@ GSD v1 + Silver Bullet is a prompt-enforcement system: PostToolUse hooks, CLAUDE
 
 ## Category 5 — True Parallel Execution
 
-**GSD v1 + SB:** Wave-based parallel execution dispatches multiple subagents via Claude Code's Agent tool. These subagents share the same Claude Code session infrastructure, run within the same billing context, and do not have true filesystem isolation.
+**GSD v1 + SB:** Wave-based parallel execution dispatches multiple subagents via Claude Code's active runtime delegation mechanism. These subagents share the same Claude Code session infrastructure, run within the same billing context, and do not have true filesystem isolation.
 
 **GSD-2 only:**
 - Parallel orchestration runs multiple actual `gsd` processes as separate OS processes

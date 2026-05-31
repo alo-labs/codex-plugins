@@ -23,7 +23,7 @@ fix:
 2. **Rationalization.** LLMs construct plausible-sounding reasons for skipping steps
    ("the tests are obvious," "the documentation was implicit"). Rules stated once in a
    prompt do not prevent this.
-3. **Context loss.** After `/compact` or across sessions, instructions stated only in the
+3. **Context loss.** After `context compaction` or across sessions, instructions stated only in the
    conversation are lost. Rules embedded in hooks and config files survive compaction.
 
 Silver Bullet addresses all three with multiple overlapping layers: invocation-based skill
@@ -41,7 +41,7 @@ strongest. The table below shows Silver Bullet's implementation status for each 
 | Tier | Technique | SB Status | SB Implementation |
 |------|-----------|-----------|-------------------|
 | 1 | CLAUDE.md / system prompt | Implemented | `silver-bullet.md` (sections 0–9) injected into every project via `/silver:init` |
-| 2 | `.claude/rules/` scoped rules | Deferred | Hooks compensate; scoped rules add marginal value for SB's flat structure |
+| 2 | `.codex/rules/` scoped rules | Deferred | Hooks compensate; scoped rules add marginal value for SB's flat structure |
 | 3 | Hooks (PreToolUse, PostToolUse, Stop, UserPromptSubmit, SessionStart) | Implemented | 11 hooks registered in `hooks/hooks.json` across 5 event types |
 | 4 | Recursive rule echo (self-reinforcing CLAUDE.md) | Deferred | Hooks fire on every relevant tool use, compensating adequately |
 | 5 | Redundant encoding (multiple files state same rules) | Implemented | `silver-bullet.md` + `CLAUDE.md` + workflow files all enforce the same constraints |
@@ -66,7 +66,7 @@ before reaching Claude's execution.
 ┌───────────────────────────────────────────────────────────────────┐
 │  [UserPromptSubmit]  prompt-reminder.sh                           │
 │  Re-injects missing-skills reminder before EVERY user prompt.     │
-│  Survives /compact — hook fires regardless of context state.      │
+│  Survives context compaction — hook fires regardless of context state.      │
 │                                                                   │
 │  ┌─────────────────────────────────────────────────────────────┐  │
 │  │  [SessionStart]  session-start                              │  │
@@ -130,8 +130,8 @@ before reaching Claude's execution.
 | Matcher | `startup\|clear\|compact` |
 | Async | No |
 
-**What it does:** Fires at session start and after `/compact` or `/clear`. Reads the
-current git branch and compares it to the branch stored in `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/branch`.
+**What it does:** Fires at session start and after `context compaction` or `/clear`. Reads the
+current git branch and compares it to the branch stored in `~/.codex/.silver-bullet/branch`.
 If the branch has changed, it resets the state file so skills from the previous branch
 do not carry over. Also injects "superpowers" context for autonomous mode sessions.
 
@@ -170,7 +170,7 @@ skills are recorded in the state file before allowing source file edits.
 
 #### 4.2a Plugin boundary protection
 
-Blocks any Edit/Write/Bash targeting `${SB_RUNTIME_HOME_ROOT}/plugins/cache/`. The runtime must never
+Blocks any Edit/Write/Bash targeting `~/.codex/plugins/cache/`. The runtime must never
 modify upstream plugin files.
 
 **Block message:** "THIRD-PARTY PLUGIN BOUNDARY VIOLATION"
@@ -191,7 +191,7 @@ disable process compliance. If you need to reconfigure, use /silver:init."
 
 #### 4.2c State file tamper prevention (SB-008)
 
-Blocks direct Edit/Write targeting `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/` and Bash write commands
+Blocks direct Edit/Write targeting `~/.codex/.silver-bullet/` and Bash write commands
 targeting `state`, `branch`, or `trivial` files within that directory. Whitelist: Bash
 commands matching `quality-gate-stage-[1-4]` (legitimate §9 stage recording).
 
@@ -205,7 +205,7 @@ commands matching `quality-gate-stage-[1-4]` (legitimate §9 stage recording).
 - No `.silver-bullet.json` found walking up the directory tree
 - Trivial file exists at `state.trivial_file` (and is not a symlink)
 - Non-logic file extension (`.md`, `.json`, `.yml`, etc.) — skipped per-edit
-- Small Edit tool change (combined old+new string < 100 chars) — treated as typo fix
+- Small active runtime file-editing mechanism change (combined old+new string < 100 chars) — treated as typo fix
 - In `devops-cycle` workflow, `.yml`, `.yaml`, `.json`, `.toml` are NOT auto-exempted
 
 ---
@@ -281,7 +281,7 @@ top of a broken CI.
 | Async | No |
 
 **What it does:** Appends the invoked skill name to the state file
-(`${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state`) on every successful Skill tool use. This is the
+(`~/.codex/.silver-bullet/state`) on every successful runtime-native skill invocation channel use. This is the
 primary mechanism that tracks workflow progress.
 
 **Output format:** Writes one line (skill name) to state file. Emits informational JSON
@@ -307,7 +307,7 @@ workflow intent.
 | Async | No |
 
 **What it does:** After certain skill invocations, compresses the skill's output into a
-compact summary stored in the project's `.claude/` directory. Reduces context consumption
+compact summary stored in the project's `.codex/` directory. Reduces context consumption
 for long skill outputs (e.g., code review, testing-strategy).
 
 **What it blocks:** Does not block — performs compression and exits 0.
@@ -428,7 +428,7 @@ list when on `main` or `master` branch (same rule as completion-audit.sh).
 
 **What it does:** Fires before every user prompt is processed. Reads the state file and
 emits a compact compliance reminder as `additionalContext`. This re-injects the
-enforcement state into Claude's context on every turn, surviving `/compact` and session
+enforcement state into Claude's context on every turn, surviving `context compaction` and session
 boundaries.
 
 **Output format (missing skills):**
@@ -469,7 +469,7 @@ active workflow reference, anti-skip blocks, anti-rationalization text, and work
 transition narration requirements.
 
 **Anti-skip blocks** explicitly name violation patterns:
-> "You are violating this rule if you begin work without reading docs/ or skip /compact."
+> "You are violating this rule if you begin work without reading docs/ or skip context compaction."
 
 **Anti-rationalization blocks** state that combining steps, skipping steps, or implicitly
 covering steps are all violations regardless of the justification offered.
@@ -480,11 +480,11 @@ context state, the enforcement model survives context window limits.
 
 ---
 
-### 4.13 State file (${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state)
+### 4.13 State file (~/.codex/.silver-bullet/state)
 
 | Attribute | Value |
 |-----------|-------|
-| Path | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state` (configurable) |
+| Path | `~/.codex/.silver-bullet/state` (configurable) |
 | Format | One skill name per line |
 
 **What it does:** The single source of truth for workflow progress within a session and
@@ -495,16 +495,16 @@ prevention in `dev-cycle-check.sh` blocks direct writes).
 **Branch scoping:** `session-start` resets the state file on branch change, so skills
 from one branch do not carry over to another.
 
-**Security:** Path validated to stay within `${SB_RUNTIME_HOME_ROOT}/` by every hook that reads it
+**Security:** Path validated to stay within `~/.codex/` by every hook that reads it
 (SB-002/SB-003). Symlinks rejected for trivial file.
 
 ---
 
-### 4.14 Trivial bypass (${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial)
+### 4.14 Trivial bypass (~/.codex/.silver-bullet/trivial)
 
 | Attribute | Value |
 |-----------|-------|
-| Path | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` (configurable, legacy compatibility marker) |
+| Path | `~/.codex/.silver-bullet/trivial` (configurable, legacy compatibility marker) |
 | Format | Regular file; retained only for backward compatibility |
 
 **What it does:** In older sessions, the legacy trivial marker could short-circuit some
@@ -522,7 +522,7 @@ historical references continue to read cleanly.
 ### 4.15 Branch-scoped state (session-start reset)
 
 **What it does:** When `session-start` detects that the current git branch differs from
-the branch stored in `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/branch`, it deletes the state file
+the branch stored in `~/.codex/.silver-bullet/branch`, it deletes the state file
 (clearing all recorded skills) and writes the new branch name. This ensures Claude
 starts the full workflow from scratch on each branch.
 
@@ -551,7 +551,7 @@ Already documented in §4.2b above.
 | Config key | `compactPrompt` in `.silver-bullet.json` |
 | Template | `templates/silver-bullet.config.json.default` |
 
-**What it does:** Provides a custom instruction to Claude Code's `/compact` compaction
+**What it does:** Provides a custom instruction to Claude Code's `context compaction` compaction
 LLM. The value tells the compaction model to preserve `silver-bullet.md` rules verbatim
 — especially skill names, ordering constraints, and anti-skip rules — rather than
 summarizing them.
@@ -563,7 +563,7 @@ Do not summarize skill names, ordering constraints, or anti-skip rules.
 ```
 
 **Why it matters:** The compaction LLM may summarize or omit enforcement rules if not
-given explicit guidance, weakening the documentation layer after `/compact` runs. The
+given explicit guidance, weakening the documentation layer after `context compaction` runs. The
 `compactPrompt` key is Playbook Tier 8.
 
 ---
@@ -605,9 +605,9 @@ techniques that are insufficient on their own:
 | `project.active_workflow` | string | `full-dev-cycle` | Sets skill lists for intermediate and final delivery checks |
 | `skills.required_planning` | string[] | `["silver-quality-gates", "gsd-discuss-phase", "gsd-plan-phase"]` | Skills required before any source edit (Stage A gate) |
 | `skills.required_deploy` | string[] | (12-skill default list) | Skills required before PR/deploy/release commands and before Stop hook allows completion |
-| `state.state_file` | string | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/state` | Path to the skill recording state file |
-| `state.trivial_file` | string | `${SB_RUNTIME_HOME_ROOT}/.silver-bullet/trivial` | Path to the trivial bypass marker file |
-| `compactPrompt` | string | (verbatim preservation instruction) | Instruction to `/compact` compaction LLM to preserve enforcement rules |
+| `state.state_file` | string | `~/.codex/.silver-bullet/state` | Path to the skill recording state file |
+| `state.trivial_file` | string | `~/.codex/.silver-bullet/trivial` | Path to the trivial bypass marker file |
+| `compactPrompt` | string | (verbatim preservation instruction) | Instruction to `context compaction` compaction LLM to preserve enforcement rules |
 
 ### State File Format
 

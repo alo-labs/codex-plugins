@@ -46,7 +46,7 @@ while true; do
 done
 
 # --- Read config (gracefully degrade if jq is absent) ---
-_SB_STATE_DIR="${SB_RUNTIME_STATE_DIR}"
+_SB_STATE_DIR="~/.codex/.silver-bullet"
 STATE_FILE="${_SB_STATE_DIR}/state"
 TRIVIAL_FILE="${_SB_STATE_DIR}/trivial"
 REQUIRED_DEPLOY="silver-quality-gates gsd-discuss-phase gsd-plan-phase gsd-execute-phase gsd-verify-work gsd-ship gsd-code-review gsd-secure-phase gsd-validate-phase requesting-code-review receiving-code-review finishing-a-development-branch silver-create-release verification-before-completion test-driven-development verify-tests"

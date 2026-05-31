@@ -1,5 +1,6 @@
 ---
 name: silver:spec
+title: Silver: /silver:spec - Spec
 description: Write a Silver Bullet specification
 argument-hint: <problem or idea>
 ---

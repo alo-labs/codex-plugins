@@ -1,5 +1,6 @@
 ---
 name: silver:fast
+title: Silver: /silver:fast - Fast
 description: >
   This skill should be used for 3-tier complexity triage: trivial → gsd-fast, medium → gsd-quick with flags, complex → silver:feature escalation.
 argument-hint: "<description of change>"
@@ -30,7 +31,7 @@ Change: {$ARGUMENTS or "(not specified)"}
 
 ## Step 0: Complexity Triage
 
-Analyze $ARGUMENTS to classify into one of three tiers. Classification is **autonomous** — no AskUserQuestion.
+Analyze $ARGUMENTS to classify into one of three tiers. Classification is **autonomous** — no direct user interaction.
 
 **Tier 1 (Trivial):**
 - ≤3 files AND no logic changes
@@ -63,7 +64,7 @@ Routing to: {gsd-fast|gsd-quick|silver:feature}
 
 **Only reached when Step 0 classifies as Tier 1 (Trivial).**
 
-Invoke `gsd-fast` via the Skill tool. Pass $ARGUMENTS as the change description.
+Invoke `gsd-fast` through the active runtime's SB-recognized skill invocation channel. Pass $ARGUMENTS as the change description.
 
 After gsd-fast completes, run scope expansion check (Step 4).
 
@@ -106,7 +107,7 @@ Detected signals:
 Flags: {--discuss --research --validate | --full | (none)}
 ```
 
-Invoke `gsd-quick` via the Skill tool with the composed flags and $ARGUMENTS.
+Invoke `gsd-quick` through the active runtime's SB-recognized skill invocation channel with the composed flags and $ARGUMENTS.
 
 After gsd-quick completes, run scope expansion check (Step 4).
 
@@ -131,7 +132,7 @@ Change exceeds fast-path complexity. Routing to silver:feature.
 Reason: {specific reason — e.g., "touches >10 files", "cross-cutting concern", "schema change", "new capability"}
 ```
 
-Invoke `silver:feature` via the Skill tool with $ARGUMENTS. Exit silver:fast.
+Invoke `silver:feature` through the active runtime's SB-recognized skill invocation channel with $ARGUMENTS. Exit silver:fast.
 
 ## Step 4: Scope Expansion Check
 
@@ -144,7 +145,7 @@ After Tier 1 or Tier 2 execution completes, check if scope expanded beyond the c
 **During Tier 2:** If files modified > 10:
 - Escalate to Tier 3 (silver:feature, Step 3)
 
-Escalation is **autonomous** — no AskUserQuestion needed. Display escalation banner:
+Escalation is **autonomous** — no direct user interaction needed. Display escalation banner:
 
 ```
 FAST PATH ESCALATION

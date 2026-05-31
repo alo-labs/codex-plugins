@@ -1,5 +1,6 @@
 ---
 name: silver:update
+title: Silver: /silver:update - Update
 description: This skill should be used when the user runs `/silver:update` or asks to update Silver Bullet — checks GitHub for the latest release, shows the changelog since the installed version, and installs the update after confirmation.
 version: 0.1.0
 ---
@@ -12,7 +13,7 @@ Check GitHub for the latest Silver Bullet release, display what changed since yo
 
 ### Step 1: Read installed version
 
-Read `~/.claude/plugins/installed_plugins.json`. Try the `silver-bullet@alo-labs` key first; if absent, fall back to the `silver-bullet@silver-bullet` key (legacy installation):
+Read `~/.codex/plugins/installed_plugins.json`. Try the `silver-bullet@alo-labs` key first; if absent, fall back to the `silver-bullet@silver-bullet` key (legacy installation):
 
 - `version` — currently installed version (e.g. `0.24.1`)
 - If neither key exists, treat installed version as `0.0.0`.
@@ -107,7 +108,7 @@ Your project files (CLAUDE.md, silver-bullet.md, hooks, config) are never
 touched — only the active host's plugin cache and registry are updated.
 ```
 
-Use AskUserQuestion:
+Ask the user directly:
 - Question: "Proceed with update to vA.B.C?"
 - Options:
   - "A. Yes, update now" — install via marketplace and clean up stale entries
@@ -120,7 +121,7 @@ If user cancels, exit.
 Run the host-appropriate install command:
 
 ```bash
-claude mcp install silver-bullet@alo-labs
+bash "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current/scripts/install-codex.sh" --purge-legacy-skills
 # Codex host: ./scripts/install-codex.sh --purge-legacy-skills
 ```
 
@@ -142,7 +143,7 @@ After the marketplace install succeeds, clean up any residual legacy installatio
 Check whether `installed_plugins.json` contains the legacy `silver-bullet@silver-bullet` key. If it does, remove it atomically:
 
 ```bash
-REG="~/.claude/plugins/installed_plugins.json"
+REG="~/.codex/plugins/installed_plugins.json"
 if jq -e '.plugins["silver-bullet@silver-bullet"]' "$REG" > /dev/null 2>&1; then
   TMP="$(mktemp "${REG}.XXXXXX")"
   jq 'del(.plugins["silver-bullet@silver-bullet"])' "$REG" > "$TMP" && mv "$TMP" "$REG"
@@ -151,20 +152,20 @@ fi
 
 **6b. Remove stale cache directory:**
 
-Check whether `~/.claude/plugins/cache/silver-bullet/silver-bullet/` exists. If it does, remove it:
+Check whether `~/.codex/plugins/cache/silver-bullet/silver-bullet/` exists. If it does, remove it:
 
 ```bash
 if [[ -z "$HOME" ]]; then
   echo "WARNING: HOME is unset — skipping stale cache cleanup."
 else
-  STALE_CACHE="~/.claude/plugins/cache/silver-bullet/silver-bullet"
+  STALE_CACHE="~/.codex/plugins/cache/silver-bullet/silver-bullet"
   if [[ -d "$STALE_CACHE" && ! -L "$STALE_CACHE" && "$STALE_CACHE" == "${HOME}/"* ]]; then
     rm -rf "$STALE_CACHE"
   fi
 fi
 ```
 
-Do NOT remove `~/.claude/plugins/cache/silver-bullet/alo-labs/` — that is the newly installed version.
+Do NOT remove `~/.codex/plugins/cache/silver-bullet/alo-labs/` — that is the newly installed version.
 
 If either cleanup step fails, log the error but do not abort — the install already succeeded.
 

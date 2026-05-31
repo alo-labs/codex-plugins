@@ -2,7 +2,7 @@
 # Sync marketplace.json version with plugin.json before tagging a release.
 #
 # Updates BOTH:
-#   - .claude-plugin/marketplace.json (self-hosted entry in this repo)
+#   - .codex-plugin/marketplace.json (self-hosted entry in this repo)
 #   - The upstream marketplace repo (defaults to alo-labs/claude-plugins),
 #     then commits and pushes the version bump there
 #
@@ -15,8 +15,8 @@ set -euo pipefail
 trap 'exit 1' ERR
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
-plugin_json="$repo_root/.claude-plugin/plugin.json"
-marketplace_json="$repo_root/.claude-plugin/marketplace.json"
+plugin_json="$repo_root/.codex-plugin/plugin.json"
+marketplace_json="$repo_root/.codex-plugin/marketplace.json"
 marketplace_repo_url="${MARKETPLACE_REPO_URL:-https://github.com/alo-labs/claude-plugins.git}"
 marketplace_repo_root="${MARKETPLACE_REPO_ROOT:-}"
 requested_version="${1:-}"
@@ -49,7 +49,7 @@ fi
 sync_marketplace_repo() {
   local root="$1"
   local version="$2"
-  local manifest="$root/.claude-plugin/marketplace.json"
+  local manifest="$root/.codex-plugin/marketplace.json"
   local remote_before
   local remote_after
 
@@ -71,12 +71,12 @@ sync_marketplace_repo() {
     rm -f -- "$tmp"
   fi
 
-  if git -C "$root" diff --quiet -- .claude-plugin/marketplace.json; then
+  if git -C "$root" diff --quiet -- .codex-plugin/marketplace.json; then
     echo "✓ Marketplace repo already at silver-bullet $version: $root"
     return 0
   fi
 
-  git -C "$root" add .claude-plugin/marketplace.json
+  git -C "$root" add .codex-plugin/marketplace.json
   git -C "$root" commit -m "Bump silver-bullet to $version"
   git -C "$root" push
 

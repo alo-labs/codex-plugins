@@ -78,8 +78,8 @@ All SB hooks were reviewed for output patterns that could interact with the Clau
 - **Permission relevance:** ⚠️ **HIGH** — Same format as `completion-audit.sh`'s PreToolUse deny. When a forbidden skill (e.g., `executing-plans`, `subagent-driven-development`) is invoked, `forbidden-skill-check.sh` emits `permissionDecision:"deny"`.
 
   Sequence that could trigger re-prompting:
-  1. User (or agent) invokes a forbidden skill → `forbidden-skill-check.sh` fires → emits `permissionDecision:"deny"` → Claude Code sees "Skill tool: denied"
-  2. If Claude Code remembers this deny for the `Skill` tool class, it would re-prompt for Skill tool permissions on subsequent invocations, even with Bypass Permissions set.
+  1. User (or agent) invokes a forbidden skill → `forbidden-skill-check.sh` fires → emits `permissionDecision:"deny"` → Claude Code sees "runtime-native skill invocation channel: denied"
+  2. If Claude Code remembers this deny for the `Skill` tool class, it would re-prompt for runtime-native skill invocation channel permissions on subsequent invocations, even with Bypass Permissions set.
 
 - **Verdict:** ⚠️ **Candidate** — `forbidden-skill-check.sh` emits `permissionDecision:"deny"` on forbidden skill attempts. Whether this triggers a persistent permission re-prompt is a platform behavior question.
 

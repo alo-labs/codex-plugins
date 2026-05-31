@@ -65,7 +65,7 @@ Results cached at `.planning/.context-cache/{phase-name}.json`. Cache key is a h
 ### Data Flow
 
 ```
-Skill tool use (GSD phase command)
+runtime-native skill invocation channel use (GSD phase command)
   → PostToolUse hook fires
     → hooks/semantic-compress.sh (gate: is this a GSD phase command?)
       → scripts/semantic-compress.sh

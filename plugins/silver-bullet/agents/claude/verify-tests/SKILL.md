@@ -1,5 +1,6 @@
 ---
 name: verify-tests
+title: Silver: Verify Tests
 description: This skill should be used to run the project's test execution gate before final delivery; it runs configured verify commands or stack defaults and writes the freshness marker consumed by SB hooks
 argument-hint: ""
 version: 0.1.0
@@ -24,7 +25,7 @@ Run the project's test execution gate. This skill executes the configured verify
 
 ## Output Contract
 
-- On success: report that the test execution gate passed and mention the marker file written under `~/.claude/.silver-bullet/`
+- On success: report that the test execution gate passed and mention the marker file written under `~/.codex/.silver-bullet/`
 - On failure: show the failing command and the first error line if available
 
 ## Notes

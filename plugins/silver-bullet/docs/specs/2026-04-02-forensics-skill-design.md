@@ -36,7 +36,7 @@ The forensics skill is a SKILL.md that guides Claude through a symptom-driven in
 | `docs/workflows/full-dev-cycle.md` | Modify | Add forensics invocation point in VERIFY section |
 | `templates/workflows/full-dev-cycle.md` | Modify | Same addition (kept in sync with docs/ copy) |
 
-The skill is invoked via the Skill tool as `/forensics` with an optional slug argument (e.g., `/forensics autonomous-stall-2026-04-02`). The slug defaults to `<failure-type>-<YYYY-MM-DD>` if not supplied. A user-supplied slug is used verbatim; no date suffix is appended. If the user-supplied slug contains characters invalid in a filename (spaces, forward slashes, colons), replace each with a hyphen before use.
+The skill is invoked through the active runtime's SB-recognized skill invocation channel as `/forensics` with an optional slug argument (e.g., `/forensics autonomous-stall-2026-04-02`). The slug defaults to `<failure-type>-<YYYY-MM-DD>` if not supplied. A user-supplied slug is used verbatim; no date suffix is appended. If the user-supplied slug contains characters invalid in a filename (spaces, forward slashes, colons), replace each with a hyphen before use.
 
 **Required SKILL.md frontmatter:**
 ```yaml

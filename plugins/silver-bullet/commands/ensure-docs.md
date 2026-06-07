@@ -1,6 +1,6 @@
 ---
-name: silver:ensure-docs
-title: Silver: /silver:ensure-docs - Ensure Docs
+name: "silver:ensure-docs"
+title: "Silver: /silver:ensure-docs - Ensure Docs"
 description: Reconcile and update all mandated documentation for a task
 argument-hint: "[--bootstrap | --reconcile-brownfield | --from-hook --task <id> --gaps <path> | --recover-scheme]"
 ---

@@ -1,6 +1,6 @@
 ---
-name: silver:ingest
-title: Silver: /silver:ingest - Ingest
+name: "silver:ingest"
+title: "Silver: /silver:ingest - Ingest"
 description: Ingest an external artifact into Silver Bullet
 argument-hint: <source or artifact>
 ---

@@ -1,6 +1,6 @@
 ---
-name: silver:devops
-title: Silver: /silver:devops - DevOps
+name: "silver:devops"
+title: "Silver: /silver:devops - DevOps"
 description: Run infrastructure or DevOps work through Silver Bullet
 argument-hint: <infra or ops task>
 ---

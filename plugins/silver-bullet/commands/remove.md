@@ -1,6 +1,6 @@
 ---
-name: silver:remove
-title: Silver: /silver:remove - Remove
+name: "silver:remove"
+title: "Silver: /silver:remove - Remove"
 description: Remove or retire a Silver Bullet work item
 argument-hint: <item id or description>
 ---

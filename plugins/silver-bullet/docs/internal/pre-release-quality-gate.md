@@ -79,11 +79,11 @@ Review the entire plugin for cross-file inconsistencies, redundancies, and contr
    - **Hooks + config**: .sh files, hooks.json, .silver-bullet.json, templates
    - **Help site + README**: HTML pages, search.js, README.md — step counts, paths, versions
    - **Cross-plugin consistency**: read 100% of skill content from all 5 dependency plugins —
-     GSD: `~/.codex/get-shit-done/` workflows/references/templates;
-     Superpowers: `~/.codex/plugins/cache/*/superpowers/*/skills/*/SKILL.md`;
-     Engineering: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/*/SKILL.md`;
-     Design: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/design/skills/*/SKILL.md`;
-     Product Management: `~/.codex/plugins/cache/*/knowledge-work-plugins/*/product-management/skills/*/SKILL.md` —
+     GSD: `$HOME/.codex/get-shit-done/` workflows/references/templates;
+     Superpowers: `$HOME/.codex/plugins/cache/*/superpowers/*/skills/*/SKILL.md`;
+     Engineering: `$HOME/.codex/plugins/cache/*/knowledge-work-plugins/*/engineering/skills/*/SKILL.md`;
+     Design: `$HOME/.codex/plugins/cache/*/knowledge-work-plugins/*/design/skills/*/SKILL.md`;
+     Product Management: `$HOME/.codex/plugins/cache/*/knowledge-work-plugins/*/product-management/skills/*/SKILL.md` —
      check for contradictions, conflicts, inconsistencies, or redundancies between Silver Bullet
      instructions and upstream plugin skills
 2. Fix all genuine issues found
@@ -127,7 +127,7 @@ After all four stages pass in the current session, rerun the full test suite
 before release finalization:
 
 1. Run `/verify-tests`
-2. Record the rerun marker: `echo "full-test-suite-rerun" >> ~/.codex/.silver-bullet/quality-gate-state`
+2. Record the rerun marker: `echo "full-test-suite-rerun" >> $HOME/.codex/.silver-bullet/quality-gate-state`
 3. Do not invoke `/silver-release` until both the rerun marker and the `/verify-tests` freshness marker are present
 
 `hooks/completion-audit.sh` blocks release creation until the quality-gate file
@@ -140,9 +140,9 @@ contains the four stage markers plus `full-test-suite-rerun`, and the
 
 Each stage is enforced via the mandatory `/superpowers:verification-before-completion`
 skill invocation. When invoked, it is recorded in the state file
-(`~/.codex/.silver-bullet/state`); `hooks/completion-audit.sh` tracks required skill
+(`$HOME/.codex/.silver-bullet/state`); `hooks/completion-audit.sh` tracks required skill
 invocations to gate `gh release create`. The stage completion markers and the
-full-suite rerun marker live in `~/.codex/.silver-bullet/quality-gate-state`.
+full-suite rerun marker live in `$HOME/.codex/.silver-bullet/quality-gate-state`.
 
 **Session reset:** The `session-start` hook clears the Silver Bullet quality-gate file at
 the beginning of every session. Each release cycle must earn its own gate pass in

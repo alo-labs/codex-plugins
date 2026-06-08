@@ -17,7 +17,7 @@ is synchronized from the repo root. Third-party plugins that do not publish Code
 represented by thin wrappers in the shared `alo-labs/codex-plugins` marketplace, which fetches
 upstream content at install time instead of vendoring it here.
 
-No server, no database — all state lives in flat files under `~/.codex/.silver-bullet/`.
+No server, no database — all state lives in flat files under `$HOME/.codex/.silver-bullet/`.
 
 ## Core Components
 
@@ -33,8 +33,8 @@ No server, no database — all state lives in flat files under `~/.codex/.silver
 | Shared Codex marketplace | `https://github.com/alo-labs/codex-plugins` | Thin wrappers for third-party plugins that lack native Codex packaging |
 | Live runtime matrix | `tests/live/` | Shared Claude/Codex E2E harness with runtime adapters |
 | Config | `.silver-bullet.json` | Project-level list of tracked/required skills |
-| State file | `~/.codex/.silver-bullet/state` | Flat file recording invoked skills in this session |
-| Trivial flag | `~/.codex/.silver-bullet/trivial` | Legacy compatibility marker. Codex agents should route trivial work through `/silver:fast` instead of using the touch-file bypass. |
+| State file | `$HOME/.codex/.silver-bullet/state` | Flat file recording invoked skills in this session |
+| Trivial flag | `$HOME/.codex/.silver-bullet/trivial` | Legacy compatibility marker. Codex agents should route trivial work through `/silver:fast` instead of using the touch-file bypass. |
 
 ### Key hooks
 
@@ -49,8 +49,8 @@ No server, no database — all state lives in flat files under `~/.codex/.silver
 | `ci-status-check.sh` | PostToolUse (Bash) | Warns on commit/push if CI is failing |
 | `prompt-reminder.sh` | UserPromptSubmit | Re-injects missing skills list before every user message and surfaces current workflow context |
 | `stop-check.sh` | Stop / SubagentStop | Requires `required_planning` skills (planning floor) before session ends. Full `required_deploy` is enforced by `completion-audit.sh` at delivery commands |
-| *(hooks.json entry)* | SessionStart | Clears any stale `~/.codex/.silver-bullet/trivial` marker at session start; does not auto-create it |
-| *(hooks.json entry)* | PostToolUse (Write\|Edit\|MultiEdit) | Clears `~/.codex/.silver-bullet/trivial` when files are modified |
+| *(hooks.json entry)* | SessionStart | Clears any stale `$HOME/.codex/.silver-bullet/trivial` marker at session start; does not auto-create it |
+| *(hooks.json entry)* | PostToolUse (Write\|Edit\|MultiEdit) | Clears `$HOME/.codex/.silver-bullet/trivial` when files are modified |
 
 ### Fast Path
 

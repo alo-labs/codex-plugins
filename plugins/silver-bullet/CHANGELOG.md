@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.37.16] — 2026-06-08
+
+## Bug Fixes
+
+- `fix(codex): use HOME-expanded runtime paths in generated package snippets`
+- `fix(codex): keep SB picker skills on a single native /Silver surface`
+- `fix(codex): add hook trigger parity coverage for exec_command and apply_patch`
+
+## Documentation
+
+- `docs: refresh website and Help Center for the current Codex package model`
+- `docs: record June 2026 Codex picker and runtime path lessons`
+
+---
+
 ## [0.37.15] — 2026-06-08
 
 ## Bug Fixes
@@ -958,7 +973,7 @@ bash silver-bullet/forge-sb-install.sh
 
 ### Hooks — dev-cycle-check.sh
 
-- **DC-01**: The fallback self-protection pattern `/silver-bullet[^/]*/hooks/` (used when `CLAUDE_PLUGIN_ROOT` is unset) also matched the silver-bullet source repo's own `hooks/` directory, blocking legitimate hook edits during development. Restricted the fallback to paths provably inside `~/.codex/` (the installed plugin location only).
+- **DC-01**: The fallback self-protection pattern `/silver-bullet[^/]*/hooks/` (used when `CLAUDE_PLUGIN_ROOT` is unset) also matched the silver-bullet source repo's own `hooks/` directory, blocking legitimate hook edits during development. Restricted the fallback to paths provably inside `$HOME/.codex/` (the installed plugin location only).
 
 ## [0.23.8] — 2026-04-20
 
@@ -1015,7 +1030,7 @@ bash silver-bullet/forge-sb-install.sh
 - **UPD-02**: Replaced fragile `curl | grep | sed` tag parse with `jq -r '.tag_name' | sed 's/^v//'` (jq is already a project prerequisite).
 - **UPD-03**: Bound `$LATEST`, `$NEW_CACHE`, `$COMMIT_SHA`, `$NOW` as real shell variables. Removed unquoted/unresolved `<latest-version>` placeholders from executable commands.
 - **UPD-04**: Atomic registry write — `mktemp` + `mv` with a concrete `jq --arg` expression that updates `version`, `installPath`, `lastUpdated`, `gitCommitSha`. Prevents mid-write corruption.
-- **UPD-05**: Cancel-path `rm -rf` guarded by `~/.codex/plugins/cache/` prefix match.
+- **UPD-05**: Cancel-path `rm -rf` guarded by `$HOME/.codex/plugins/cache/` prefix match.
 
 ### silver-migrate
 - **MIG-01**: Description updated with explicit `/silver:migrate` trigger + pre-v0.20.0 context.
@@ -1341,7 +1356,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 
 ### Added
 - `silver:init` Phase 3 step 3.7.5: after project scaffolding, merges SB
-  hook entries from `hooks/hooks.json` into `~/.codex/settings.json` using
+  hook entries from `hooks/hooks.json` into `$HOME/.codex/settings.json` using
   `python3`. Hook commands are registered with the actual install path
   substituted for `${CLAUDE_PLUGIN_ROOT}`. Idempotent — re-running init
   does not add duplicate entries. Also runs during update mode (step 5a).
@@ -1354,7 +1369,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 - docs/workflows/full-dev-cycle.md MODEL ROUTING section updated to match; removed manual prompt flow
 
 ### Added
-- `hooks/ensure-model-routing.sh` — self-healing session-start hook that reapplies `model:` directives to all 24 GSD agent files if a GSD update wipes them. Canary-guarded (~2ms no-op when correct, <50ms when patching). Bash 3.2 compatible. Audit trail written to `~/.codex/.silver-bullet/model-routing-patch.log`.
+- `hooks/ensure-model-routing.sh` — self-healing session-start hook that reapplies `model:` directives to all 24 GSD agent files if a GSD update wipes them. Canary-guarded (~2ms no-op when correct, <50ms when patching). Bash 3.2 compatible. Audit trail written to `$HOME/.codex/.silver-bullet/model-routing-patch.log`.
 
 ### Fixed
 - All "8 dimensions" references updated to "9 dimensions" across site/index.html (3 occurrences), site/help/index.html, site/help/dev-workflow/index.html, site/help/search.js (3 occurrences), and docs/workflows/full-dev-cycle.md (4 occurrences total)
@@ -1454,7 +1469,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
 - PreToolUse → PostToolUse in landing page HARD STOP gate description
 - Broken relative link in compare page footer (help/ → ../help/)
 - Stale /tmp/ references in help reference page, search index, and silver:init skill
-- Test files updated from /tmp/.silver-bullet-* to ~/.codex/.silver-bullet/ paths
+- Test files updated from /tmp/.silver-bullet-* to $HOME/.codex/.silver-bullet/ paths
 - session-log-init sentinel subshell fully detached from pipeline (fixes test hangs)
 - session-log-init grep pattern updated to match new mode file path
 - SENTINEL audit doc updated: 8→7 layers, post-remediation note added

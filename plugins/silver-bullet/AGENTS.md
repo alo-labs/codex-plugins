@@ -10,7 +10,7 @@
 
 - Stack: Bash for hooks/scripts, Markdown for skills/templates/docs, JSON for config and manifests.
 - Main surfaces: `hooks/`, `skills/`, `scripts/`, `templates/`, `tests/`, `docs/`, `site/`, `forge/`, `plugins/`.
-- Never modify the installed plugin cache under `~/.codex/plugins/cache/`; all behavior changes belong in this source repo.
+- Never modify the installed plugin cache under `$HOME/.codex/plugins/cache/`; all behavior changes belong in this source repo.
 
 ## Useful Commands
 

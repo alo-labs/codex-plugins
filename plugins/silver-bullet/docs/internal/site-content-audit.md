@@ -223,7 +223,7 @@ The Silver Bullet website is **significantly outdated**. The plugin has undergon
 - Session mode selection at start (interactive or autonomous)
 - How autonomous mode works (drive start to finish, suppress clarification questions)
 - Bypass-permissions auto-detection (auto-set autonomous if detected)
-- Session mode file location (~/.codex/.silver-bullet/mode)
+- Session mode file location ($HOME/.codex/.silver-bullet/mode)
 - Mode preference storage in §10
 
 **Files to update:**
@@ -334,7 +334,7 @@ The Silver Bullet website is **significantly outdated**. The plugin has undergon
 **Impact:** Developers don't know SB never forks/modifies upstream plugin files
 
 **Missing documentation:**
-- SB never modifies files under ~/.codex/plugins/cache/
+- SB never modifies files under $HOME/.codex/plugins/cache/
 - How to adjust third-party skill behavior (hook, workflow, wrapper skill instead of fork)
 
 **Files to update:**

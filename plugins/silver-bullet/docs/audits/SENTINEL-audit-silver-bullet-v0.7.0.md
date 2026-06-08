@@ -120,7 +120,7 @@ A malicious `.silver-bullet.json` could set `state_file` to an arbitrary path (e
 **Patch plan**:
 ```
 All hooks reading state.state_file / state.trivial_file:
-After expanding the path, validate it stays within ~/.codex/ or $SB_STATE_DIR:
+After expanding the path, validate it stays within $HOME/.codex/ or $SB_STATE_DIR:
   case "$state_file" in
     "$HOME"/.codex/*) ;; # allowed
     *) state_file="${SB_STATE_DIR}/state" ;; # fallback to default
@@ -195,7 +195,7 @@ For full safety, use a PID+starttime check or a lockfile.)
 **Category**: Path confusion / supply chain
 
 ```bash
-sp_file=$(ls ~/.codex/plugins/cache/*/superpowers/*/skills/using-superpowers/SKILL.md 2>/dev/null | head -1)
+sp_file=$(ls $HOME/.codex/plugins/cache/*/superpowers/*/skills/using-superpowers/SKILL.md 2>/dev/null | head -1)
 ```
 
 This glob matches any directory structure under the plugin cache. If a malicious plugin registers a directory named `superpowers` inside the cache, it could inject its own SKILL.md into the session context.
@@ -309,7 +309,7 @@ No immediate action required. If strengthening is desired:
 **Files**: All templates in `templates/`
 **Category**: Secret detection
 
-Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_NAME}}`, `{{TECH_STACK}}`, etc.) or documented default paths under `~/.codex/`. No hardcoded API keys, tokens, passwords, or credentials found.
+Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_NAME}}`, `{{TECH_STACK}}`, etc.) or documented default paths under `$HOME/.codex/`. No hardcoded API keys, tokens, passwords, or credentials found.
 
 ---
 
@@ -318,7 +318,7 @@ Reviewed all template files. All sensitive values use placeholders (`{{PROJECT_N
 **File**: `templates/silver-bullet.config.json.default`
 **Category**: Unsafe defaults
 
-Default state paths are `~/.codex/.silver-bullet/state` and `~/.codex/.silver-bullet/trivial` -- both under the user's home directory. The `umask 0077` in hooks ensures files are created with user-only permissions.
+Default state paths are `$HOME/.codex/.silver-bullet/state` and `$HOME/.codex/.silver-bullet/trivial` -- both under the user's home directory. The `umask 0077` in hooks ensures files are created with user-only permissions.
 
 ---
 

@@ -52,8 +52,8 @@ Checked files:
 |-------|-------|
 | Plugin name | silver-bullet |
 | Repository | https://github.com/alo-exp/silver-bullet.git |
-| Installed version path | `~/.codex/plugins/cache/silver-bullet/silver-bullet/<version>` |
-| State dir | `~/.codex/.silver-bullet/` |
+| Installed version path | `$HOME/.codex/plugins/cache/silver-bullet/silver-bullet/<version>` |
+| State dir | `$HOME/.codex/.silver-bullet/` |
 | Config file | `.silver-bullet.json` (per-project) |
 | Hook count | 10 hooks (bash scripts) |
 | Skill count | 24 SKILL.md files |
@@ -80,10 +80,10 @@ Skills use the following tools via the orchestration layer:
 recon_notes {
   architecture:
     Silver Bullet is a multi-layer orchestration plugin installed in the Claude Code
-    plugin system at ~/.codex/plugins/cache/silver-bullet/. It operates through:
+    plugin system at $HOME/.codex/plugins/cache/silver-bullet/. It operates through:
     (1) SKILL.md files that define natural-language orchestration logic read by Claude
     (2) bash hooks wired to Claude Code's hook system (PreToolUse/PostToolUse/Stop)
-    (3) A per-project state file at ~/.codex/.silver-bullet/state recording skill invocations
+    (3) A per-project state file at $HOME/.codex/.silver-bullet/state recording skill invocations
     (4) A per-project config .silver-bullet.json that influences hook behavior
     The enforcement model is invocation-based: hooks verify that supported skill invocation events/receipts were
     made, not that the work was actually done. This is documented as a known limitation.
@@ -94,14 +94,14 @@ recon_notes {
     - Session logs (docs/sessions/*.md) → forensics skill (UNTRUSTED DATA boundary documented)
     - GitHub API responses → silver-update → plugin registry write
     - .silver-bullet.json → all hooks (config injection surface)
-    - ~/.codex/.silver-bullet/state → completion-audit.sh (state injection surface)
+    - $HOME/.codex/.silver-bullet/state → completion-audit.sh (state injection surface)
     - CLAUDE.md / silver-bullet.md → session startup (auto-read as trusted instructions)
     - External plugins (GSD, Superpowers, MultAI, Design, Engineering) → chained through the active runtime's SB-recognized skill invocation channel
 
   data_flows:
     1. User message → /silver router → classifies intent → invokes sub-skill with $ARGUMENTS
     2. Sub-skills read silver-bullet.md §10 via `grep` bash command for user preferences
-    3. record-skill.sh appends skill names to ~/.codex/.silver-bullet/state
+    3. record-skill.sh appends skill names to $HOME/.codex/.silver-bullet/state
     4. completion-audit.sh reads state file + config to gate git commit/push/PR/release
     5. silver:update runs git clone from GitHub into plugin cache, then writes installed_plugins.json
     6. create-release reads git log output, sanitizes commit subjects, creates gh release
@@ -109,10 +109,10 @@ recon_notes {
     8. silver-init reads README.md, CONTEXT.md, CLAUDE.md from project root (UNTRUSTED)
 
   privilege_level:
-    - Full file system read/write to ~/.codex/ and project directory
+    - Full file system read/write to $HOME/.codex/ and project directory
     - Ability to execute arbitrary bash commands via the Bash tool
     - Ability to clone external git repos into the plugin cache
-    - Ability to write to ~/.codex/plugins/installed_plugins.json
+    - Ability to write to $HOME/.codex/plugins/installed_plugins.json
     - Ability to invoke any Claude Code skill (through the active runtime's SB-recognized skill invocation channel)
     - gh CLI access for GitHub API operations
     - git operations (commit, push, tag, release)
@@ -123,8 +123,8 @@ recon_notes {
     - git clone from alo-exp/silver-bullet (update path)
     - jq (required for all hook operation — absence disables ALL enforcement)
     - gh CLI (GitHub release creation)
-    - GSD plugin: ~/.codex/get-shit-done/ (primary execution engine)
-    - Superpowers plugin: ~/.codex/plugins/cache/*/superpowers/
+    - GSD plugin: $HOME/.codex/get-shit-done/ (primary execution engine)
+    - Superpowers plugin: $HOME/.codex/plugins/cache/*/superpowers/
     - MultAI plugin (conditional — architecture review path)
 }
 ```
@@ -243,7 +243,7 @@ However, this boundary is enforced only by Claude's comprehension and good faith
 ```bash
 git clone --depth 1 --branch v<latest-version> https://github.com/alo-exp/silver-bullet.git "$NEW_CACHE"
 ```
-And then writes the new path to `~/.codex/plugins/installed_plugins.json`. This places external code from a GitHub repository directly into the plugin cache, which is subsequently loaded and executed by Claude Code as trusted plugin content.
+And then writes the new path to `$HOME/.codex/plugins/installed_plugins.json`. This places external code from a GitHub repository directly into the plugin cache, which is subsequently loaded and executed by Claude Code as trusted plugin content.
 
 **Attack vectors:**
 1. **Supply chain compromise:** If `alo-exp/silver-bullet` repository is compromised (account takeover, malicious release), the update skill will automatically clone and install malicious skills/hooks into the user's Claude Code environment.
@@ -288,7 +288,7 @@ These are unauthenticated, and the GitHub API response for `releases/latest` is 
 
 **Location:** `skills/silver-update/SKILL.md` Step 6
 
-**Description:** The update skill writes `installPath` (absolute path including `$HOME`) to `~/.codex/plugins/installed_plugins.json`. This is standard behavior for plugin managers but means the user's home directory path is stored in a file that could be read by any plugin. Low risk in current architecture but worth noting for future plugin isolation improvements.
+**Description:** The update skill writes `installPath` (absolute path including `$HOME`) to `$HOME/.codex/plugins/installed_plugins.json`. This is standard behavior for plugin managers but means the user's home directory path is stored in a file that could be read by any plugin. Low risk in current architecture but worth noting for future plugin isolation improvements.
 
 ---
 
@@ -307,7 +307,7 @@ These are unauthenticated, and the GitHub API response for `releases/latest` is 
 
 The triage gate in silver:fast/SKILL.md requires user confirmation (direct user interaction) that the change is "truly trivial." However:
 1. The classification relies entirely on Claude's judgment and user self-reporting — no mechanical verification of ≤3 files occurs before invoking gsd-fast
-2. Once `silver:fast` is invoked, the `trivial_file` (`~/.codex/.silver-bullet/trivial`) is set, which then also bypasses `dev-cycle-check.sh` and `completion-audit.sh`
+2. Once `silver:fast` is invoked, the `trivial_file` (`$HOME/.codex/.silver-bullet/trivial`) is set, which then also bypasses `dev-cycle-check.sh` and `completion-audit.sh`
 3. The routing in `silver/SKILL.md` allows silver:fast to be triggered by keywords like "trivial", "quick fix", "typo", "one-liner", "config value" — an attacker who knows this routing table can frame a non-trivial request as trivial to trigger the bypass path
 
 **Concrete attack:** A user (or injected instruction in autonomous mode) sends: "quick fix: update the API endpoint URL to point to our new server" — which could be classified as a config value change routing to silver:fast, bypassing security review that might have caught credentials or endpoint exposure issues.
@@ -353,7 +353,7 @@ fi
 
 The `^` and `$` anchors in `grep -E` match beginning/end of line by default, not the entire string. A multi-line bash command embedded as a single `command_str` could potentially embed a whitelisted pattern on one line alongside malicious appends on another line. The `printf '%s'` without `-n` might handle this differently across platforms.
 
-Additionally, the path component `~/\.codex/[^/]+/state` uses `[^/]+` which matches any single path segment — including non-standard state file locations if an attacker can manipulate `SILVER_BULLET_STATE_FILE` env var (though the env var is validated to stay within `~/.codex/`).
+Additionally, the path component `~/\.codex/[^/]+/state` uses `[^/]+` which matches any single path segment — including non-standard state file locations if an attacker can manipulate `SILVER_BULLET_STATE_FILE` env var (though the env var is validated to stay within `$HOME/.codex/`).
 
 **CVSS 3.1:** AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:M/A:N = **3.3 (Low)**
 
@@ -385,10 +385,10 @@ If `jq` is absent (removed, uninstalled, or PATH manipulated), ALL Silver Bullet
 
 **Location:** `silver-bullet.md §4`, `silver-bullet.md §2f`
 
-**Description:** In autonomous mode, SB suppresses all confirmation-asking behaviors and routes instructions without interactive review. The mode is set by writing to `~/.codex/.silver-bullet/mode`. An instruction (injected via any of the injection vectors above) could trigger autonomous mode activation:
+**Description:** In autonomous mode, SB suppresses all confirmation-asking behaviors and routes instructions without interactive review. The mode is set by writing to `$HOME/.codex/.silver-bullet/mode`. An instruction (injected via any of the injection vectors above) could trigger autonomous mode activation:
 
 ```bash
-echo "autonomous" > ~/.codex/.silver-bullet/mode
+echo "autonomous" > $HOME/.codex/.silver-bullet/mode
 ```
 
 However, the state tamper detection in dev-cycle-check.sh would normally block this. The mode file write is not explicitly in the tamper prevention whitelist — it blocks writes to `state`, `branch`, and `trivial` files but the whitelist check targets those specific files. The `mode` file write would be blocked by the general `.codex/[^/]+/(state|branch|trivial)` pattern only if `mode` is listed — checking the regex: it is NOT listed. The write pattern `\.codex/[^/]+/(state|branch|trivial)` does not cover `mode`.
@@ -408,7 +408,7 @@ However, the state tamper detection in dev-cycle-check.sh would normally block t
 **Description:** The session startup (§0) performs an automatic version check and offers to update if outdated. The update process:
 1. Fetches latest version via unauthenticated GitHub API call
 2. Clones the repository at the specified tag
-3. Writes the new path into `~/.codex/plugins/installed_plugins.json`
+3. Writes the new path into `$HOME/.codex/plugins/installed_plugins.json`
 4. New skills and hooks are loaded on next Claude Desktop restart
 
 There is no:
@@ -533,7 +533,7 @@ This creates a persistence mechanism: instructions written to §10 are automatic
 
 **Location:** `skills/silver-init/SKILL.md` Phase −1
 
-**Description:** The session-init sentinel `~/.codex/.silver-bullet/session-init` prevents Phase −1 from running more than once per session. This is a performance optimization, but it means that if the session-init phase is manipulated on its first run (e.g., via a poisoned docs/ file that affects Phase −1 context loading), subsequent invocations of `/silver:init` in the same session will skip the context reload and operate on potentially stale or corrupted state.
+**Description:** The session-init sentinel `$HOME/.codex/.silver-bullet/session-init` prevents Phase −1 from running more than once per session. This is a performance optimization, but it means that if the session-init phase is manipulated on its first run (e.g., via a poisoned docs/ file that affects Phase −1 context loading), subsequent invocations of `/silver:init` in the same session will skip the context reload and operate on potentially stale or corrupted state.
 
 **CVSS 3.1:** AV:L/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N = **2.2 (Low)**
 

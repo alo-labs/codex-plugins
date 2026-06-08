@@ -1,6 +1,6 @@
 # Silver Bullet
 
-[![version](https://img.shields.io/badge/version-v0.37.15-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.15)
+[![version](https://img.shields.io/badge/version-v0.37.16-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.16)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Agentic Process Orchestrator for AI-native Software Engineering and DevOps.**
@@ -294,7 +294,7 @@ It will:
 - copy workflow docs into `docs/workflows/`
 - scaffold the documentation scheme and durable knowledge/lessons folders
 - initialize or connect GSD planning artifacts
-- set up enforcement state paths under `~/.codex/.silver-bullet/`
+- set up enforcement state paths under `$HOME/.codex/.silver-bullet/`
 
 After that, use `/silver` for normal work.
 
@@ -328,10 +328,10 @@ After that, use `/silver` for normal work.
 | `/devops-skill-router` | Selects optional DevOps plugin skills for the current toolchain |
 | `/verify-tests` | Runs configured verification commands or stack defaults and writes a freshness marker |
 
-Logical route names may appear differently by host. For example, a Codex plugin
-install may expose `silver-bullet:silver-feature`, while generated command
-surfaces may expose `silver:feature`. The workflow contracts use logical names;
-the host adapter chooses the equivalent exposed name.
+Workflow contracts use logical names such as `silver:feature`. In Codex, SB
+mirrors its packaged `skill-source/` files into the native `~/.codex/skills`
+surface so the picker shows a single `/Silver:` namespace instead of plugin
+prefixed duplicates.
 
 In Codex, use `silver-bullet invoke-skill <name>` when SB requires a recorded
 skill invocation and the runtime has no callable `Skill` tool. Directly reading
@@ -380,14 +380,14 @@ Minimal shape:
     ]
   },
   "state": {
-    "state_file": "~/.codex/.silver-bullet/state",
-    "trivial_file": "~/.codex/.silver-bullet/trivial"
+    "state_file": "$HOME/.codex/.silver-bullet/state",
+    "trivial_file": "$HOME/.codex/.silver-bullet/trivial"
   },
   "release": {
     "profile": "generic",
     "require_plugin_runtime_matrix": true,
     "require_pre_release_quality_gate": true,
-    "quality_gate_state_file": "~/.codex/.silver-bullet/quality-gate-state"
+    "quality_gate_state_file": "$HOME/.codex/.silver-bullet/quality-gate-state"
   }
 }
 ```
@@ -430,7 +430,7 @@ Useful docs:
 - [docs/SDLC-MAP.md](docs/SDLC-MAP.md) - SDLC coverage matrix
 - [docs/composable-flows-contracts.md](docs/composable-flows-contracts.md) -
   canonical flow contracts
-- [docs/sb-benefits-over-plain-gsd.md](docs/sb-benefits-over-plain-gsd.md) -
+- [docs/internal/sb-benefits-over-plain-gsd.md](docs/internal/sb-benefits-over-plain-gsd.md) -
   detailed SB-over-GSD analysis
 
 ## Testing
@@ -506,7 +506,7 @@ tests/                            Unit, integration, live, and E2E harnesses
 .planning/                        GSD project lifecycle artifacts for this repo
 ```
 
-The Codex package mostly symlinks source-owned assets into `plugins/silver-bullet/`, but materializes the picker-facing `skills/` tree as real files.
+The Codex package mostly symlinks source-owned assets into `plugins/silver-bullet/`, stores internal generated skill files under `skill-source/`, and mirrors those files into native `~/.codex/skills` during install so the picker exposes only the `/Silver:` namespace.
 Project-instance artifacts such as `.planning/`, `.codex/`, `.forge/`, and
 runtime state are not treated as plugin package content.
 
@@ -525,14 +525,14 @@ runtime state are not treated as plugin package content.
 | Hooks not firing | Confirm `.silver-bullet.json` and `silver-bullet.md` both exist in the project root |
 | Too many files trigger enforcement | Adjust `project.src_pattern` and `project.src_exclude_pattern` |
 | YAML/JSON edits are unexpectedly gated | In `devops-cycle`, YAML/JSON/TOML are infrastructure code and intentionally gated |
-| CI is red and you need to push a fix | Commit normally; for push use the explicit CI override marker only when fixing CI: `touch ~/.codex/.silver-bullet/ci-red-override` |
+| CI is red and you need to push a fix | Commit normally; for push use the explicit CI override marker only when fixing CI: `touch $HOME/.codex/.silver-bullet/ci-red-override` |
 | Want to refresh templates | Re-run `/silver:init`; it detects existing config and preserves project-owned content |
 | Want to start fresh | Remove `.silver-bullet.json` and `silver-bullet.md`, then rerun `/silver:init` |
 
 ## Current Release
 
-- Version: `0.37.15`
-- Release: [v0.37.15](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.15)
+- Version: `0.37.16`
+- Release: [v0.37.16](https://github.com/alo-exp/silver-bullet/releases/tag/v0.37.16)
 - Notable changes:
   - The Codex package no longer exposes a plugin-owned `skills/` directory, preventing `/Silver Bullet:` duplicate picker entries.
   - The Codex installer maps internal `skill-source/` files into the native `~/.codex/skills` mirror so the picker-facing surface remains `/Silver:`.

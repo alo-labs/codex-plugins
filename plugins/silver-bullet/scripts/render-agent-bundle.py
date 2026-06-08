@@ -183,14 +183,18 @@ def ensure_codex_picker_title(text: str) -> str:
 
 
 def runtime_placeholders(agent: str) -> list[tuple[str, str]]:
-    current_home = os.path.join("~", f".{agent}")
+    # These substitutions often land inside quoted shell snippets. Use $HOME
+    # rather than "~" so fallback paths still expand when quoted.
+    current_home = f"$HOME/.{agent}"
     opposite = "claude" if agent == "codex" else "codex"
-    opposite_home = os.path.join("~", f".{opposite}")
+    opposite_home = f"$HOME/.{opposite}"
 
     return [
-        ("~/.codex", current_home),
-        ("~/.codex/.silver-bullet", f"{current_home}/.silver-bullet"),
-        ("~/.codex/plugins/cache", f"{current_home}/plugins/cache"),
+        ("$HOME/.codex", current_home),
+        ("$HOME/.codex/.silver-bullet", f"{current_home}/.silver-bullet"),
+        ("$HOME/.codex/plugins/cache", f"{current_home}/plugins/cache"),
+        (os.path.join("~", f".{opposite}") + "/", f"{current_home}/"),
+        (os.path.join("~", f".{opposite}"), current_home),
         (f"{opposite_home}/", f"{current_home}/"),
         (opposite_home, current_home),
         (f"$HOME/.{opposite}/", f"$HOME/.{agent}/"),

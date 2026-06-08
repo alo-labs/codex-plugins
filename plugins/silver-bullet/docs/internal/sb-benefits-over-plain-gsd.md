@@ -3,6 +3,7 @@
 **Date:** 2026-05-14  
 **Scope:** Concrete benefits Silver Bullet provides when layered on top of GSD, based on the current Silver Bullet project documents and codebase surfaces: hooks, commands, and skills.  
 **Short answer:** GSD is the planning and execution engine. Silver Bullet is the orchestration, enforcement, quality, release, and operating-discipline layer around that engine.
+**Location:** Internal long-form analysis; the concise public summary lives in README and the website.
 
 ---
 
@@ -394,7 +395,7 @@ SB's guard layer blocks direct edits to GSD-managed planning artifacts and relat
 - REQUIREMENTS.md
 - phase plans
 - other `.planning/` lifecycle files
-- SB state markers under `~/.codex/.silver-bullet`
+- SB state markers under `$HOME/.codex/.silver-bullet`
 - legacy trivial bypass markers
 
 The guard forces the user or agent to use the owning workflow or skill instead.

@@ -398,7 +398,7 @@ git commit -m "feat: expand /silver router with 6-workflow table, disambiguation
 
 Use the Glob tool to search for:
 ```
-~/.codex/plugins/cache/multai/skills/orchestrator/SKILL.md
+$HOME/.codex/plugins/cache/multai/skills/orchestrator/SKILL.md
 ```
 
 If no file found, output exactly:
@@ -415,12 +415,12 @@ STOP. Do not proceed.
 
 Read installed version:
 ```bash
-cat "~/.codex/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
+cat "$HOME/.codex/plugins/installed_plugins.json" | jq -r '.plugins["multai@multai"][0].version // "unknown"'
 ```
 
 Check latest: visit MultAI marketplace or check local CHANGELOG.md:
 ```bash
-cat "~/.codex/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
+cat "$HOME/.codex/plugins/cache/multai/CHANGELOG.md" 2>/dev/null | grep "^## \[" | head -1
 ```
 
 If installed version appears outdated compared to CHANGELOG, display:
@@ -436,7 +436,7 @@ No interactive user prompt needed — MultAI update is user-initiated only. Just
 
 Use the Glob tool to search for:
 ```
-~/.codex/plugins/cache/engineering/skills/
+$HOME/.codex/plugins/cache/engineering/skills/
 ```
 
 If no directory found, display:
@@ -453,7 +453,7 @@ Continue without stopping.
 
 Use the Glob tool to search for:
 ```
-~/.codex/plugins/cache/product-management/skills/
+$HOME/.codex/plugins/cache/product-management/skills/
 ```
 
 If no directory found, display:
@@ -562,7 +562,7 @@ Confirm: identify the exact line containing the auto-update or version check bul
 
 Find the line that references auto-update or version check in §0. Add:
 ```
-- Check if MultAI has updates available: read `~/.codex/plugins/installed_plugins.json` for `multai@multai` version; compare to CHANGELOG. If outdated, offer to run `/multai:update` before starting session.
+- Check if MultAI has updates available: read `$HOME/.codex/plugins/installed_plugins.json` for `multai@multai` version; compare to CHANGELOG. If outdated, offer to run `/multai:update` before starting session.
 ```
 
 - [ ] **Step 3: Apply same change to templates/silver-bullet.md.base**

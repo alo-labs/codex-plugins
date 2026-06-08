@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.37.14] — 2026-06-08
+
+## Bug Fixes
+
+- `fix(codex): expose Silver Bullet picker skills only through the native /Silver mirror`
+
+## Tests
+
+- `test(codex): prevent duplicate /Silver Bullet skill listings from the plugin manifest`
+
+---
+
 ## [0.37.13] — 2026-06-07
 
 ## Bug Fixes

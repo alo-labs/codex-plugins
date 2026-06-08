@@ -1,6 +1,6 @@
 ---
 name: "silver:release"
-title: "Silver: /silver:release - Release"
+title: "Silver: Release"
 description: Prepare a Silver Bullet milestone release
 argument-hint: <version or release description>
 ---

@@ -1,6 +1,6 @@
 ---
 name: "silver:create-release"
-title: "Silver: /silver:create-release - Create Release"
+title: "Silver: Create Release"
 description: Generate release notes and create a release
 argument-hint: <version or release description>
 ---

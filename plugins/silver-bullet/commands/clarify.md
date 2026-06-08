@@ -1,6 +1,6 @@
 ---
 name: "silver:clarify"
-title: "Silver: /silver:clarify - Clarify"
+title: "Silver: Clarify"
 description: Clarify a vague idea or requirement with Silver Bullet
 argument-hint: <idea, requirement sketch, or requirement doc>
 ---

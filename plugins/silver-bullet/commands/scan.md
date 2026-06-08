@@ -1,6 +1,6 @@
 ---
 name: "silver:scan"
-title: "Silver: /silver:scan - Scan"
+title: "Silver: Scan"
 description: Scan a Silver Bullet session for deferred work
 argument-hint: <session or path>
 ---

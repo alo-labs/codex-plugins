@@ -1,6 +1,6 @@
 ---
 name: silver
-title: "Silver: /silver - Router"
+title: "Silver: Router"
 description: Route freeform text through Silver Bullet
 argument-hint: <description of what you want to do>
 ---

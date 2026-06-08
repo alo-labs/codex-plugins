@@ -1,6 +1,6 @@
 ---
 name: "silver:validate"
-title: "Silver: /silver:validate - Validate"
+title: "Silver: Validate"
 description: Validate a spec or plan with Silver Bullet
 argument-hint: <spec or plan>
 ---

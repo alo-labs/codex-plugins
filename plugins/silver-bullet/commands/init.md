@@ -1,6 +1,6 @@
 ---
 name: "silver:init"
-title: "Silver: /silver:init - Init"
+title: "Silver: Init"
 description: Initialize Silver Bullet in a project
 argument-hint: [project path]
 ---

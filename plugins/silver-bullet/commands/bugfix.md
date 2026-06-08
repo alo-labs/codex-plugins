@@ -1,6 +1,6 @@
 ---
 name: "silver:bugfix"
-title: "Silver: /silver:bugfix - Bugfix"
+title: "Silver: Bugfix"
 description: Fix a bug with Silver Bullet discipline
 argument-hint: <bug description>
 ---

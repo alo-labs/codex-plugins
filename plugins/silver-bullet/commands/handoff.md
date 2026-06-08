@@ -1,6 +1,6 @@
 ---
 name: "silver:handoff"
-title: "Silver: /silver:handoff - Handoff"
+title: "Silver: Handoff"
 description: Generate a reusable project-level session handoff prompt
 argument-hint: "[optional focus area or 'include task details']"
 ---

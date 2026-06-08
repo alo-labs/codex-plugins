@@ -1,6 +1,6 @@
 ---
 name: "silver:blast-radius"
-title: "Silver: /silver:blast-radius - Blast Radius"
+title: "Silver: Blast Radius"
 description: Assess the blast radius of a change
 argument-hint: <change description>
 ---

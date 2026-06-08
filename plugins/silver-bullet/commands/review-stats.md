@@ -1,6 +1,6 @@
 ---
 name: "silver:review-stats"
-title: "Silver: Review Stats"
+title: "Review Stats"
 description: Summarize Silver Bullet review statistics
 argument-hint: <scope or time range>
 ---

@@ -1,6 +1,6 @@
 ---
 name: "silver:fast"
-title: "Silver: Fast"
+title: "Fast"
 description: Handle a trivial task with no workflow overhead
 argument-hint: <small task>
 ---

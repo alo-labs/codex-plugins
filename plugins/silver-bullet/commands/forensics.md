@@ -1,6 +1,6 @@
 ---
 name: "silver:forensics"
-title: "Silver: Forensics"
+title: "Forensics"
 description: Investigate a failed or abandoned Silver Bullet session
 argument-hint: <session or failure description>
 ---

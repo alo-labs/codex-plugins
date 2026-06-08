@@ -1,6 +1,6 @@
 ---
 name: "silver:rem"
-title: "Silver: Rem"
+title: "Rem"
 description: Capture a Silver Bullet knowledge or lesson item
 argument-hint: <lesson or insight>
 ---

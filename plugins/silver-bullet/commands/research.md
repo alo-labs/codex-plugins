@@ -1,6 +1,6 @@
 ---
 name: "silver:research"
-title: "Silver: Research"
+title: "Research"
 description: Research a technical decision with Silver Bullet
 argument-hint: <question or topic>
 ---

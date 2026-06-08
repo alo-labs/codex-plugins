@@ -1,6 +1,6 @@
 ---
 name: "silver:spec"
-title: "Silver: Spec"
+title: "Spec"
 description: Write a Silver Bullet specification
 argument-hint: <problem or idea>
 ---

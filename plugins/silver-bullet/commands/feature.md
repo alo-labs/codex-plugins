@@ -1,6 +1,6 @@
 ---
 name: "silver:feature"
-title: "Silver: Feature"
+title: "Feature"
 description: Build a feature with Silver Bullet
 argument-hint: <feature description>
 ---

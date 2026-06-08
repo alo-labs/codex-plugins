@@ -1,6 +1,6 @@
 ---
 name: "silver:quality-gates"
-title: "Silver: Quality Gates"
+title: "Quality Gates"
 description: Run Silver Bullet quality gates
 argument-hint: <scope or path>
 ---

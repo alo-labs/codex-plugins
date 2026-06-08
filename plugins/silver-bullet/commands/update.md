@@ -1,6 +1,6 @@
 ---
 name: "silver:update"
-title: "Silver: Update"
+title: "Update"
 description: Update Silver Bullet or refresh its dependencies
 argument-hint: [project path]
 ---

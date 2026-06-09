@@ -42,6 +42,7 @@ sb_skill_is_installed() {
       "$repo_root"
       # Host-specific runtime root.
       "${SB_RUNTIME_HOME_ROOT}"
+      "${SB_RUNTIME_PLUGIN_CACHE_ROOT:-${SB_RUNTIME_HOME_ROOT}/plugins/cache}"
       "$HOME/.agents"
     )
   fi
@@ -54,7 +55,11 @@ sb_skill_is_installed() {
         shopt -s nullglob
         for candidate in \
           "$root"/*/skills/"$skill"/SKILL.md \
-          "$root"/*/*/skills/"$skill"/SKILL.md; do
+          "$root"/*/*/skills/"$skill"/SKILL.md \
+          "$root"/*/*/*/skills/"$skill"/SKILL.md \
+          "$root"/*/upstream/skills/"$skill"/SKILL.md \
+          "$root"/*/*/upstream/skills/"$skill"/SKILL.md \
+          "$root"/*/*/*/upstream/skills/"$skill"/SKILL.md; do
           if [[ -f "$candidate" ]]; then
             shopt -u nullglob
             return 0

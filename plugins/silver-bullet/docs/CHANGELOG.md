@@ -16,13 +16,34 @@
 
 <!-- ENTRIES BELOW — newest first -->
 
+## 2026-06-10 — one-index-canonical-flows
+**What**: Renumbered SB's canonical software engineering flows from the former zero-based catalog to `FLOW 1`-`FLOW 18` across the website, flow contracts, skill instructions, packaged sources, templates, hooks, and tests.
+**Commits**: —
+**Skills run**: silver:ensure-docs
+**Virtual cost**: ~$0.16 (medium complexity — source-wide numbering migration and consistency tests)
+**KNOWLEDGE.md**: no changes
+
+## 2026-06-10 — website-content-consistency-scan
+**What**: Scanned the public website content for stale or nonaligned claims and corrected comparison/SB-vs-GSD/workflow wording for host-neutral instruction files, monthly knowledge docs, helper-plugin orchestration, current release-gate scope, and the 18 canonical software engineering flows.
+**Commits**: —
+**Skills run**: silver:ensure-docs
+**Virtual cost**: ~$0.08 (low complexity — targeted static-site consistency scan and verification)
+**KNOWLEDGE.md**: no changes
+
+## 2026-06-09 — website-help-center-currentness-audit
+**What**: Audited the public website and Help Center against the current v0.37.22 implementation, removed stale research, release, session-startup, enforcement-count, and workflow-step claims, and aligned workflow, reference, and search content with current skill contracts.
+**Commits**: —
+**Skills run**: silver:ensure-docs
+**Virtual cost**: ~$0.20 (medium complexity — full static-site audit, Help Center section pass, and targeted docs tests)
+**KNOWLEDGE.md**: updated (research multi-AI exception)
+
 ## 2026-05-19 — v0.37.0-sdlc-interception-ledger
 **What**: Extended Silver Bullet's orchestration contract for v0.37.0 with merged clarify behavior, SB-owned milestone bootstrap, a live active-intent ledger in session logs, and release-prep docs that keep the user-facing workflow aligned with the new SDLC interception model.
 **Commits**: —
 **Skills run**: silver:clarify, silver:init, silver:feature, verification-before-completion
 **Virtual cost**: ~$0.40 (high complexity — hooks, docs, tests, and package sync)
 **KNOWLEDGE.md**: updated (intent ledger coupling, request/completion consistency, release-prep orchestration)
-**Lessons**: updated (request/completion coupling, dedup-safe ledger updates)
+**Learnings**: updated (request/completion coupling, dedup-safe ledger updates)
 
 ## 2026-05-14 — sb-gsd-alignment
 **What**: Re-aligned Silver Bullet around GSD as the lifecycle authority, making SB the Agentic Process Orchestrator that composes pre-execution quality checks, GSD execution, and final delivery gates without blocking implementation on post-execution markers.
@@ -53,7 +74,7 @@
 **KNOWLEDGE.md**: updated (doc gate contract, checklist semantics, stale-artifact test hardening)
 
 ## 2026-05-07 — codex-docs-coverage
-**What**: Brought the project docs up to date with the current Codex packaging split, shared marketplace boundary, dual-runtime live matrix, and the May knowledge/lessons files.
+**What**: Brought the project docs up to date with the current Codex packaging split, shared marketplace boundary, dual-runtime live matrix, and the May knowledge/learnings files.
 **Commits**: —
 **Skills run**: gsd:docs-update
 **Virtual cost**: ~$0.12 (low complexity — docs sweep + verification)

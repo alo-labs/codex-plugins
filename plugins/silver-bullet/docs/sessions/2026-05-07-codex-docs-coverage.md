@@ -27,3 +27,6 @@
 - For truly event-driven issue handling, a GitHub webhook or GitHub Action bridge is still the
   cleaner path than schedule-based polling.
 
+## Items Filed
+
+- #206: chore: install Graphify CLI for local SB retrieval

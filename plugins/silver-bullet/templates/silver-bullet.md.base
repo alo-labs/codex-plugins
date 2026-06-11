@@ -60,12 +60,12 @@ Twelve enforcement layers enforce compliance:
 1. **Skill tracker** (Claude Skill events or Codex `silver-bullet invoke-skill`) — Records every supported Silver Bullet skill invocation to the state file
 2. **Stage enforcer** (Pre+PostToolUse/Edit|Write|Bash) — HARD STOP if planning skills incomplete before source edits
 3. **Compliance status** (PostToolUse/all) — Shows workflow progress on every tool use (informational)
-4. **Planning file guard** (PreToolUse/Edit|Write|MultiEdit) — `planning-file-guard.sh` blocks direct edits to GSD-managed planning artifacts (ROADMAP.md, STATE.md, etc.); forces use of the owning GSD skill
+4. **Planning file guard** (PreToolUse/Edit|Write|MultiEdit) — `planning-file-guard.sh` blocks direct edits to SB-managed planning artifacts (ROADMAP.md, STATE.md, etc.); forces use of the owning SB skill or workflow
 5. **Completion audit** (Pre+PostToolUse/Bash) — Blocks intermediate commits until planning is done; blocks PR/deploy/release until full workflow is done
 6. **CI status check** (Pre+PostToolUse/Bash) — Blocks further commits and actions when CI is failing
 7. **Session management** (PostToolUse/Bash) — Session logging, autonomous mode timeout detection, branch-scoped state reset
 8. **Stop hook** (Stop/SubagentStop) — Blocks task-complete declaration if required_deploy skills are missing
-9. **UserPromptSubmit recorder + reminder** (UserPromptSubmit) — Records requested SB/GSD routes and re-injects missing skills list before every user message
+9. **UserPromptSubmit recorder + reminder** (UserPromptSubmit) — Records requested SB and optional extension routes and re-injects missing skills list before every user message
 10. **Forbidden skill gate** (PreToolUse/Skill) — Blocks deprecated/forbidden skill invocations before they execute
 11. **ROADMAP freshness gate** (PreToolUse/Bash) — `roadmap-freshness.sh` blocks `git commit` if a phase `SUMMARY.md` is staged but the ROADMAP.md checkbox is not ticked; prevents milestone state from diverging from execution reality
 12. **Redundant instructions + anti-rationalization** — Workflow file + silver-bullet.md both enforce;
@@ -787,11 +787,14 @@ These rules apply to ALL file operations, in every context and session mode.
 
 ## 8. Third-Party Plugin Boundary
 
-Silver Bullet orchestrates GSD as the lifecycle authority plus selected helper plugins
-but **NEVER modifies their skill files**. All behavioral changes MUST be implemented in
-Silver Bullet's own orchestrator layer — silver-bullet.md, workflows, hooks, or Silver Bullet skills.
+Silver Bullet owns the default lifecycle through SB-owned skills. Third-party
+plugins are optional extension surfaces for provider-specific, DevOps, design,
+research, or issue-tracker work; they do not own routing, planning, execution,
+verification, ship, or release. SB **NEVER modifies third-party skill files**.
+All behavioral changes MUST be implemented in Silver Bullet's own orchestrator
+layer — silver-bullet.md, workflows, hooks, or Silver Bullet skills.
 
-If a third-party skill becomes unavailable during a run, SB fails closed:
+If an optional third-party skill becomes unavailable during a run, SB fails closed:
 stop, notify the user, and offer remediation in this order:
 1. Install the missing plugin and retry
 2. Continue only if there is an explicitly approved degraded path
@@ -799,13 +802,13 @@ stop, notify the user, and offer remediation in this order:
 
 You MUST NOT:
 - Edit any file under `$HOME/.codex/plugins/cache/` (third-party plugin caches)
-- Modify a Superpowers, Engineering, Design, or GSD skill file to change behavior
+- Modify a Superpowers, Anthropic, Engineering, Design, GSD, or provider skill file to change behavior
 - Fork or patch an upstream skill — wrap it in a Silver Bullet hook or workflow step instead
 
-If a third-party skill's behavior needs adjustment, implement the change as:
+If an optional third-party skill's behavior needs adjustment, implement the change as:
 1. A workflow instruction (in `templates/workflows/*.md`) that runs before/after the skill
 2. A hook (in `hooks/`) that intercepts or augments the skill's output
-3. A Silver Bullet skill (in `skills/`) that wraps the third-party skill with additional logic
+3. A Silver Bullet skill (in `skills/`) that wraps the optional extension with additional logic
 
 ---
 

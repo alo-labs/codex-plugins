@@ -35,13 +35,13 @@ Read `docs/workflows/full-dev-cycle.md` before starting any non-trivial task. If
 
 Silver Bullet owns the agentic loop in SB-activated projects. On every non-trivial user goal, wait for SB route/workflow guidance first, then invoke only the SB/GSD/helper skills that guidance selects. When an SB-launched workflow step completes, return control to the active SB workflow and let it choose the next step until the user goal is achieved or user feedback is required.
 
-Before planning, editing, debugging, reviewing, or shipping, read the relevant project knowledge and learnings that could affect the action. Prefer Graphify when available (`graphify query "<task context>"` from the project root); otherwise read `docs/knowledge/INDEX.md`, current `docs/knowledge/YYYY-MM.md`, current `docs/learnings/YYYY-MM.md`, and any directly referenced docs.
+Before planning, editing, debugging, reviewing, or shipping, read the relevant project knowledge and learnings that could affect the action. Prefer Graphify when available (`graphify query "<task context with concrete files/features>" --graph graphify-out/graph.json` from the project root); inspect the returned nodes for relevance before acting. If the graph is missing, run `graphify update . --no-cluster` as the no-LLM code-index refresh path. If Graphify is unavailable or still has no useful index, read `docs/knowledge/INDEX.md`, current `docs/knowledge/YYYY-MM.md`, current `docs/learnings/YYYY-MM.md`, and any directly referenced docs.
 
 ## Review Loop (Section 3a)
 
 Review loop must produce two consecutive clean passes. Run the audit skill twice in sequence:
 
-1. Invoke the audit skill (e.g. `silver:quality-gates`, `gsd-code-review`, or the applicable review skill)
+1. Invoke the audit skill (e.g. `silver:quality-gates`, `silver:review`, or the applicable review skill)
 2. If issues found: fix them, then re-run
 3. If clean pass: run the audit again immediately (second pass)
 4. If second pass is also clean: two consecutive clean passes confirmed — proceed

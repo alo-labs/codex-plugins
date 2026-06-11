@@ -30,3 +30,5 @@
 ## Items Filed
 
 - #206: chore: install Graphify CLI for local SB retrieval
+- #207: bug: fix Claude live matrix hang during release gate
+- #208: bug: fix Kay live Stage C edit release-gate failures

@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/alo-exp/sidekick.git",
-        "ref": "ba7d754c72adf114fe5d2ec6e7cec3cd6e22bc75"
+        "ref": "e9ff53318a3571ce6242a381af4c4daa776ba89a"
       },
       "version": "0.7.1",
       "policy": {

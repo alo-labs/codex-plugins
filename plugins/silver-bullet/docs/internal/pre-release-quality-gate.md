@@ -50,9 +50,10 @@ only supplements the SB review artifact.
    accepted findings in that round.
 8. **Loop**: run rounds until **2 consecutive clean rounds across all active
    review steps**. Match the review cycle discipline used in Stages 2 and 4.
-9. **MANDATORY — invoke `/silver:completion-audit` or `/silver:verify`** via
-   the runtime-native skill invocation channel. Running verification commands manually is NOT a substitute
-   for invoking the SB completion gate. You need BOTH: (a) run the actual
+9. **MANDATORY — invoke `/silver:completion-audit` or `/silver:verify`** through
+   the active runtime's SB-recognized skill invocation channel. Running
+   verification commands manually is NOT a substitute for invoking the SB
+   completion gate. You need BOTH: (a) run the actual
    verification commands (tests, CI status, lint), AND (b) invoke the SB skill
    so `record-skill.sh` tracks it.
 

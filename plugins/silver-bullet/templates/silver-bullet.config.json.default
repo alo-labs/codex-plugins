@@ -1,6 +1,6 @@
 {
-  "config_version": "0.38.0",
-  "version": "0.38.0",
+  "config_version": "0.38.1",
+  "version": "0.38.1",
   "project": {
     "name": "{{PROJECT_NAME}}",
     "src_pattern": "/src/",
@@ -58,6 +58,7 @@
     ],
     "all_tracked": [
       "silver-quality-gates",
+      "silver-domain-audit",
       "silver-blast-radius",
       "devops-quality-gates",
       "devops-skill-router",

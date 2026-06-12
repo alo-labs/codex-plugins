@@ -63,6 +63,7 @@ append_skill_roots() {
     "${HOME}/.codex/skills"
     "${HOME}/.agents/skills"
     "${PLUGIN_ROOT}/skills"
+    "${PLUGIN_ROOT}/skill-source"
   )
 
   shopt -s nullglob
@@ -105,11 +106,12 @@ find_skill_file() {
     [[ -d "$root" ]] || continue
     for name in "${candidate_names[@]}"; do
       [[ -n "$name" ]] || continue
-      candidate="${root}/${name}/SKILL.md"
-      if [[ -f "$candidate" ]]; then
-        printf '%s\n' "$candidate"
-        return 0
-      fi
+      for candidate in "${root}/${name}/SKILL.md" "${root}/${name}/SILVER_SOURCE"; do
+        if [[ -f "$candidate" ]]; then
+          printf '%s\n' "$candidate"
+          return 0
+        fi
+      done
     done
   done
 
@@ -118,9 +120,9 @@ find_skill_file() {
   for root in "${SKILL_ROOTS[@]}"; do
     [[ -d "$root" ]] || continue
     if command -v rg >/dev/null 2>&1; then
-      candidate=$(rg -l -m1 -g 'SKILL.md' "^(name:[[:space:]]*[\"']?(${escaped_raw}|${escaped_canonical})[\"']?[[:space:]]*)$" "$root" 2>/dev/null | head -1 || true)
+      candidate=$(rg -l -m1 -g 'SKILL.md' -g 'SILVER_SOURCE' "^(name:[[:space:]]*[\"']?(${escaped_raw}|${escaped_canonical})[\"']?[[:space:]]*)$" "$root" 2>/dev/null | head -1 || true)
     else
-      candidate=$(grep -Rls -E "^(name:[[:space:]]*[\"']?(${escaped_raw}|${escaped_canonical})[\"']?[[:space:]]*)$" "$root" 2>/dev/null | head -1 || true)
+      candidate=$(find "$root" -type f \( -name 'SKILL.md' -o -name 'SILVER_SOURCE' \) -exec grep -lsE "^(name:[[:space:]]*[\"']?(${escaped_raw}|${escaped_canonical})[\"']?[[:space:]]*)$" {} + 2>/dev/null | head -1 || true)
     fi
     if [[ -n "$candidate" && -f "$candidate" ]]; then
       printf '%s\n' "$candidate"

@@ -8,7 +8,7 @@ Silver Bullet does not provide generic automatic model routing. The historical `
 
 | Surface | Model owner | Silver Bullet responsibility |
 |---------|-------------|------------------------------|
-| Current Claude or Codex session | User and host configuration | Compose workflow, enforce gates, record skill progress |
+| Current Claude, Codex, or Cursor session | User and host configuration | Compose workflow, enforce gates, record skill progress |
 | GSD subagents or GSD-managed work | GSD and host agent configuration | Delegate to GSD at the correct lifecycle boundary |
 | Design, Engineering, Product Management, Superpowers, MultAI | The invoked plugin/tool and current host session | Sequence the helper only when the SB workflow calls for it |
 | Hooks and shell helpers | No model selection | Validate state, command intent, and artifact freshness |
@@ -24,13 +24,15 @@ Silver Bullet does not provide generic automatic model routing. The historical `
 ## Runtime Capability Tiers
 
 SB documents four capability tiers so users know what enforcement to expect in
-each host environment. Run `bash scripts/sb-diagnostics.sh` for a local probe.
+each host environment. Run `bash scripts/sb-bootstrap.sh` for onboarding
+orientation (jq check, diagnostics, init next steps) or
+`bash scripts/sb-diagnostics.sh` for a capability probe only.
 
 | Tier | Name | What works | Typical host |
 |------|------|------------|--------------|
 | 0 | Guidance-only | Skills, workflows, artifact templates; no hook enforcement | SDK/web sessions without hook config |
 | 1 | State-tracked | Skill markers and state file under `$HOME/.codex/.silver-bullet/` | Partial hook delivery or manual skill invocation |
-| 2 | Hook-enforced | PreToolUse/PostToolUse/Stop gates, completion audit, planning guards | Claude Code CLI, Codex CLI with merged hooks |
+| 2 | Hook-enforced | PreToolUse/PostToolUse/Stop gates, completion audit, planning guards | Claude Code CLI, Codex CLI, Cursor with `$HOME/.codex/hooks.json` |
 | 3 | Live-tested | Release live matrix, e2e-live scenarios, installed-runtime receipts | CI release gates and local live harness |
 
 Tiers are cumulative: tier 2 includes tier 1 behavior; tier 3 assumes tier 2
@@ -39,7 +41,10 @@ for release work.
 ### Diagnostics
 
 ```bash
-# Human-readable report
+# Onboarding probe (jq, diagnostics, init/migrator next steps)
+bash scripts/sb-bootstrap.sh
+
+# Human-readable capability report
 bash scripts/sb-diagnostics.sh
 
 # JSON for automation
@@ -47,7 +52,21 @@ SB_DIAG_FORMAT=json bash scripts/sb-diagnostics.sh
 ```
 
 Checks: `jq`, hook config presence, Graphify availability, package version,
-state root, and inferred capability tier.
+state root, inferred runtime name (`claude`, `codex`, or `cursor`), and capability tier.
+
+### Marketplace install surfaces
+
+| Host | Public marketplace | Dev/checkout installer |
+|------|-------------------|------------------------|
+| Claude Code | [alo-labs/claude-plugins](https://github.com/alo-labs/claude-plugins) | `scripts/install-claude.sh` |
+| Codex | [alo-labs/codex-plugins](https://github.com/alo-labs/codex-plugins) | `scripts/install-codex.sh` |
+| Cursor | [alo-labs/alo-labs-cursor-marketplace](https://github.com/alo-labs/alo-labs-cursor-marketplace) | `scripts/install-cursor.sh` |
+
+Release prep runs `scripts/sync-release-marketplace-versions.sh <version>` to
+keep all three marketplace repos aligned with `.codex-plugin/plugin.json` /
+`.codex-plugin/plugin.json` / `plugins/silver-bullet/.codex-plugin/plugin.json`.
+
+Cursor release smoke (no live agent required): `bash scripts/release-live-matrix-cursor-smoke.sh`.
 
 ### Related Docs
 

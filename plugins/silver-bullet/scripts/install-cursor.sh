@@ -94,7 +94,8 @@ sync_plugin_tree_from_public_release() {
   git clone --depth 1 --branch "v${release_version}" \
     https://github.com/alo-exp/silver-bullet.git "$checkout_dir" >/dev/null 2>&1 || \
     git clone --depth 1 --branch "$release_version" \
-      https://github.com/alo-exp/silver-bullet.git "$checkout_dir" >/dev/null
+      https://github.com/alo-exp/silver-bullet.git "$checkout_dir" >/dev/null 2>&1 || \
+    git clone --depth 1 https://github.com/alo-exp/silver-bullet.git "$checkout_dir" >/dev/null
 
   mkdir -p "${checkout_dir}/agents"
   python3 "$AGENT_RENDERER" render \

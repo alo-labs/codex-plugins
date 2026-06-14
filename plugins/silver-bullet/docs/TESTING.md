@@ -210,3 +210,31 @@ Do **not** test:
 - The markdown prose inside workflow/skill files (no executable logic)
 - Third-party plugin hooks (GSD, Superpowers enforce their own behavior)
 - Trivial config scaffolding (placeholder presence is already tested in CI)
+
+## Session note (2026-06-14)
+
+Doc-scheme gate remediation for `phase-056-zuvo-runtime-parity-release` in a Cursor session did not change test commands, harness layout, or coverage targets; prior v0.39.2 `run-all-tests.sh` stdin guidance remains authoritative.
+
+## Doc-scheme session (2026-06-14)
+
+Task `phase-056-zuvo-runtime-parity-release`: v0.39.4 shipped (phase 056 runtime parity, phase 057 Cursor marketplace, site refresh). Doc-scheme gate refreshed in Cursor runtime (`$HOME/.codex/.silver-bullet`).
+
+
+## Cursor runtime bootstrap (v0.39.4 / phase 057)
+
+Phase 057 adds targeted coverage for the Cursor host adapter:
+
+| Area | What it proves | Location |
+|------|----------------|----------|
+| Runtime paths | `$HOME/.codex/.silver-bullet` state + hook manifest resolution | `tests/hooks/test-runtime-paths.sh` (cursor cases) |
+| Bootstrap / install | Marketplace sync, plain-file template layout, local git identity on CI | `tests/hooks/test-cursor-runtime-bootstrap.sh` |
+| Hook bridge | Cursor `exec_command` / patch events reach SB PreToolUse hooks | `tests/hooks/test-cursor-hook-bridge.sh` |
+
+Run the focused slice before release:
+
+```bash
+bash tests/hooks/test-cursor-runtime-bootstrap.sh
+bash tests/hooks/test-cursor-hook-bridge.sh
+```
+
+Full suite still gates delivery via `/verify-tests` → `tests/run-all-tests.sh` (stdin closed per test).

@@ -41,16 +41,10 @@ fi
 UAT=".planning/UAT.md"
 SPEC=".planning/SPEC.md"
 
-# Only gate on release, milestone completion, or ship when SPEC defines acceptance criteria
-if ! printf '%s' "$skill" | grep -qE 'silver-release|silver-ship'; then
+# Gate milestone release only — phase-level ship (silver:ship) does not require UAT.md.
+# UAT is generated at milestone completion (silver:feature Step 17) before silver:release.
+if ! printf '%s' "$skill" | grep -qE 'silver-release'; then
   exit 0
-fi
-
-# Ship gate applies only when the project has a spec with acceptance criteria
-if printf '%s' "$skill" | grep -qE 'silver-ship'; then
-  if [[ ! -f "$SPEC" ]]; then
-    exit 0
-  fi
 fi
 
 # Check 1: UAT.md must exist (UATG-01)
@@ -68,10 +62,11 @@ if grep -E '\| FAIL \|' "$UAT" | grep -qvE '\|\s*(#|Total|PASS|NOT.?RUN|Status|R
   exit 0
 fi
 
-# Check 3: NOT-RUN advisory (non-blocking)
-if grep -qE '\| NOT-RUN \|' "$UAT"; then
-  not_run_count=$(grep -cE '\| NOT-RUN \|' "$UAT" || true)
-  printf '{"hookSpecificOutput":{"message":"⚠️  UAT ADVISORY: %s criterion/criteria marked NOT-RUN in .planning/UAT.md. Ensure all criteria are executed before milestone completion."}}' "$not_run_count"
+# Check 3: NOT-RUN blocks milestone release (UATG-02)
+if grep -E '\| NOT-RUN \|' "$UAT" | grep -qvE '\|\s*(#|Total|PASS|FAIL|Status|Result)\s*\|'; then
+  not_run_count=$(grep -E '\| NOT-RUN \|' "$UAT" | grep -cvE '\|\s*(#|Total|PASS|FAIL|Status|Result)\s*\|' || true)
+  emit_block "UAT GATE: ${not_run_count} criterion/criteria marked NOT-RUN in .planning/UAT.md. Execute all criteria before completing milestone. Override only with explicit SB OVERRIDE: documented waiver in user message (audited)."
+  exit 0
 fi
 
 # Check 4: Spec version must match (UATG-04)

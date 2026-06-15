@@ -24,12 +24,29 @@ if [[ -f "$_lib_dir/required-skills.sh" ]]; then
   # shellcheck source=lib/required-skills.sh
   source "$_lib_dir/required-skills.sh"
 fi
+if [[ -f "$_lib_dir/quality-gates-mode.sh" ]]; then
+  # shellcheck source=lib/quality-gates-mode.sh
+  source "$_lib_dir/quality-gates-mode.sh"
+fi
 if [[ -f "$_lib_dir/hook-audit.sh" ]]; then
   # shellcheck source=lib/hook-audit.sh
   source "$_lib_dir/hook-audit.sh"
 fi
+if [[ -f "$_lib_dir/jq-gate.sh" ]]; then
+  # shellcheck source=lib/jq-gate.sh
+  source "$_lib_dir/jq-gate.sh"
+fi
 
-command -v jq >/dev/null 2>&1 || exit 0
+emit_block_jq_missing() {
+  local reason="$1"
+  local json_reason
+  json_reason=$(printf '%s' "$reason" | jq -Rs '.')
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}' "$json_reason"
+}
+
+if declare -f sb_jq_enforcement_block >/dev/null 2>&1; then
+  sb_jq_enforcement_block "workflow-chain-guard" "emit_block_jq_missing"
+fi
 
 input=$(cat)
 hook_event=$(printf '%s' "$input" | jq -r '.hook_event_name // "PreToolUse"')
@@ -81,12 +98,19 @@ shopt -u nullglob
 [[ ${#active_workflows[@]} -gt 0 ]] || exit 0
 
 if [[ ${#active_workflows[@]} -gt 1 ]]; then
-  active_names=""
-  for wf in "${active_workflows[@]}"; do
-    active_names+="  • $(basename "$wf" .md)"$'\n'
-  done
-  emit_block "$(printf 'WORKFLOW DEPENDENCY GATE — multiple active composed workflows are present.\n\nActive workflows:\n%s\nResolve the active workflow selection before making implementation edits.' "$active_names")"
-  exit 0
+  scoped_id="${SB_WORKFLOW_ID:-}"
+  if [[ -n "$scoped_id" && -f "$wf_dir/$scoped_id.md" ]]; then
+    active_workflows=("$wf_dir/$scoped_id.md")
+  else
+    active_names=""
+    stale_hint=""
+    for wf in "${active_workflows[@]}"; do
+      active_names+="  • $(basename "$wf" .md)"$'\n'
+    done
+    stale_hint=$'\nStale workflows (>7 days) are auto-archived on session start. To archive manually: bash scripts/workflows.sh complete <workflow-id>'
+    emit_block "$(printf 'WORKFLOW DEPENDENCY GATE — multiple active composed workflows are present.\n\nActive workflows:\n%s\nSet SB_WORKFLOW_ID to the workflow you are executing, archive stale workflows with scripts/workflows.sh complete <id>,%s or resolve the active set before making implementation edits.' "$active_names" "$stale_hint")"
+    exit 0
+  fi
 fi
 
 workflow_file="${active_workflows[0]}"
@@ -106,7 +130,7 @@ case "$composer_slug" in
     required_markers=(silver-blast-radius devops-quality-gates silver-context silver-plan)
     ;;
   silver-research)
-    required_markers=(silver-clarify)
+    required_markers=(silver-clarify silver-research)
     ;;
   silver-bugfix)
     # Bugfix is diagnosis-first: the documented pre-execution chain is
@@ -116,8 +140,26 @@ case "$composer_slug" in
     # that are genuinely recorded before the first fix/test edit.
     required_markers=(silver-debug silver-plan)
     ;;
+  silver-fast)
+    # Tier 2 fast path: planning floor + context + plan before implementation edits.
+    required_markers=(silver-quality-gates silver-context silver-plan)
+    ;;
   *)
     exit 0
+    ;;
+esac
+
+# Conditional silver-spec when SPEC.md is absent (greenfield feature/ui work).
+if [[ "$composer_slug" == "silver-feature" || "$composer_slug" == "silver-ui" ]]; then
+  if [[ ! -f "$repo_root/.planning/SPEC.md" ]]; then
+    required_markers+=("silver-spec")
+  fi
+fi
+
+# Post-plan validation gate for feature/ui/devops/fast composers.
+case "$composer_slug" in
+  silver-feature|silver-ui|silver-devops|silver-fast)
+    required_markers+=("silver-validate")
     ;;
 esac
 
@@ -139,7 +181,9 @@ missing_markers=()
 state_contents=""
 [[ -f "$state_file" ]] && state_contents=$(cat "$state_file")
 for marker in "${required_markers[@]}"; do
-  if declare -F sb_required_skill_is_recorded >/dev/null 2>&1; then
+  if [[ "$marker" == "silver-quality-gates" ]] && declare -f sb_qg_preplan_marker_recorded >/dev/null 2>&1; then
+    sb_qg_preplan_marker_recorded "$state_contents" && continue
+  elif declare -F sb_required_skill_is_recorded >/dev/null 2>&1; then
     sb_required_skill_is_recorded "$state_contents" "$marker" && continue
   elif grep -Fqx -- "$marker" "$state_file" 2>/dev/null; then
     continue

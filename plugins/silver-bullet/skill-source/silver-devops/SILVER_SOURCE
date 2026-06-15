@@ -15,6 +15,7 @@ SB **queue builder** for infra/CI/CD/IaC work. Parent orchestrator seeds the que
 - No brainstorming phase — infrastructure changes are driven by operational requirements established upstream (in silver:feature or silver:research). Blast-radius analysis replaces the product/engineering brainstorm.
 - Uses `devops-quality-gates` (7 IaC-adapted dimensions) instead of the standard product quality sweep at BOTH pre-plan and pre-ship gates.
 - Application TDD is not applicable to pure infra plans; IaC uses plan, dry-run, policy, security, drift, and rollback validation instead.
+- **Config alignment:** `skills.required_deploy_devops` in `templates/silver-bullet.config.json.default` intentionally omits `tdd` (present in `required_deploy` for app work). This is by design — do not add `tdd` to devops delivery gates without changing the IaC policy in this skill.
 
 **The 7 IaC quality dimensions:** reliability, security, scalability, modularity, testability, observability, change-safety. (Usability omitted because infra has no direct user interface; reusability/extensibility are covered by modularity/change-safety in IaC.)
 
@@ -36,6 +37,19 @@ SILVER BULLET ► DEVOPS WORKFLOW
 Change: {$ARGUMENTS or "(not specified)"}
 Mode:   {interactive | autonomous — from §10e or session selection}
 ```
+
+### Activate devops-cycle enforcement profile
+
+At workflow start, set the project enforcement profile so hooks use `required_deploy_devops` and DevOps planning gates:
+
+```bash
+if [[ -f .silver-bullet.json ]] && command -v jq >/dev/null 2>&1; then
+  tmp="$(mktemp)"
+  jq '.project.active_workflow = "devops-cycle"' .silver-bullet.json > "$tmp" && mv "$tmp" .silver-bullet.json
+fi
+```
+
+This must run before the first planning skill so `completion-audit.sh` and `dev-cycle-check.sh` apply the DevOps skill lists.
 
 ## Composition Proposal
 
@@ -262,6 +276,8 @@ If `docs/doc-scheme.md`/`docs/doc-scheme.json` are missing, recover via `/silver
 ## Step 11: Ship / Deploy
 
 Invoke `silver:ship` through the active runtime's SB-recognized skill invocation channel. Purpose: push branch, deploy, create PR.
+
+Before ship, invoke `silver:branch-finish` on feature branches and `silver:completion-audit` immediately before `silver:ship` (both are in `required_deploy_devops`).
 
 If this workflow performs or prepares an environment rollout, invoke
 `silver:deploy` before or inside ship according to the release plan. The deploy

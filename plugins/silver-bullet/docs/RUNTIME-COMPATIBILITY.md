@@ -9,8 +9,8 @@ Silver Bullet does not provide generic automatic model routing. The historical `
 | Surface | Model owner | Silver Bullet responsibility |
 |---------|-------------|------------------------------|
 | Current Claude, Codex, or Cursor session | User and host configuration | Compose workflow, enforce gates, record skill progress |
-| GSD subagents or GSD-managed work | GSD and host agent configuration | Delegate to GSD at the correct lifecycle boundary |
-| Design, Engineering, Product Management, Superpowers, MultAI | The invoked plugin/tool and current host session | Sequence the helper only when the SB workflow calls for it |
+| SB orchestrator subagents / Task workers | Host agent configuration | Delegate implementation at the correct lifecycle boundary |
+| Optional extension plugins (DevOps, MultAI, connectors) | The invoked plugin/tool and current host session | Sequence only when the SB workflow explicitly calls for them |
 | Hooks and shell helpers | No model selection | Validate state, command intent, and artifact freshness |
 
 ## Rules
@@ -37,6 +37,19 @@ orientation (jq check, diagnostics, init next steps) or
 
 Tiers are cumulative: tier 2 includes tier 1 behavior; tier 3 assumes tier 2
 for release work.
+
+### Tier 0–1 playbook (single-agent / no hooks)
+
+When hooks are absent or tier &lt; 2, Silver Bullet still applies the **same skill order** but without mechanical PreToolUse/Stop enforcement:
+
+1. Run `/silver:init` or `/silver:migrate` so `sb_initiated: true` and workflow docs are present.
+2. Route via `/silver` → composer (`silver:feature`, `silver:fast`, etc.).
+3. **Invoke each required skill explicitly** through the host skill channel — reading `SKILL.md` does not record state.
+4. Follow composer post-execute order: **REVIEW → VERIFY → SECURE → VALIDATE → pre-ship QUALITY GATE → SHIP**.
+5. Run `verify-tests` before `gh pr create` / release even without hook blocks.
+6. Parent-only orchestrator directive blocks (`orchestrator-directive-guard`) are **inactive** below tier 2 — you may implement inline, but still invoke skills for traceability.
+
+Tier 2+ restores parent-only mode: parent spawns Task workers; cooperative single-agent inline implementation is disabled when directive guard is active.
 
 ### Orchestrator parent mode (default)
 

@@ -1,5 +1,204 @@
 # Changelog
 
+## [0.44.4] — 2026-06-18
+
+Fresh adversarial flow review (post-v0.44.3): greenfield UI spec dead-end and Fast Tier 2 deploy-chain documentation gaps.
+
+## Bug Fixes
+- `fix(skills): silver-ui — add Step 1d silver:spec for greenfield UI (workflow-chain-guard dead-end when SPEC.md absent)`
+- `fix(skills): silver-ui — reorder plan before ui-contract to match hook/orchestrator queue`
+- `fix(skills): silver-fast — document full canonical deploy chain for Tier 2 PR/release paths`
+
+## Tests
+- `test(hooks): workflow-chain-guard silver-ui conditional silver-spec`
+- `test(hooks): orchestrator queue silver-ui conditional silver-spec`
+- `test(integration): skill-execution-paths guards for ui spec and fast deploy chain`
+
+---
+
+## [0.44.3] — 2026-06-18
+
+Flow adversarial review: align UI, DevOps, and Fast Tier 2 skills with `workflow-chain-guard` pre-build `silver:validate` requirements.
+
+## Bug Fixes
+- `fix(skills): silver-ui — add Step 6b Pre-Build Validation before execute (workflow-chain-guard dead-end)`
+- `fix(skills): silver-devops — add Step 5b pre-build and Step 9b post-ship silver:validate steps`
+- `fix(skills): silver-fast — make Tier 2 silver:validate mandatory; fix SessionStart trivial-marker wording`
+
+## Tests
+- `test(integration): skill-execution-paths guards for validate ordering in ui/devops/fast`
+
+---
+
+## [0.44.2] — 2026-06-18
+
+Launch-readiness adversarial review: fix silver:phase ROADMAP guard bypass, register v0.44.0 utility skills in all_tracked, and align Codex manifest/config versions with package.json.
+
+## Bug Fixes
+- `fix(hooks): planning-file-guard — roadmap-edit-override allows ROADMAP.md/STATE.md edits for silver:phase and silver:undo`
+- `fix(config): add silver, silver-phase, silver-spike, silver-thread, silver-undo to skills.all_tracked`
+- `fix(scripts): sync-codex-package and sync-codex-marketplace-version derive version from package.json`
+
+## Documentation
+- `docs(skills): silver:phase and silver:undo document roadmap-edit-override protocol`
+- `docs(orchestrator): add PHASE worker template for silver:phase queue atoms`
+
+## Tests
+- `test(hooks): planning-file-guard roadmap-edit-override bypass coverage`
+- `test(scripts): release version alignment guard across plugin manifests and config template`
+- `test(hooks): required-skills-consistency asserts v0.44.0 utility skills are tracked`
+
+---
+
+## [0.44.1] — 2026-06-18
+
+Patch release: GSD runtime purge, orphaned shim test removal, hook test fixes, and skill scenario coverage for v0.44.0 utility skills.
+
+## Refactoring
+- `refactor(hooks): purge GSD runtime references — legacy-gsd-alias.sh renamed to legacy-skill-alias.sh, sb_legacy_gsd_alias_normalize renamed to sb_legacy_skill_alias_normalize; semantic-compress.sh updated to match silver:* trigger patterns; phase-archive.sh retargeted to SB-native skill names; dead code removed from record-skill.sh, record-requested-skill.sh, spec-floor-check.sh, uat-gate.sh, dev-cycle-check.sh, dependency-skill-check.sh`
+- `refactor(skills): silver:ensure-docs, silver:review-stats, silver:undo — update internal GSD skill references to SB-native equivalents`
+- `refactor(scripts): install-codex.sh GSD_PHASE_ARCHIVE_HOOK and legacy-gsd-alias references replaced with SB-native names`
+
+## Bug Fixes
+- `fix(hooks): semantic-compress.sh trigger pattern updated from gsd:execute-phase to silver:execute to match current skill namespace`
+
+## Tests
+- `test(hooks): rename test-legacy-gsd-alias.sh to test-legacy-skill-alias.sh; update sb_legacy_skill_alias_normalize call sites; test-semantic-compress.sh trigger fixture updated to silver:execute`
+- `test(skills): add scenario coverage for silver:phase, silver:spike, silver:thread, silver:undo (v0.44.0 utility skills)`
+- `chore(tests): remove orphaned test-gsd-sdk-shim.sh — GSD SDK shim (gsd-sdk.cjs, install-gsd-sdk-shim.sh) was removed in v0.44.0; test was mistakenly not deleted at that time`
+
+---
+
+## [0.44.0] — 2026-06-17
+
+## Features
+- `feat(skills): add silver:spike — executable feasibility experiments with Given/When/Then structure and VALIDATED/INVALIDATED/PARTIAL verdicts`
+- `feat(skills): add silver:phase — CRUD management for phases in ROADMAP.md; sanctioned path to mutate phase list without planning-file-guard`
+- `feat(skills): add silver:undo — safe git revert for SB phase/plan commits with dependency checks and artifact cleanup`
+- `feat(skills): add silver:thread — lightweight cross-session context threads for topic-specific tracking across sessions`
+- `feat(skills): silver:context --assumptions mode — surface AI implementation assumptions without interactive session; writes ASSUMPTIONS.md`
+- `feat(skills): silver:add --seed flag — forward-looking idea classification with trigger-condition tracking in .planning/seeds/`
+- `feat(skills): silver:plan --mvp mode — vertical-slice planning producing thin end-to-end feature slices; writes SKELETON.md for new projects`
+- `feat(skills): silver:review deployment risk scoring — per-change Tier 1–4 deployment risk score in REVIEW.md`
+- `feat(silver-bullet.md): Package Legitimacy Gate — verify package name, age, download signals, and source repo before any installation`
+- `feat(silver-bullet.md): Alumnium optional visual/browser companion integration — structured fallback hierarchy (Alumnium → host browser MCP → text-only)`
+- `feat(docs): pre-release quality gate now enforces 2 consecutive clean rounds per review/audit stage`
+
+## Bug Fixes
+- `fix(hooks): session-start removes stale Design plugin detection code`
+- `fix(scripts): remove gsd-sdk.cjs and install-gsd-sdk-shim.sh legacy GSD SDK shim layer`
+- `fix(skills): silver:init legacy plugin section updated to reflect removal of probing/reporting third-party lifecycle plugins`
+- `fix(tests): test-install-codex assertion updated to match new legacy plugin note wording`
+
+## Documentation
+- `docs(site): reference page and search index updated with silver:spike, silver:phase, silver:undo, silver:thread entries`
+- `docs(internal): pre-release-quality-gate.md adds MANDATORY 2-consecutive-clean-rounds requirement at top`
+
+## Chores
+- `chore(bundles): sync all agent bundles (claude, codex, cursor) with updated and new skills`
+- `chore(release): v0.44.0 superset audit remediation, four new utility skills, skill extensions
+
+---
+
+## [0.43.11] — 2026-06-17
+
+Ship migrate mechanical scripts referenced by `silver:migrate` since v0.43.10 skill update.
+
+## Bug Fixes
+- `fix(scripts): add sb-migrate-config.sh and sb-migrate-project.sh for legacy project surface parity`
+
+## Tests
+- `test(scripts): sb-migrate-config and sb-migrate-project regression suites`
+
+## [0.43.10] — 2026-06-17
+
+Independent launch-readiness adversarial review (Round 1–2): enforcement bypasses, orchestrator parity, routing/docs drift, migrate/init gaps, bundle render fix.
+
+## Bug Fixes
+- `fix(hooks): workflow-chain-guard honors apply_patch and devops pre-exec markers`
+- `fix(hooks): workflow-chain-guard uat-gate completion-audit sb_initiated jq fail-closed parity`
+- `fix(hooks): orchestrator queues — conditional silver-spec, silver-fast, devops router/security`
+- `fix(skills): router post-exec order, migrate/update routes, bugfix validate→QG, init orchestrator surface`
+- `fix(docs): devops-cycle review-before-verify; full-dev-cycle completion-audit step`
+- `fix(scripts): render-agent-bundle preserves .codex/rules project paths`
+
+## Tests
+- `test(hooks): apply_patch chain-guard, orchestrator devops/fast/spec, uat-gate sb_initiated fixtures`
+
+## [0.43.9] — 2026-06-16
+
+Independent launch-readiness adversarial review (round 5): Codex package sync now chains Cursor manifest refresh.
+
+## Bug Fixes
+- `fix(scripts): sync-codex-package.sh invokes sync-cursor-package.sh after codex sanitizer so Cursor hooks/manifest stay present in shared plugins/silver-bullet tree`
+- `fix(site): refresh Help Center search index version strings to match package.json (0.43.9)`
+
+## Tests
+- `test(scripts): sync-codex-package asserts Cursor manifest and cursor-hooks.json after codex sync`
+
+## [0.43.8] — 2026-06-16
+
+Independent launch-readiness adversarial review (round 4): silver-ui post-execution sequencing alignment.
+
+## Bug Fixes
+- `fix(skills): silver-ui mandatory deps document full post-exec chain (UI quality → review → verify → secure → ship)`
+- `fix(skills): silver-ui step order — UI visual audit before code review (matches orchestrator queue)`
+- `fix(docs): composable-flows-contracts documents FLOW 9 insertion before REVIEW for silver:ui`
+- `fix(site): silver-ui help page step order aligned to canonical REVIEW→VERIFY→SECURE`
+
+## Tests
+- `test(hooks): silver-ui orchestrator queue asserts ui-review before review triad`
+
+## [0.43.7] — 2026-06-16
+
+Independent launch-readiness adversarial review (round 3): orchestrator pre-exec queue parity and enforcement hardening.
+
+## Bug Fixes
+- `fix(hooks): silver-ui/devops orchestrator queues include silver-validate before execute`
+- `fix(hooks): silver-release queue includes branch-finish and completion-audit before ship`
+- `fix(hooks): register silver-create-release as orchestrator flow atom`
+- `fix(hooks): silver-ui chain-guard marker order plan → ui-contract (composable FLOW 6→7)`
+- `fix(hooks): forbidden-skill-check jq fail-closed for sb_initiated projects`
+- `fix(skills): silver-ui mandatory deps and tdd canonical marker documentation`
+
+## Tests
+- `test(hooks): extend orchestrator queue regression for ui/devops/release atoms`
+
+## [0.43.6] — 2026-06-16
+
+Independent launch-readiness adversarial review (round 2): fix orchestrator autonomous queue ordering and completeness.
+
+## Bug Fixes
+- `fix(hooks): orchestrator queues use canonical REVIEW→VERIFY→SECURE post-exec order`
+- `fix(hooks): expand flow_atom list (review triad, security, branch-finish, completion-audit)`
+- `fix(hooks): orchestrator advance uses last_completed_index for duplicate quality-gate tokens`
+- `fix(hooks): dev-cycle-check finalization fallback uses canonical tdd marker`
+- `fix(docs): composable-flows-contracts post-execution sequencing section`
+- `fix(skills): silver:devops display chain lists full post-exec gates`
+
+## Tests
+- `test(hooks): add orchestrator queue order regression suite`
+
+## [0.43.5] — 2026-06-16
+
+Patch release: regenerate `agents/claude`, `agents/codex`, and `agents/cursor` from `skills/` so packaged agent bundles match v0.43.4 skill fixes (silver-migrate, silver-bugfix, silver-fast, silver-ship, devops-quality-gates, silver-quality-gates, silver-devops).
+
+## Chore
+- `chore(agents): sync bundles from skills post v0.43.4`
+
+## [0.43.4] — 2026-06-15
+
+SB flows launch audit remediation (F-01–F-14): planning guard SB phase paths, migrate inference, workflow doc order, devops profile reset, tier 0–1 playbook, fast-path tightening, jq fail-closed for initiated projects, REVIEW-ROUNDS delivery gate, ship UAT scope, flow-advance jq visibility, sb_initiated banner, compliance `tdd` display, Cursor apply_patch parity, bugfix chain order.
+
+## Bug Fixes
+- `fix(hooks): exempt SB-native phase VERIFICATION/REVIEW/SECURITY from planning-file-guard`
+- `fix(skills): silver:migrate inference globs for phases/*/PLAN.md and VERIFICATION.md`
+- `fix(docs): reconcile full-dev-cycle post-exec order to REVIEW→VERIFY`
+- `fix(hooks): reset devops-cycle active_workflow after silver:ship`
+- `fix(hooks): jq missing blocks PreToolUse in SB-initiated projects`
+- `fix(hooks): REVIEW-ROUNDS.md two-round substance gate at delivery`
+- `fix(hooks): compliance-status uses canonical tdd marker`
+
 ## [0.43.3] — 2026-06-15
 
 Second adversarial review closure: unified quality-gates mode detection, devops dual-mode markers, jq-missing fail-closed paths, and e2e-live journey stabilization.

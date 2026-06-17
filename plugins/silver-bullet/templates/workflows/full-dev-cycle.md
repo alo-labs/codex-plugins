@@ -82,18 +82,7 @@ where TDD does not apply.
 Execution must produce atomic commits or clearly grouped changes and update the
 relevant summary artifacts.
 
-### 6. Verify
-
-Run `/silver:verify`.
-
-Verification is non-skippable. It checks tests, acceptance criteria, artifacts,
-UAT evidence, and regression risk. Run `/verify-tests` after the last source
-change and before PR creation, deployment, or release.
-
-If verification identifies test coverage gaps, add the missing tests through the
-SB test-gap path and re-run verification.
-
-### 7. Review
+### 6. Review
 
 Run the SB review sequence:
 
@@ -104,6 +93,17 @@ Run the SB review sequence:
 Review loops must continue until two consecutive clean passes or an explicit
 deferred item is captured with `/silver:add`. Do not silently drop accepted
 findings.
+
+### 7. Verify
+
+Run `/silver:verify`.
+
+Verification is non-skippable. It checks tests, acceptance criteria, artifacts,
+UAT evidence, and regression risk. Run `/verify-tests` after the last source
+change and before PR creation, deployment, or release.
+
+If verification identifies test coverage gaps, add the missing tests through the
+SB test-gap path and re-run verification.
 
 ### 8. Security and validation
 
@@ -133,6 +133,11 @@ in `docs/learnings/YYYY-MM.md`.
 Run `/silver:branch-finish` on feature branches. This step is skipped on
 `main`/`master` because there is no feature branch to finish.
 
+### 11b. Completion audit
+
+Run `/silver:completion-audit` before ship. This gate independently verifies
+required skills, artifact substance, and delivery readiness markers.
+
 ### 12. CI and ship
 
 - Run `/verify-tests`.
@@ -150,6 +155,7 @@ readiness, fresh tests, `silver:ship`, milestone archival, and
 
 ## Non-Skippable Gates
 
+- `/silver:completion-audit` immediately before ship
 - `/silver:quality-gates` before planning and before ship
 - `/silver:verify`
 - `/verify-tests` before PR, deploy, or release

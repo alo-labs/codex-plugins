@@ -40,8 +40,8 @@ fi
 
 mkdir -p "$proj_root/.codex/rules"
 if [[ -f "$PLUGIN_ROOT/templates/cursor-rules/silver-orchestrator.mdc" ]]; then
-  cp "$PLUGIN_ROOT/templates/cursor-rules/silver-orchestrator.mdc" "$proj_root/.codex/rules/silver-orchestrator.mdc"
-  echo "Refreshed .codex/rules/silver-orchestrator.mdc"
+  cp "$PLUGIN_ROOT/templates/cursor-rules/silver-orchestrator.mdc" "$proj_root/.cursor/rules/silver-orchestrator.mdc"
+  echo "Refreshed .cursor/rules/silver-orchestrator.mdc"
 fi
 
 echo "Migration complete for $proj_root"

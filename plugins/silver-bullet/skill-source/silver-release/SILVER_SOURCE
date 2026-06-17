@@ -74,6 +74,13 @@ MILESTONE ARCHIVE -> CREATE RELEASE
 Display the proposed chain and skipped flows before starting. In autonomous mode,
 auto-confirm the composition and record the decision.
 
+> **Orchestrator parent mode:** When `orchestrator_mode` is `parent`, the
+> autonomous queue in `hooks/lib/orchestrator-state.sh` runs the **delivery tail**
+> only (quality gates through `silver:create-release`). Audit, gap-closure, UAT,
+> and milestone steps in this skill remain **parent-driven** — the orchestrator
+> does not auto-chain them. Complete Steps 0–7 manually before the delivery tail
+> advances.
+
 ### Workflow Tracking
 
 Resolve `scripts/workflows.sh`, start `/silver:release`, export
@@ -122,6 +129,13 @@ When the user requests skipping any step:
 milestone completion audit, cross-artifact review when release artifacts exist,
 fresh full-suite verification via `verify-tests`, `silver:verify`,
 `silver:ship`, and milestone archive before `silver:create-release`.
+
+**Pre-release quality gate (4-stage):** Before `silver:create-release`, the
+4-stage process in `docs/internal/pre-release-quality-gate.md` MUST complete.
+Each review/audit stage (Stage 1, Stage 2, Stage 4) requires **2 consecutive
+clean rounds** — zero accepted findings in two back-to-back passes. Do not
+advance to `silver:create-release` until all four stages and the
+`full-test-suite-rerun` marker are recorded in the quality gate state file.
 
 Non-skippable release gates:
 

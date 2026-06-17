@@ -19,6 +19,11 @@ fi
 
 log "Refreshing generated package surface in ${DEST_DIR}"
 
+plugin_version="$(jq -r '.version' "${REPO_ROOT}/package.json")"
+tmp="$(mktemp)"
+jq --arg v "$plugin_version" '.version = $v' "$DEST_DIR/.codex-plugin/plugin.json" > "$tmp"
+mv "$tmp" "$DEST_DIR/.codex-plugin/plugin.json"
+
 mkdir -p "${REPO_ROOT}/agents"
 python3 "$AGENT_RENDERER" render --agent claude --source-root "${REPO_ROOT}/skills" --dest-root "${REPO_ROOT}/agents/claude"
 python3 "$AGENT_RENDERER" render --agent codex --source-root "${REPO_ROOT}/skills" --dest-root "${REPO_ROOT}/agents/codex"
@@ -88,6 +93,14 @@ if [[ -x "${SCRIPT_DIR}/codex-sanitize-package.sh" ]]; then
   "${SCRIPT_DIR}/codex-sanitize-package.sh" "$DEST_DIR"
 else
   printf 'ERROR: codex sanitizer helper missing at %s\n' "${SCRIPT_DIR}/codex-sanitize-package.sh" >&2
+  exit 1
+fi
+
+cursor_package_sync_script="${SCRIPT_DIR}/sync-cursor-package.sh"
+if [[ -x "$cursor_package_sync_script" ]]; then
+  "$cursor_package_sync_script"
+else
+  printf 'ERROR: Cursor package sync script not found or not executable: %s\n' "$cursor_package_sync_script" >&2
   exit 1
 fi
 

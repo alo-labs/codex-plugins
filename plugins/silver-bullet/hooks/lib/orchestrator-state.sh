@@ -12,7 +12,7 @@ sb_orchestrator_composition_log() {
 
 sb_orchestrator_is_composer_skill() {
   case "$1" in
-    silver-feature|silver-ui|silver-devops|silver-bugfix|silver-research|silver-release)
+    silver-feature|silver-ui|silver-devops|silver-bugfix|silver-research|silver-release|silver-fast)
       return 0
       ;;
     *)
@@ -23,7 +23,7 @@ sb_orchestrator_is_composer_skill() {
 
 sb_orchestrator_is_flow_atom() {
   case "$1" in
-    silver-quality-gates|silver-context|silver-plan|silver-execute|silver-verify|silver-ship|silver-review|silver-secure|silver-validate|silver-clarify|silver-spec|silver-debug|silver-ui-contract|silver-ui-review|silver-blast-radius|devops-quality-gates)
+    silver-quality-gates|silver-context|silver-plan|silver-execute|silver-verify|silver-ship|silver-review|silver-review-request|silver-review-triage|silver-secure|silver-validate|silver-clarify|silver-spec|silver-debug|silver-ui-contract|silver-ui-review|silver-blast-radius|devops-quality-gates|devops-skill-router|silver-branch-finish|silver-completion-audit|silver-create-release|security)
       return 0
       ;;
     *)
@@ -32,31 +32,62 @@ sb_orchestrator_is_flow_atom() {
   esac
 }
 
+# Canonical post-execution chain (review triad → verify → secure → validate → pre-ship QG → ship prep).
+sb_orchestrator_post_exec_queue() {
+  local preship_qg="${1:-FLOW-QUALITY-GATE-PRESHIP}"
+  printf '%s' "silver-review-request,silver-review,silver-review-triage,silver-verify,security,silver-secure,silver-validate,${preship_qg},silver-branch-finish,silver-completion-audit,silver-ship"
+}
+
 sb_orchestrator_default_queue_for_composer() {
   local composer="$1"
+  local post_exec
   case "$composer" in
     silver-feature)
-      printf '%s' 'FLOW-QUALITY-GATE,silver-context,silver-plan,silver-execute,silver-verify,silver-review,silver-secure,silver-validate,silver-ship'
+      post_exec="$(sb_orchestrator_post_exec_queue 'FLOW-QUALITY-GATE-PRESHIP')"
+      printf '%s' "FLOW-QUALITY-GATE,silver-context,silver-plan,silver-validate,silver-execute,${post_exec}"
       ;;
     silver-ui)
-      printf '%s' 'FLOW-QUALITY-GATE,silver-context,silver-plan,silver-ui-contract,silver-execute,silver-ui-review,silver-verify,silver-review,silver-secure,silver-validate,silver-ship'
+      post_exec="$(sb_orchestrator_post_exec_queue 'FLOW-QUALITY-GATE-PRESHIP')"
+      printf '%s' "FLOW-QUALITY-GATE,silver-context,silver-plan,silver-ui-contract,silver-validate,silver-execute,silver-ui-review,${post_exec}"
       ;;
     silver-devops)
-      printf '%s' 'silver-blast-radius,devops-quality-gates,silver-context,silver-plan,silver-execute,silver-verify,silver-review,silver-secure,silver-validate,silver-ship'
+      post_exec="$(sb_orchestrator_post_exec_queue 'FLOW-DEVOPS-QUALITY-GATE-PRESHIP')"
+      printf '%s' "silver-blast-radius,devops-skill-router,devops-quality-gates,security,silver-context,silver-plan,silver-validate,silver-execute,${post_exec}"
       ;;
     silver-bugfix)
-      printf '%s' 'silver-quality-gates,silver-context,silver-plan,silver-debug,silver-execute,silver-verify,silver-ship'
+      post_exec="$(sb_orchestrator_post_exec_queue 'FLOW-QUALITY-GATE-PRESHIP')"
+      printf '%s' "silver-debug,silver-plan,silver-execute,${post_exec}"
       ;;
     silver-research)
       printf '%s' 'silver-clarify,silver-research'
       ;;
+    silver-fast)
+      printf '%s' 'FLOW-QUALITY-GATE,silver-plan,silver-validate,silver-execute,silver-verify'
+      ;;
     silver-release)
-      printf '%s' 'silver-quality-gates,silver-review,silver-validate,silver-create-release'
+      printf '%s' 'silver-quality-gates,silver-review-request,silver-review,silver-review-triage,silver-verify,security,silver-secure,silver-validate,silver-branch-finish,silver-completion-audit,silver-ship,silver-create-release'
       ;;
     *)
-      printf '%s' 'silver-context,silver-plan,silver-execute,silver-verify,silver-ship'
+      post_exec="$(sb_orchestrator_post_exec_queue 'FLOW-QUALITY-GATE-PRESHIP')"
+      printf '%s' "silver-context,silver-plan,silver-execute,${post_exec}"
       ;;
   esac
+}
+
+# Resolve composer queue with runtime conditionals (e.g. silver-spec when SPEC.md absent).
+sb_orchestrator_queue_for_composer() {
+  local composer="$1"
+  local repo_root="${2:-}"
+  local queue
+  queue="$(sb_orchestrator_default_queue_for_composer "$composer")"
+  case "$composer" in
+    silver-feature|silver-ui)
+      if [[ -n "$repo_root" && ! -f "$repo_root/.planning/SPEC.md" ]]; then
+        queue="${queue//silver-context/silver-spec,silver-context}"
+      fi
+      ;;
+  esac
+  printf '%s' "$queue"
 }
 
 sb_orchestrator_flow_csv_for_workflows() {
@@ -64,11 +95,13 @@ sb_orchestrator_flow_csv_for_workflows() {
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     case "$line" in
-      FLOW-QUALITY-GATE) line="QUALITY GATE" ;;
+      FLOW-QUALITY-GATE|FLOW-QUALITY-GATE-PRESHIP|FLOW-DEVOPS-QUALITY-GATE-PRESHIP) line="QUALITY GATE" ;;
+      devops-skill-router) line="DEVOPS SKILL ROUTER" ;;
+      security) line="SECURE" ;;
       silver-*) line="$(printf '%s' "${line#silver-}" | tr '[:lower:]' '[:upper:]')" ;;
     esac
     out="${out:+$out,}$line"
-  done < <(sb_orchestrator_default_queue_for_composer "$composer" | tr ',' '\n')
+  done < <(sb_orchestrator_queue_for_composer "$composer" | tr ',' '\n')
   printf '%s' "$out"
 }
 
@@ -105,6 +138,7 @@ sb_orchestrator_write_json() {
 sb_orchestrator_seed_intent() {
   local intent="$1"
   local composer="${2:-}"
+  local repo_root="${3:-}"
   local now
   now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   command -v jq >/dev/null 2>&1 || return 0
@@ -113,7 +147,7 @@ sb_orchestrator_seed_intent() {
   if sb_orchestrator_detect_full_software_intent "$intent"; then
     queue_csv="$(sb_orchestrator_full_software_queue)"
   elif [[ -n "$composer" ]]; then
-    queue_csv="$(sb_orchestrator_default_queue_for_composer "$composer")"
+    queue_csv="$(sb_orchestrator_queue_for_composer "$composer" "$repo_root")"
   else
     queue_csv="silver-context,silver-plan,silver-execute,silver-verify,silver-ship"
   fi
@@ -158,7 +192,7 @@ sb_orchestrator_on_composer_start() {
   [[ -n "$composer_skill" ]] || return 0
   command -v jq >/dev/null 2>&1 || return 0
 
-  sb_orchestrator_seed_intent "$intent" "$composer_skill"
+  sb_orchestrator_seed_intent "$intent" "$composer_skill" "$repo_root"
 
   local wf_bin wf_id flows_csv
   wf_bin=""
@@ -224,11 +258,17 @@ sb_orchestrator_advance_on_atom() {
     fi
   fi
 
-  local queue_len idx next_idx now
+  local queue_len idx next_idx now last_idx
   queue_len="$(jq '.flow_queue | length' "$file" 2>/dev/null || echo 0)"
-  idx="$(jq -r --arg atom "$atom_skill" '
-    (.flow_queue | to_entries[] | select(.value == $atom) | .key) // empty
+  last_idx="$(jq -r '.last_completed_index // -1' "$file" 2>/dev/null || echo -1)"
+  idx="$(jq -r --arg atom "$atom_skill" --argjson start "$((last_idx + 1))" '
+    (.flow_queue | to_entries[] | select(.key >= $start and .value == $atom) | .key) // empty
   ' "$file" 2>/dev/null || true)"
+  if [[ -z "$idx" ]]; then
+    idx="$(jq -r --arg atom "$atom_skill" '
+      (.flow_queue | to_entries[] | select(.value == $atom) | .key) // empty
+    ' "$file" 2>/dev/null || true)"
+  fi
   [[ -n "$idx" ]] || idx="$(jq -r --arg atom "$atom_skill" '
     (.flow_queue | to_entries[] | select(.value | contains($atom)) | .key) // 0
   ' "$file" 2>/dev/null || echo 0)"
@@ -241,8 +281,8 @@ sb_orchestrator_advance_on_atom() {
   fi
 
   now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-  updated="$(jq --arg completed "$atom_skill" --arg next "$next_flow" --arg now "$now" \
-    '.current_flow = $next | .last_completed = $completed | .updated_at = $now' \
+  updated="$(jq --arg completed "$atom_skill" --arg next "$next_flow" --arg now "$now" --argjson idx "$idx" \
+    '.current_flow = $next | .last_completed = $completed | .last_completed_index = $idx | .updated_at = $now' \
     "$file" 2>/dev/null || true)"
   [[ -n "$updated" ]] && sb_orchestrator_write_json "$updated"
 

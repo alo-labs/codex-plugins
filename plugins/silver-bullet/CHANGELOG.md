@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.44.6] — 2026-06-18
+
+Fresh adversarial flow review (post-v0.44.5): validate dead-end for DevOps/Fast paths without SPEC.md.
+
+## Bug Fixes
+- `fix(skills): silver-validate — plan-only mode when SPEC.md absent (unblocks devops/fast pre-exec chain)`
+- `fix(skills): silver-devops/silver-fast — document plan-only validate path`
+- `fix(templates): sync orchestrator worker templates to host-neutral plugin wording`
+
+## Tests
+- `test(hooks): workflow-chain-guard silver-devops without SPEC.md`
+- `test(hooks): orchestrator worker template repo/plugin parity`
+- `test(integration): skill-execution-paths plan-only validate guards`
+
+---
+
+## [0.44.5] — 2026-06-18
+
+Fresh adversarial flow review (post-v0.44.4): parent orchestrator worker template gaps and devops queue skill mapping.
+
+## Bug Fixes
+- `fix(orchestrator): add missing worker templates for DECIDE, SPECIFY, devops router, review triad tail, branch-finish, completion-audit`
+- `fix(hooks): map devops-quality-gates and devops-skill-router correctly in orchestrator flow_to_skill`
+- `fix(hooks): prevent worker sessions from re-seeding composer orchestrator queue`
+- `fix(skills): silver-devops/silver-bugfix — document canonical mandatory pre/post chains`
+
+## Tests
+- `test(hooks): orchestrator worker template coverage for all composer queue skills`
+- `test(hooks): flow-advance worker composer re-seed guard`
+- `test(integration): skill-execution-paths invoke-line ordering guards`
+
+---
+
 ## [0.44.4] — 2026-06-18
 
 Fresh adversarial flow review (post-v0.44.3): greenfield UI spec dead-end and Fast Tier 2 deploy-chain documentation gaps.

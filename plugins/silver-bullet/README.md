@@ -1,6 +1,6 @@
 # Silver Bullet
 
-[![version](https://img.shields.io/badge/version-v0.46.0-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.46.0)
+[![version](https://img.shields.io/badge/version-v0.47.0-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.47.0)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Agentic Process Orchestrator for AI-native Software Engineering and DevOps.**
@@ -276,6 +276,8 @@ It will:
 After that, use `/silver` for normal work.
 
 ## Built-In Skills And Routes
+
+Silver Bullet ships **85 canonical skills** under `skills/`. The plugin exposes **36 command stubs** in `plugins/silver-bullet/commands/` for top marketplace routes (`/silver`, `/silver:feature`, `/silver:bugfix`, etc.). The remaining **~49 skills are Skill-tool-only** — invoke them through the host skill picker or, on Codex, `silver-bullet invoke-skill <name>`. Regenerate stubs after composer changes: `bash scripts/generate-plugin-commands.sh`.
 
 | Route or skill | Purpose |
 |----------------|---------|

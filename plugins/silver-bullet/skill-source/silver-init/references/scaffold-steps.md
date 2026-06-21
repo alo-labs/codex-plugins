@@ -12,7 +12,7 @@ If Phase 0 determined this is an update:
 2. Overwrite `silver-bullet.md` from `${PLUGIN_ROOT}/templates/silver-bullet.md.base` with placeholder replacements. Read `.silver-bullet.json` first for `project.name` and other values. This is safe — Silver Bullet owns this file.
    - Replace `{{PROJECT_NAME}}` with the project name from `.silver-bullet.json`
    - Replace `{{ACTIVE_WORKFLOW}}` with the active workflow name from `.silver-bullet.json` (default: `full-dev-cycle`)
-3. If the project already has a project instruction file (`CLAUDE.md` in Claude, `AGENTS.md` in Codex), strip any SB-owned sections from it (migration from pre-v0.7.0). Check for headings matching `## N. <Known SB Title>` where N is 0–9 (titles: Session Startup, Automated Enforcement, Active Workflow, NON-NEGOTIABLE, Review Loop, Session Mode, Model Routing, GSD, File Safety, Third-Party, Pre-Release). If found, remove these sections (from heading to next `## ` or EOF), preserving all non-SB content. Also remove old-style reference lines that do not mention silver-bullet.md.
+3. If the project already has a project instruction file (`CLAUDE.md` in Claude, `AGENTS.md` in Codex), strip any SB-owned sections from it (migration from pre-v0.7.0). Check for headings matching `## N. <Known SB Title>` where N is 0–9 (titles: Session Startup, Automated Enforcement, Active Workflow, NON-NEGOTIABLE, Review Loop, Session Mode, Model Routing, Legacy Lifecycle, File Safety, Third-Party, Pre-Release). If found, remove these sections (from heading to next `## ` or EOF), preserving all non-SB content. Also remove old-style reference lines that do not mention silver-bullet.md.
 4. If the project instruction file already exists, verify it contains a reference line mentioning "silver-bullet.md". If not, add at the very top of the file: `> **Always adhere strictly to this file and silver-bullet.md — they override all defaults.**`
 5. Run conflict detection (same as step 3.1c below).
 5a. Run step 3.7.5 to re-register or refresh SB hooks in `$HOME/.codex/settings.json`.
@@ -59,11 +59,11 @@ Check if a project instruction file exists in the project root (`CLAUDE.md` or `
 
 **Step 1 — Strip SB-owned sections from the project instruction file:**
 
-Silver Bullet sections are identified by headings matching `## N. <Known SB Title>` where N is 0–9 (including `## 3a.`). Known titles include: Session Startup, Automated Enforcement, Active Workflow, NON-NEGOTIABLE, Review Loop, Session Mode, Model Routing, GSD, File Safety, Third-Party, Pre-Release. These sections start at the heading and end just before the next `## ` heading or end-of-file.
+Silver Bullet sections are identified by headings matching `## N. <Known SB Title>` where N is 0–9 (including `## 3a.`). Known titles include: Session Startup, Automated Enforcement, Active Workflow, NON-NEGOTIABLE, Review Loop, Session Mode, Model Routing, Legacy Lifecycle, File Safety, Third-Party, Pre-Release. These sections start at the heading and end just before the next `## ` heading or end-of-file.
 
 Run via shell to detect SB sections:
 ```bash
-grep -nE '^## [0-9]+[a-z]?\. (Session Startup|Automated Enforcement|Active Workflow|NON-NEGOTIABLE|Review Loop|Session Mode|Model Routing|GSD|File Safety|Third-Party|Pre-Release)' CLAUDE.md AGENTS.md 2>/dev/null || echo "NO_SB_SECTIONS"
+grep -nE '^## [0-9]+[a-z]?\. (Session Startup|Automated Enforcement|Active Workflow|NON-NEGOTIABLE|Review Loop|Session Mode|Model Routing|Legacy Lifecycle|File Safety|Third-Party|Pre-Release)' CLAUDE.md AGENTS.md 2>/dev/null || echo "NO_SB_SECTIONS"
 ```
 
 If `NO_SB_SECTIONS` → skip to Step 2.
@@ -152,7 +152,7 @@ Read `${PLUGIN_ROOT}/templates/CLAUDE.md.base`, perform replacements, write back
 
 ### 3.4 Write config
 
-Read `${PLUGIN_ROOT}/templates/silver-bullet.config.json.default`, replace `{{PROJECT_NAME}}`, set `src_pattern` to the detected value (replacing default `/src/` if different), set **`sb_initiated` to `true`**, and write to `.silver-bullet.json`.
+Read `${PLUGIN_ROOT}/templates/silver-bullet.config.json.default`, replace `{{PROJECT_NAME}}`, set `src_pattern` to the detected value (replacing default `/src/` if different), set **`sb_initiated` to `true`**, and write to `.silver-bullet.json`. For `recommended_tools.graphify`, always default `enabled_by_user` to `null` on fresh init until Phase 1.1a records an explicit user choice; include suspension fields when install was attempted.
 
 ### 3.5 Copy workflow files
 

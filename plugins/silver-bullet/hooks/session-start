@@ -114,22 +114,11 @@ while true; do
 done
 [[ -z "$sb_project_root" ]] && exit 0
 
-# SB-initiated gate (Wave 0.1): only activate enforcement in projects
-# where silver:init set sb_initiated: true.
+# Cache project root for CWD-independent hook resolution (#232).
 if [[ -f "$_lib_dir/sb-project-gate.sh" ]]; then
   # shellcheck source=lib/sb-project-gate.sh
   source "$_lib_dir/sb-project-gate.sh"
   sb_project_root_cache_write "$sb_project_root" 2>/dev/null || true
-  if ! sb_project_is_initiated "$sb_project_root/.silver-bullet.json"; then
-    _init_banner='⚠️ Silver Bullet NOT ACTIVATED — `sb_initiated` is false or absent in `.silver-bullet.json`. Enforcement hooks are inert until you run `/silver:init` or `/silver:migrate`. Copying config files alone does not activate gates.'
-    if command -v jq >/dev/null 2>&1; then
-      ctx=$(printf '%s' "$_init_banner" | jq -Rs '.')
-      printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}' "$ctx"
-    else
-      printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","message":"Silver Bullet not activated — run /silver:init or /silver:migrate"}}'
-    fi
-    exit 0
-  fi
 fi
 
 # Prerequisite probe (Wave 0.2): jq + plugin cache; attempt repair or block.
@@ -140,8 +129,10 @@ if [[ -f "$_lib_dir/prerequisite-probe.sh" ]]; then
   if ! prereq_issues="$(sb_prereq_run_probe "$sb_project_root" 2>/dev/null)"; then
     block_msg="$(sb_prereq_blocking_message "$prereq_issues")"
     if command -v jq >/dev/null 2>&1; then
-      ctx=$(printf '%s' "$block_msg" | jq -Rs '.')
-      printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}' "$ctx"
+      ctx=$(printf '%s' "$block_msg" | jq -Rs '.' 2>/dev/null || true)
+      if [[ -n "$ctx" ]]; then
+        printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}' "$ctx"
+      fi
     else
       printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","message":"Silver Bullet prerequisites missing — run /silver:init"}}'
     fi
@@ -155,8 +146,8 @@ fi
 session_start_file="${SB_STATE_DIR}/session-start-time"
 session_start_value="$(cat "$session_start_file" 2>/dev/null || true)"
 if ! [[ "$session_start_value" =~ ^[0-9]+$ ]]; then
-  sb_guard_nofollow "$session_start_file"
-  date +%s > "$session_start_file"
+  sb_guard_nofollow "$session_start_file" 2>/dev/null || true
+  date +%s >"$session_start_file" 2>/dev/null || true
 fi
 
 # ── Branch-scoped state reset ─────────────────────────────────────────────────
@@ -224,8 +215,8 @@ esac
 if [[ "$sb_should_mutate" == true && -n "$current_branch" && ( ! -f "$branch_file" || -z "$stored_branch" ) ]]; then
   # Branch file absent or empty (first run, file deleted, or corrupted) — initialize
   # without wiping state.
-  sb_guard_nofollow "$branch_file"
-  printf '%s\n' "$current_branch" > "$branch_file"
+  sb_guard_nofollow "$branch_file" 2>/dev/null || true
+  printf '%s\n' "$current_branch" >"$branch_file" 2>/dev/null || true
   # v0.30.0 fix (#87 Bug 2): verify the write succeeded; fail-soft (warn-only,
   # do not exit non-zero) so the rest of the hook still runs.
   if [[ ! -s "$branch_file" ]]; then
@@ -258,8 +249,23 @@ elif [[ "$sb_should_mutate" == true && -n "$current_branch" && -n "$stored_branc
   else
     rm -f -- "${SB_STATE_DIR}/graphify-query" 2>/dev/null || true
   fi
-  sb_guard_nofollow "$branch_file"
-  printf '%s\n' "$current_branch" > "$branch_file"
+  if [[ -f "$_lib_dir/agentmemory-gate.sh" ]]; then
+    # shellcheck source=lib/agentmemory-gate.sh
+    source "$_lib_dir/agentmemory-gate.sh"
+    _am_cfg=""
+    if [[ -n "${sb_project_root:-}" && -f "${sb_project_root}/.silver-bullet.json" ]]; then
+      _am_cfg="${sb_project_root}/.silver-bullet.json"
+    fi
+    if [[ -n "$_am_cfg" ]]; then
+      sb_agentmemory_clear_usage_state "$_am_cfg" 2>/dev/null || true
+    else
+      rm -f -- "${SB_STATE_DIR}/agentmemory-usage" 2>/dev/null || true
+    fi
+  else
+    rm -f -- "${SB_STATE_DIR}/agentmemory-usage" 2>/dev/null || true
+  fi
+  sb_guard_nofollow "$branch_file" 2>/dev/null || true
+  printf '%s\n' "$current_branch" >"$branch_file" 2>/dev/null || true
   if [[ ! -s "$branch_file" ]]; then
     printf '⚠️  silver-bullet session-start: branch file write failed at %s\n' "$branch_file" >&2
   fi
@@ -280,6 +286,8 @@ if [[ "$sb_should_mutate" == true ]]; then
     for wf in "$wf_dir"/*.md; do
       [[ -f "$wf" && ! -L "$wf" ]] || continue
       wf_mtime=$(stat -f %m "$wf" 2>/dev/null || stat -c %Y "$wf" 2>/dev/null || echo 0)
+      wf_mtime="${wf_mtime:-0}"
+      [[ "$wf_mtime" =~ ^[0-9]+$ ]] || wf_mtime=0
       age=$((now_epoch - wf_mtime))
       if [[ "$age" -gt "$stale_ttl" ]]; then
         mkdir -p "$wf_dir/.archive" 2>/dev/null || true
@@ -297,7 +305,7 @@ if command -v jq >/dev/null 2>&1; then
   search_dir="$PWD"
   while true; do
     if [[ -f "$search_dir/.silver-bullet.json" ]]; then
-      cfg_trivial=$(jq -r '.state.trivial_file // ""' "$search_dir/.silver-bullet.json")
+      cfg_trivial=$(jq -r '.state.trivial_file // ""' "$search_dir/.silver-bullet.json" 2>/dev/null || true)
       [[ -n "$cfg_trivial" ]] && trivial_file="$cfg_trivial"
       break
     fi
@@ -333,7 +341,8 @@ fi
 # so enforcement rules survive context compaction.
 # Security: co-located with hooks; plugin-dir write access implies hook modification
 # access anyway. Path traversal defense: verify file resolves within plugin directory.
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd 2>/dev/null || true)"
+[[ -n "$script_dir" ]] || exit 0
 core_rules_file="${script_dir}/core-rules.md"
 # Path traversal defense: reject if resolved path escapes plugin directory
 if [[ -f "$core_rules_file" ]]; then
@@ -356,13 +365,11 @@ if [[ -f "$core_rules_file" ]]; then
     # shellcheck source=lib/core-rules-integrity.sh
     source "$_lib_dir/core-rules-integrity.sh"
     _cr_content="$(sb_core_rules_read_verified "$core_rules_file" "$script_dir" 2>/dev/null || true)"
-    if [[ -z "$_cr_content" ]] && [[ -f "${script_dir}/core-rules.sha256" ]]; then
+    if [[ -z "$_cr_content" ]]; then
       _cr_content="$(sb_core_rules_integrity_warning)"
-    elif [[ -z "$_cr_content" ]]; then
-      _cr_content="$(cat "$core_rules_file" 2>/dev/null || true)"
     fi
   else
-    _cr_content="$(cat "$core_rules_file" 2>/dev/null || true)"
+    _cr_content="⚠️ core-rules.md integrity check unavailable — enforcement rules were not injected. Run /silver:init or reinstall the Silver Bullet plugin."
   fi
   if [[ -n "$_cr_content" ]]; then
     combined="${combined:+$combined
@@ -390,7 +397,7 @@ fi
 if [[ -f "$_lib_dir/enforcement-tier-gate.sh" ]]; then
   # shellcheck source=lib/enforcement-tier-gate.sh
   source "$_lib_dir/enforcement-tier-gate.sh"
-  tier_num="$(sb_enforcement_tier_effective "$sb_project_root/.silver-bullet.json")"
+  tier_num="$(sb_enforcement_tier_effective "$sb_project_root/.silver-bullet.json" 2>/dev/null || echo 0)"
   sb_enforcement_tier_persist "$sb_project_root/.silver-bullet.json" "$tier_num" 2>/dev/null || true
   et_banner="$(sb_enforcement_tier_session_banner "$tier_num")"
   combined="${combined:+$combined
@@ -456,22 +463,31 @@ if [[ -f "$_lib_dir/recommended-tools.sh" && -n "${sb_project_root:-}" ]]; then
     # shellcheck source=lib/graphify-gate.sh
     source "$_lib_dir/graphify-gate.sh"
   fi
+  if [[ -f "$_lib_dir/agentmemory-gate.sh" ]]; then
+    # shellcheck source=lib/agentmemory-gate.sh
+    source "$_lib_dir/agentmemory-gate.sh"
+  fi
   _rt_cfg="${sb_project_root}/.silver-bullet.json"
   if [[ -f "$_rt_cfg" ]]; then
-    _rt_ctx="$(sb_recommended_tool_consent_prompt_block "$_rt_cfg" "graphify" 2>/dev/null || true)"
-    if [[ -n "$_rt_ctx" ]]; then
-      combined="${combined:+$combined
+    for _rt_tool in graphify agentmemory alumnium rtk context_mode; do
+      _rt_ctx="$(sb_recommended_tool_consent_prompt_block "$_rt_cfg" "$_rt_tool" 2>/dev/null || true)"
+      if [[ -n "$_rt_ctx" ]]; then
+        combined="${combined:+$combined
 
 ---
 
 }${_rt_ctx}"
-    fi
+      fi
+    done
   fi
 fi
 
 # If nothing found, silent no-op
 [[ -z "$combined" ]] && exit 0
 
-# Escape for JSON and output
-content=$(printf '%s' "$combined" | jq -Rs .)
-printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}' "$content"
+# Escape for JSON and output (fail-soft: ERR trap must not swallow context after build)
+content=""
+content=$(printf '%s' "$combined" | jq -Rs . 2>/dev/null || true)
+if [[ -n "$content" ]]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":%s}}' "$content"
+fi

@@ -61,7 +61,7 @@ The stricter goal is that an AS1 user should not lose a feature, capability, or 
 | Backlog/deferred work | `silver:add`, `silver:remove`, domain-audit backlog decisions | GitHub/local issue ID | Superset when configured with GitHub project |
 | Incident workflow | `silver:incident`, `silver:forensics`, `silver:canary` | `.planning/INCIDENT.md` | Covered by new SB route |
 | Provider/task benchmark | `silver:benchmark` | `.planning/BENCHMARK.md` | Covered by new SB route |
-| Agent self-quality benchmark | `silver:benchmark`, `progressive-review-loop` | BENCHMARK / review loop evidence | Covered |
+| Agent self-quality benchmark | `silver:benchmark`, `silver:review-fix-ladder` | BENCHMARK / review loop evidence | Covered |
 | Knowledge store/project memory | docs/knowledge, docs/learnings, Graphify retrieval, session logs | monthly knowledge/learnings and graph evidence | Superset: SB separates project knowledge from portable learnings |
 | Session recovery | `silver:handoff`, workflow tracker, session logs, `silver:forensics` | handoff and `.planning/workflows/` state | Superset: recovery tied to workflow evidence |
 | Cross-provider adversarial review | `silver:review`, optional external enrichment, `silver:benchmark` | REVIEW / BENCHMARK | Superset when optional providers are installed; SB review remains authoritative |
@@ -177,7 +177,7 @@ The stricter goal is that an AS1 user should not lose a feature, capability, or 
     AS1 demands evidence for claims. SB ties evidence back to accepted requirements, validation, UAT, review, and release artifacts.
 
 15. **Pipeline is less composable than SB's flow catalog.**
-    AS1's full pipeline is easy to understand, but SB's 18-flow catalog can shape different paths for feature, bugfix, UI, DevOps, research, release, fast path, debug, docs, and forensics.
+    AS1's full pipeline is easy to understand, but SB's canonical AF-* catalog can shape different paths for feature, bugfix, UI, DevOps, research, release, fast path, debug, docs, and forensics.
 
 16. **Domain fix automation can be risky.**
     Audit-to-fix flows need strong safety tiers and rollback. SB's stricter execute/verify/review/ship cycle is slower but safer for shared codebases.
@@ -197,7 +197,7 @@ The stricter goal is that an AS1 user should not lose a feature, capability, or 
    SB connects clarification, specs, requirements, validation, planning, execution, review, security, verification, UAT, docs, ship, and release.
 
 3. **Composable workflow model.**
-   SB's 18-flow catalog lets the orchestrator assemble only the flows required for the task.
+   SB's canonical AF-* catalog lets the orchestrator assemble only the flows required for the task.
 
 4. **Release governance is deeper.**
    SB owns milestone audit, UAT audit, release gap closure, docs gates, ship readiness, milestone archive, changelog, tag, and GitHub Release creation.

@@ -87,6 +87,18 @@ sb_recommended_tool_benefits() {
     graphify)
       printf '%s' 'Scoped retrieval saves tokens; team-shared knowledge graph indexes code and docs; portable across Claude, Codex, and Cursor agents.'
       ;;
+    agentmemory)
+      printf '%s' 'Session capture with git-backed memory export; proactive context injection; pairs with Graphify for save-via-agentmemory, retrieve-via-Graphify synergy.'
+      ;;
+    alumnium)
+      printf '%s' 'AI-native browser/visual testing via MCP (do/check/get/wait); preferred for clarify, ui-review, verify. See alumnium.ai.'
+      ;;
+    rtk)
+      printf '%s' '60–99% shell output savings via PreToolUse rewrite — automatic once rtk-ai/rtk is wired (not reachingforthejack/rtk).'
+      ;;
+    context_mode)
+      printf '%s' 'MCP/large-file compaction and PreCompact state recovery; highest value with MCP-heavy workflows (ELv2 license).'
+      ;;
     *)
       printf '%s' 'Improves SB workflow quality when enabled.'
       ;;
@@ -98,11 +110,21 @@ sb_recommended_tool_install_commands() {
   jq -r --arg id "$tool_id" '.recommended_tools[$id].install_commands[]? // empty' "$config_file" 2>/dev/null || true
 }
 
-# Host detection — mirrors hooks/lib/runtime-paths.sh (claude | codex | cursor).
+# Map SB host id → graphify upstream platform name (goose runs on Pi).
+sb_graphify_upstream_platform() {
+  local host="${1:-}"
+  host="${host:-$(sb_runtime_host)}"
+  case "$host" in
+    goose) printf 'pi' ;;
+    *) printf '%s' "$host" ;;
+  esac
+}
+
+# Host detection — mirrors hooks/lib/runtime-paths.sh.
 sb_runtime_host() {
   if [[ -n "${SILVER_BULLET_RUNTIME:-}" ]]; then
     case "$SILVER_BULLET_RUNTIME" in
-      claude|codex|cursor) printf '%s' "$SILVER_BULLET_RUNTIME"; return 0 ;;
+      claude|codex|cursor|opencode|goose|hermes) printf '%s' "$SILVER_BULLET_RUNTIME"; return 0 ;;
     esac
   fi
   if [[ -n "${CODEX_CI:-}" || -n "${CODEX_THREAD_ID:-}" || -n "${CODEX_INTERNAL_ORIGINATOR_OVERRIDE:-}" ]]; then
@@ -153,6 +175,35 @@ sb_recommended_tool_platform_pre_index_commands() {
     case "$host" in
       claude) printf '%s\n' 'graphify install --project' ;;
       codex) printf '%s\n' 'graphify install --project --platform codex' ;;
+      opencode) printf '%s\n' 'graphify install --project --platform opencode' ;;
+      goose) printf '%s\n' 'graphify install --project --platform pi' ;;
+      hermes) printf '%s\n' 'graphify install --project --platform hermes' ;;
+    esac
+  elif [[ "$tool_id" == "agentmemory" ]]; then
+    case "$host" in
+      codex)
+        printf '%s\n' 'codex plugin marketplace add rohitg00/agentmemory'
+        printf '%s\n' 'codex plugin add agentmemory@agentmemory'
+        ;;
+    esac
+  elif [[ "$tool_id" == "rtk" ]]; then
+    case "$host" in
+      claude) printf '%s\n' 'rtk init -g' ;;
+      cursor) printf '%s\n' 'rtk init -g --agent cursor' ;;
+      codex) printf '%s\n' 'rtk init -g --codex' ;;
+    esac
+  elif [[ "$tool_id" == "context_mode" ]]; then
+    case "$host" in
+      claude)
+        printf '%s\n' 'claude plugin marketplace add mksglu/context-mode'
+        printf '%s\n' 'claude plugin install context-mode@context-mode'
+        ;;
+      cursor)
+        printf '%s\n' 'Copy context-mode.mdc to .cursor/rules/; merge MCP + hooks per docs/CONTEXT-MODE.md'
+        ;;
+      codex)
+        printf '%s\n' 'Merge context-mode blocks into ~/.codex/config.toml and hooks.json per docs/CONTEXT-MODE.md'
+        ;;
     esac
   fi
 }
@@ -175,7 +226,7 @@ sb_recommended_tool_platform_post_index_commands() {
   if [[ -n "$legacy" ]]; then
     case "$host" in
       cursor) printf '%s' "$legacy"; return 0 ;;
-      claude|codex)
+      claude|codex|opencode|goose|hermes)
         printf '%s' "$legacy" | tail -n 1
         return 0
         ;;
@@ -186,6 +237,21 @@ sb_recommended_tool_platform_post_index_commands() {
       cursor) printf '%s\n' 'graphify cursor install' ;;
       claude) printf '%s\n' 'graphify claude install --project' ;;
       codex) printf '%s\n' 'graphify codex install --project' ;;
+      opencode|goose|hermes) ;;
+    esac
+  elif [[ "$tool_id" == "agentmemory" ]]; then
+    case "$host" in
+      claude) printf '%s\n' 'agentmemory connect claude-code' ;;
+      codex) printf '%s\n' 'agentmemory connect codex --with-hooks' ;;
+      goose) printf '%s\n' 'agentmemory connect pi' ;;
+      hermes) printf '%s\n' 'agentmemory connect hermes' ;;
+      opencode)
+        printf '%s\n' 'Merge agentmemory MCP into ~/.config/opencode/opencode.json (manual — see docs/AGENTMEMORY.md)'
+        ;;
+    esac
+  elif [[ "$tool_id" == "context_mode" ]]; then
+    case "$host" in
+      claude) printf '%s\n' 'Restart Claude Code after plugin install (hooks load on restart)' ;;
     esac
   fi
 }
@@ -196,6 +262,9 @@ sb_graphify_platform_artifact_path() {
   case "$host" in
     cursor) printf '%s/.cursor/rules/graphify.mdc' "${project_root%/}" ;;
     codex) printf '%s/.codex/hooks.json' "${project_root%/}" ;;
+    opencode) printf '%s/.opencode/opencode.json' "${project_root%/}" ;;
+    goose) printf '%s/.pi/agent/skills/graphify/SKILL.md' "${project_root%/}" ;;
+    hermes) printf '%s/AGENTS.md' "${project_root%/}" ;;
     *) printf '%s/.codex/settings.json' "${project_root%/}" ;;
   esac
 }
@@ -207,8 +276,7 @@ sb_graphify_platform_artifact_present() {
   artifact="$(sb_graphify_platform_artifact_path "$project_root" "$host")"
   [[ -f "$artifact" && ! -L "$artifact" ]] || return 1
   case "$host" in
-    cursor) grep -q 'graphify' "$artifact" 2>/dev/null ;;
-    codex) grep -q 'graphify' "$artifact" 2>/dev/null ;;
+    cursor|codex|claude|opencode|goose|hermes) grep -q 'graphify' "$artifact" 2>/dev/null ;;
     *) grep -q 'graphify' "$artifact" 2>/dev/null ;;
   esac
 }
@@ -220,6 +288,15 @@ sb_recommended_tool_full_install_lines() {
   cli_lines="$(sb_recommended_tool_install_commands "$config_file" "$tool_id")"
   if [[ -z "$cli_lines" && "$tool_id" == "graphify" ]]; then
     cli_lines=$'uv tool install graphifyy\npipx install graphifyy'
+  fi
+  if [[ -z "$cli_lines" && "$tool_id" == "agentmemory" ]]; then
+    cli_lines='npm install -g @agentmemory/agentmemory'
+  fi
+  if [[ -z "$cli_lines" && "$tool_id" == "rtk" ]]; then
+    cli_lines=$'brew tap rtk-ai/rtk && brew install rtk\ncurl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh'
+  fi
+  if [[ -z "$cli_lines" && "$tool_id" == "context_mode" ]]; then
+    cli_lines='npm install -g context-mode'
   fi
   platform_lines="$(sb_recommended_tool_platform_install_commands "$config_file" "$tool_id" "$host")"
   if [[ -n "$cli_lines" ]]; then
@@ -267,8 +344,8 @@ EOF
         local fail_reason
         fail_reason="$(sb_recommended_tool_install_failure_reason "$config_file" "$tool_id")"
         cat <<EOF
-Graphify opted in but install failed — enforcement suspended until upgrade; retry on /silver:update.
-User consent preserved (enabled_by_user=true). Hooks treat Graphify as advisory until install succeeds.
+${tool_id} opted in but install failed — enforcement suspended until upgrade; retry on /silver:update.
+User consent preserved (enabled_by_user=true). Hooks treat ${tool_id} as advisory until install succeeds.
 ${fail_reason:+Failure reason: ${fail_reason}}
 EOF
       elif [[ "$tool_id" == "graphify" ]] && declare -f sb_graphify_cli_available >/dev/null 2>&1; then
@@ -289,6 +366,52 @@ EOF
           if ! sb_graphify_index_exists "$project_root" "$config_file"; then
             printf '%s\n' "Graphify enabled — index missing. Run: graphify update . --no-cluster (expected ${graph_rel}). Hooks block substantive edits until built."
           fi
+        fi
+      elif [[ "$tool_id" == "agentmemory" ]] && declare -f sb_agentmemory_cli_available >/dev/null 2>&1; then
+        if ! sb_agentmemory_cli_available; then
+          cat <<EOF
+agentmemory enabled but CLI missing — install before substantive work (host: ${host}):
+
+${install_lines}
+
+Then start server: nohup agentmemory > ~/.agentmemory/server.log 2>&1 &
+Run platform connect commands above. Hooks block substantive edits until CLI, server, MCP, and export root are ready.
+EOF
+        elif ! sb_agentmemory_server_healthy "$config_file" 2>/dev/null; then
+          printf '%s\n' "agentmemory enabled — server not healthy. Start: nohup agentmemory > ~/.agentmemory/server.log 2>&1 &"
+        elif declare -f sb_agentmemory_export_exists >/dev/null 2>&1; then
+          local project_root export_rel
+          project_root="$(dirname "$config_file")"
+          export_rel="$(sb_agentmemory_export_rel_path "$config_file")"
+          if ! sb_agentmemory_export_exists "$project_root" "$config_file"; then
+            printf '%s\n' "agentmemory enabled — export root missing. Run: mkdir -p ${export_rel}/memory ${export_rel}/snapshots"
+          fi
+        fi
+      elif [[ "$tool_id" == "rtk" ]] && declare -f sb_rtk_cli_available >/dev/null 2>&1; then
+        if ! sb_rtk_cli_available; then
+          cat <<EOF
+RTK enabled but CLI missing or wrong binary — install before substantive work (host: ${host}):
+
+${install_lines}
+
+Verify: rtk gain --help (rejects reachingforthejack/rtk). See docs/RTK.md.
+EOF
+        elif ! sb_rtk_platform_hook_present "$(dirname "$config_file")" "$host" 2>/dev/null; then
+          printf '%s\n' "RTK enabled — host hook not wired for ${host}. Run rtk init; hooks block until present."
+        fi
+      elif [[ "$tool_id" == "context_mode" ]] && declare -f sb_context_mode_cli_available >/dev/null 2>&1; then
+        if ! sb_context_mode_node_ok "$config_file" 2>/dev/null; then
+          printf '%s\n' "Context Mode enabled — Node >= 22.5 required before install."
+        elif ! sb_context_mode_cli_available; then
+          cat <<EOF
+Context Mode enabled but not installed (host: ${host}):
+
+${install_lines}
+
+ELv2 license — see recommended_tools.context_mode.license_note. Restart agent after plugin wiring. See docs/CONTEXT-MODE.md.
+EOF
+        elif ! sb_context_mode_instruction_fragment_present "$(dirname "$config_file")" 2>/dev/null; then
+          printf '%s\n' "Context Mode enabled — instruction fragment missing from silver-bullet.md/CLAUDE.md. Run init/update scaffold."
         fi
       fi
       ;;

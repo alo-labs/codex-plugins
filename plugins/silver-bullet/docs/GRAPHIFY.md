@@ -1,6 +1,6 @@
 # Graphify Readiness
 
-Silver Bullet uses Graphify as the preferred local retrieval layer before planning, editing, debugging, review, and shipping.
+Silver Bullet uses Graphify as the **mandatory** local retrieval layer before planning, editing, debugging, review, and shipping when the CLI is installed. Hooks block substantive work without a fresh query.
 
 ## Opt-In Policy
 
@@ -70,6 +70,9 @@ Run from the project root after the CLI is on PATH. SB stores these in
 | Claude Code | `graphify install --project` | `graphify claude install --project` | `.codex/settings.json` |
 | Codex | `graphify install --project --platform codex` | `graphify codex install --project` | `.codex/hooks.json` |
 | Cursor | *(none)* | `graphify cursor install` | `.cursor/rules/graphify.mdc` ([issue #137](https://github.com/safishamsi/graphify/issues/137#issuecomment-4215764533)) |
+| OpenCode | `graphify install --project --platform opencode` | *(hooks in `.opencode/plugins/graphify.js`)* | `.opencode/opencode.json` |
+| Goose (Pi) | `graphify install --project --platform pi` | *(skill only)* | `.pi/agent/skills/graphify/SKILL.md` |
+| Hermes | `graphify install --project --platform hermes` | *(AGENTS.md rules — no PreToolUse)* | `AGENTS.md` graphify section |
 
 Codex also needs `multi_agent = true` under `[features]` in `~/.codex/config.toml` for parallel extraction (upstream note).
 
@@ -135,3 +138,28 @@ Observed constraints:
 - `graphify extract --postgres` needs `psycopg` and a reachable database.
 - `graphify-mcp --transport http` needs the MCP extra (`graphifyy[mcp]`).
 - `graphify label` can exit successfully with placeholder labels when no backend key is available.
+
+## Optimization (synergy_max)
+
+When Graphify is opted in, SB runs `bash scripts/sb-optimize-stack.sh --apply` at init/update (profile `synergy_max`):
+
+| Step | Action |
+|------|--------|
+| Git hooks | `graphify hook install` — auto-rebuild on commit/checkout |
+| Platform always-on | Per-host post-index commands (see Step 2 table) |
+| Index | `graphify update . --no-cluster` when missing or after agentmemory export |
+| Query budget | `--budget 2000` per §2g-i; TTL `query_ttl_seconds: 1800` in config |
+
+Verify: `bash scripts/sb-optimize-stack.sh --verify` or `optimize-graphify-hooks` in diagnostics.
+
+See `docs/STACK-OPTIMIZATION.md` for full contract.
+
+## agentmemory Synergy
+
+When both Graphify and agentmemory are opted in:
+
+1. **Capture** — agentmemory records sessions and exports markdown to `.agentmemory/memory/` and `.agentmemory/snapshots/`.
+2. **Index** — `graphify update . --no-cluster` indexes `.agentmemory/` alongside code and docs.
+3. **Retrieve** — use `graphify query` for structural + memory context; hooks treat a fresh Graphify query as satisfying the agentmemory usage gate.
+
+See `docs/AGENTMEMORY.md` for install, MCP wiring, and git-backed auto-save bridge setup.

@@ -1,0 +1,441 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "SKILL.md",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "skill",
+      "community": 1,
+      "norm_label": "skill.md"
+    },
+    {
+      "label": "/silver:review-fix-ladder \u2014 Progressive Review / Fix Ladder",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "community": 1,
+      "norm_label": "/silver:review-fix-ladder \u2014 progressive review / fix ladder"
+    },
+    {
+      "label": "When to Use",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "skill_when_to_use",
+      "community": 1,
+      "norm_label": "when to use"
+    },
+    {
+      "label": "Step 0: Resolve Scope",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "skill_step_0_resolve_scope",
+      "community": 3,
+      "norm_label": "step 0: resolve scope"
+    },
+    {
+      "label": "Scope Lock (HARD)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "skill_scope_lock_hard",
+      "community": 3,
+      "norm_label": "scope lock (hard)"
+    },
+    {
+      "label": "Step 1: Derive Review Charter",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L44",
+      "_origin": "ast",
+      "id": "skill_step_1_derive_review_charter",
+      "community": 1,
+      "norm_label": "step 1: derive review charter"
+    },
+    {
+      "label": "Step 2: Resolve Ladder",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L64",
+      "_origin": "ast",
+      "id": "skill_step_2_resolve_ladder",
+      "community": 1,
+      "norm_label": "step 2: resolve ladder"
+    },
+    {
+      "label": "Step 3: Execute Ladder \u2014 State Machine (HARD)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "skill_step_3_execute_ladder_state_machine_hard",
+      "community": 0,
+      "norm_label": "step 3: execute ladder \u2014 state machine (hard)"
+    },
+    {
+      "label": "Compliance Gate (MUST run before every rung advance)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L78",
+      "_origin": "ast",
+      "id": "skill_compliance_gate_must_run_before_every_rung_advance",
+      "community": 0,
+      "norm_label": "compliance gate (must run before every rung advance)"
+    },
+    {
+      "label": "No Full-Ladder Obligation",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L94",
+      "_origin": "ast",
+      "id": "skill_no_full_ladder_obligation",
+      "community": 0,
+      "norm_label": "no full-ladder obligation"
+    },
+    {
+      "label": "STOP Conditions (immediate halt)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L101",
+      "_origin": "ast",
+      "id": "skill_stop_conditions_immediate_halt",
+      "community": 0,
+      "norm_label": "stop conditions (immediate halt)"
+    },
+    {
+      "label": "Recovery Procedure (before resuming)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L115",
+      "_origin": "ast",
+      "id": "skill_recovery_procedure_before_resuming",
+      "community": 0,
+      "norm_label": "recovery procedure (before resuming)"
+    },
+    {
+      "label": "Explicit States Per Rung",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "skill_explicit_states_per_rung",
+      "community": 0,
+      "norm_label": "explicit states per rung"
+    },
+    {
+      "label": "Anti-Skip Rules (MUST / FORBIDDEN)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L136",
+      "_origin": "ast",
+      "id": "skill_anti_skip_rules_must_forbidden",
+      "community": 0,
+      "norm_label": "anti-skip rules (must / forbidden)"
+    },
+    {
+      "label": "Per-Rung Workflow (Orchestrator Checklist)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L160",
+      "_origin": "ast",
+      "id": "skill_per_rung_workflow_orchestrator_checklist",
+      "community": 0,
+      "norm_label": "per-rung workflow (orchestrator checklist)"
+    },
+    {
+      "label": "Repo-wide mode (only after user confirms)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L173",
+      "_origin": "ast",
+      "id": "skill_repo_wide_mode_only_after_user_confirms",
+      "community": 0,
+      "norm_label": "repo-wide mode (only after user confirms)"
+    },
+    {
+      "label": "Step 4: Close Out",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L180",
+      "_origin": "ast",
+      "id": "skill_step_4_close_out",
+      "community": 1,
+      "norm_label": "step 4: close out"
+    },
+    {
+      "label": "Host Delegation Notes",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L191",
+      "_origin": "ast",
+      "id": "skill_host_delegation_notes",
+      "community": 1,
+      "norm_label": "host delegation notes"
+    },
+    {
+      "label": "Subagent Prompt Templates",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L201",
+      "_origin": "ast",
+      "id": "skill_subagent_prompt_templates",
+      "community": 2,
+      "norm_label": "subagent prompt templates"
+    },
+    {
+      "label": "Template A \u2014 Audit+Fix (`rung_N_audit_fix`)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L203",
+      "_origin": "ast",
+      "id": "skill_template_a_audit_fix_rung_n_audit_fix",
+      "community": 2,
+      "norm_label": "template a \u2014 audit+fix (`rung_n_audit_fix`)"
+    },
+    {
+      "label": "Template B \u2014 Verify-Only (`rung_N_verify_1` or `rung_N_verify_2`)",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L231",
+      "_origin": "ast",
+      "id": "skill_template_b_verify_only_rung_n_verify_1_or_rung_n_verify_2",
+      "community": 2,
+      "norm_label": "template b \u2014 verify-only (`rung_n_verify_1` or `rung_n_verify_2`)"
+    },
+    {
+      "label": "Orchestrator Between Verify Passes",
+      "file_type": "document",
+      "source_file": "SKILL.md",
+      "source_location": "L260",
+      "_origin": "ast",
+      "id": "skill_orchestrator_between_verify_passes",
+      "community": 2,
+      "norm_label": "orchestrator between verify passes"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "skill",
+      "target": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L191",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_host_delegation_notes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L19",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_step_0_resolve_scope",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L44",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_step_1_derive_review_charter",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L64",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_step_2_resolve_ladder",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_step_3_execute_ladder_state_machine_hard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L180",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_step_4_close_out",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L201",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_subagent_prompt_templates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "source": "skill_silver_review_fix_ladder_progressive_review_fix_ladder",
+      "target": "skill_when_to_use",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "skill_step_0_resolve_scope",
+      "target": "skill_scope_lock_hard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L136",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_anti_skip_rules_must_forbidden",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L78",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_compliance_gate_must_run_before_every_rung_advance",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L126",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_explicit_states_per_rung",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L94",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_no_full_ladder_obligation",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L160",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_per_rung_workflow_orchestrator_checklist",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L115",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_recovery_procedure_before_resuming",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L173",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_repo_wide_mode_only_after_user_confirms",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L101",
+      "weight": 1.0,
+      "source": "skill_step_3_execute_ladder_state_machine_hard",
+      "target": "skill_stop_conditions_immediate_halt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L260",
+      "weight": 1.0,
+      "source": "skill_subagent_prompt_templates",
+      "target": "skill_orchestrator_between_verify_passes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L203",
+      "weight": 1.0,
+      "source": "skill_subagent_prompt_templates",
+      "target": "skill_template_a_audit_fix_rung_n_audit_fix",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "SKILL.md",
+      "source_location": "L231",
+      "weight": 1.0,
+      "source": "skill_subagent_prompt_templates",
+      "target": "skill_template_b_verify_only_rung_n_verify_1_or_rung_n_verify_2",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "47b6633078362c76c63960195b9ee1ebbc5b4604"
+}

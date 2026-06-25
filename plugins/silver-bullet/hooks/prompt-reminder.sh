@@ -92,8 +92,19 @@ while true; do
   search_dir=$(dirname "$search_dir")
 done
 
+if [[ -f "$_lib_dir/sb-project-gate.sh" ]]; then
+  # shellcheck source=lib/sb-project-gate.sh
+  source "$_lib_dir/sb-project-gate.sh"
+fi
+
 # No config → project not set up with Silver Bullet — return a no-op payload
 [[ -z "$config_file" ]] && finish_noop
+
+if declare -f sb_project_active >/dev/null 2>&1; then
+  sb_project_active "$config_file" || finish_noop
+elif declare -f sb_project_is_initiated >/dev/null 2>&1; then
+  sb_project_is_initiated "$config_file" || finish_noop
+fi
 
 # ── Read config values (single jq call for speed) ────────────────────────────
 SB_STATE_DIR="${SB_RUNTIME_STATE_DIR}"
@@ -318,6 +329,10 @@ fi
 directive_ctx=""
 _od_lib="${_lib_dir}/orchestrator-directive.sh"
 if [[ -f "$_od_lib" ]]; then
+  if [[ -f "$_lib_dir/orchestrator-parent.sh" ]]; then
+    # shellcheck source=lib/orchestrator-parent.sh
+    source "$_lib_dir/orchestrator-parent.sh"
+  fi
   # shellcheck source=lib/orchestrator-directive.sh
   source "$_od_lib"
   if [[ -f "$_lib_dir/orchestrator-state.sh" ]]; then
@@ -343,13 +358,11 @@ if [[ -f "$core_rules_file" ]]; then
     # shellcheck source=lib/core-rules-integrity.sh
     source "$_cr_lib"
     core_content="$(sb_core_rules_read_verified "$core_rules_file" "$script_dir" 2>/dev/null || true)"
-    if [[ -z "$core_content" ]] && [[ -f "${script_dir}/core-rules.sha256" ]]; then
+    if [[ -z "$core_content" ]]; then
       core_content="$(sb_core_rules_integrity_warning)"
-    elif [[ -z "$core_content" ]]; then
-      core_content="$(cat "$core_rules_file" 2>/dev/null || true)"
     fi
   else
-    core_content="$(cat "$core_rules_file" 2>/dev/null || true)"
+    core_content="⚠️ core-rules.md integrity check unavailable — enforcement rules were not injected. Run /silver:init or reinstall the Silver Bullet plugin."
   fi
   if [[ -n "$core_content" ]]; then
     msg="${core_content}
@@ -402,6 +415,63 @@ if [[ -f "$_lib_dir/graphify-gate.sh" && -n "${config_file:-}" && -f "$config_fi
 ---
 
 ${graphify_line}"
+  fi
+fi
+
+# agentmemory opt-in status
+if [[ -f "$_lib_dir/agentmemory-gate.sh" && -n "${config_file:-}" && -f "$config_file" ]]; then
+  # shellcheck source=lib/agentmemory-gate.sh
+  source "$_lib_dir/agentmemory-gate.sh"
+  agentmemory_line="$(sb_agentmemory_prompt_reminder_line "$config_file" 2>/dev/null || true)"
+  if [[ -n "$agentmemory_line" ]]; then
+    msg="${msg}
+
+---
+
+${agentmemory_line}"
+  fi
+fi
+
+# Token-compression tools (rtk, context_mode)
+if [[ -f "$_lib_dir/token-compression-tools-gate.sh" && -n "${config_file:-}" && -f "$config_file" ]]; then
+  # shellcheck source=lib/token-compression-tools-gate.sh
+  source "$_lib_dir/token-compression-tools-gate.sh"
+  for _tc_tool in rtk context_mode; do
+    _tc_line="$(sb_token_tool_prompt_reminder_line "$config_file" "$_tc_tool" 2>/dev/null || true)"
+    if [[ -n "$_tc_line" ]]; then
+      msg="${msg}
+
+---
+
+${_tc_line}"
+    fi
+  done
+fi
+
+# Code intelligence synergy (always when graphify + agentmemory enabled)
+if [[ -f "$_lib_dir/recommended-tools.sh" && -f "$_lib_dir/graphify-gate.sh" && -f "$_lib_dir/agentmemory-gate.sh" && -n "${config_file:-}" && -f "$config_file" ]]; then
+  # shellcheck source=lib/recommended-tools.sh
+  source "$_lib_dir/recommended-tools.sh"
+  if [[ "$(sb_recommended_tool_consent "$config_file" graphify)" == "enabled" && "$(sb_recommended_tool_consent "$config_file" agentmemory)" == "enabled" ]]; then
+    msg="${msg}
+
+---
+
+CODE INTELLIGENCE: save via agentmemory, retrieve via Graphify — every session, every substantive turn. Run graphify query before exploration; capture decisions/defects in agentmemory; never substitute raw grep/read when Graphify is fresh."
+  fi
+fi
+
+# Stack optimization status when score below threshold
+if [[ -f "$_lib_dir/stack-optimizer.sh" && -n "${config_file:-}" && -f "$config_file" ]]; then
+  # shellcheck source=lib/stack-optimizer.sh
+  source "$_lib_dir/stack-optimizer.sh"
+  stack_opt_line="$(sb_stack_optimization_prompt_line "$PWD" "$config_file" 2>/dev/null || true)"
+  if [[ -n "$stack_opt_line" ]]; then
+    msg="${msg}
+
+---
+
+${stack_opt_line}"
   fi
 fi
 

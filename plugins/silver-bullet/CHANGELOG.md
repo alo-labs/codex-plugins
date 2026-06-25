@@ -1,5 +1,88 @@
 # Changelog
 
+## [0.48.3] — 2026-06-25
+
+Recommended-tools expansion and global wiring: RTK and Context Mode opt-in gates, Alumnium opt-in, Graphify + agentmemory stack optimizer (synergy_max) across hosts, multi-agent global RTK/Context Mode optimizer, and Context Mode read-deny when enforced. Documentation and site workflow SDLC ordering; enterprise E2E fixture shift; CI/shellcheck and diagnostics fixes. Integrates doc-scheme Graphify exclusion test fix; restores opt-in Graphify gate behavior after mandatory-graphify branch merge.
+
+---
+
+## [0.48.2] — 2026-06-25
+
+Enterprise readiness ladder run 2: FLOW-16/17 worker split (`DESIGN-HANDOFF.md` / `DOCUMENT.md`), `SECURITY.md` skill-dispatched template, catalog `skill_worker_templates` parity, depth-aware review-loop docs, core-rules hash pin enforcement, Cursor GPT-5.5 ladder slug substitutions, and review-loop safety-cap non-convergence guard.
+
+## Bug Fixes
+- Split `silver-handoff` (FLOW 16) from `silver-ensure-docs` (FLOW 17) worker templates; added `FLOW-DOCUMENT` runtime queue token.
+- Split `security` vs `silver-secure` worker templates (`SECURITY.md` / `SECURE.md`) with distinct flow-log labels.
+- Fixed `RELEASE.md` mandatory skill (`silver:create-release`), `ROUTER.md` colon invoke form, orchestrator flow-label CSV mappings.
+- Lazy-load worker template mapper in `orchestrator-directive.sh` when sourced before `orchestrator-parent.sh`.
+- Core-rules injection requires verified hash pin; missing pin injects warning instead of unpinned content.
+
+## Tests
+- Extended orchestrator handoff, workflow CSV, instruction-flow parity, worker-template parity, and review-fix-ladder coverage.
+
+---
+
+## [0.48.1] — 2026-06-24
+
+Post-release APO runtime alignment, orchestrator queue fixes, and help-center refresh for the v0.48 catalog model.
+
+## Bug Fixes
+- Fixed `silver-devops` orchestrator post-exec queue token (`FLOW-QUALITY-GATE-PRESHIP` instead of stale `FLOW-DEVOPS-QUALITY-GATE-PRESHIP`).
+- Registered `silver-research` and `silver-ensure-docs` as flow atoms and extended the `silver-research` default queue with documentation and validation steps.
+
+## Tests
+- Added orchestrator queue-order and worker-template parity coverage for research and devops flows.
+- Tightened APO schema test for subagent-only `dispatch_mode` and composition triple alignment gates.
+- Added stale 18-flow phrase guard across public docs in `check-apo-invariants.py`.
+
+## Documentation
+- Refreshed README, help center, OG card, and workflow pages for the canonical `AF-*` catalog (27 atomic flows, not legacy 18-flow wording).
+- Added AGENTS.md rule requiring Composer 2.5 subagents for website and help-center authoring.
+
+---
+
+## [0.48.0] — 2026-06-24
+
+Atomic-flow APO redesign.
+
+## Features
+- Added `docs/apo-catalog.json` as the authoritative Agentic Process Orchestrator catalog for processes, workflows, atomic flows, flow steps, V-loops, evidence records, intent ledgers, process packs, dynamic composition rules, and runtime token mappings.
+- Replaced the legacy FLOW 1-18 mirror with 27 canonical non-redundant `AF-*` atomic flows, 22 catalog-backed workflows, and 85 skill-backed flow steps with local V-loops.
+- Added generated catalog views: `docs/composable-flows-contracts.md`, `docs/workflow-composition-matrix.md`, and `docs/generated/atomic-flow-index.json`.
+
+## Tests
+- Added blocking APO gates for catalog schema/SOT, atomic-flow deduplication, per-flow and per-step V-loops, composition SOT, evidence/intent models, subagent execution metadata, runtime alignment, worker parity, tool policies, router coverage, and site/doc freshness.
+
+## Documentation
+- Updated `silver-bullet.md`, `templates/silver-bullet.md.base`, README/help/reference/workflow docs, and search metadata to describe the APO catalog authority, migration from FLOW 1-18 aliases, V-loop rollups, subagent execution, opted-in tool governance, and generated-view freshness model.
+
+---
+
+## [0.47.1] — 2026-06-24
+
+Hook activation guard for non-initiated projects, sentinel manifest fix, and opt-in agentmemory with Graphify synergy.
+
+## Features
+- `feat(recommended-tools): add opt-in agentmemory with Graphify synergy` (`06b621aa`, `5f996695`) — explicit consent via `recommended_tools.agentmemory` in `.silver-bullet.json`; **save via agentmemory, retrieve via Graphify** when both tools are enabled
+- New hooks: `hooks/agentmemory-gate.sh`, `hooks/record-agentmemory-usage.sh`, shared `hooks/lib/agentmemory-gate.sh` — CLI, server, MCP, and export-root gates when opted in
+- `/silver:init` (§1.1b) and `/silver:update` (Step 8b) consent, install, and enforcement-suspend retry flows
+- Follow-ups: `fix(skills): drop host-specific paths from agentmemory init/update copy` (`ed5ae8ff`); `fix(hooks): silence ShellCheck SC1090 on graphify lazy source` (`925577b9`); `fix(gitignore): un-ignore agentmemory memory files` (`141afb3b`); `chore(setup): record agentmemory/graphify stack` (`b42e49d1`); `test(scripts): tolerate sb-diagnostics non-zero exit` (`ddc09e24`)
+
+## Documentation
+- `docs/AGENTMEMORY.md` — opt-in policy, local setup, hook enforcement, and Graphify pairing
+
+## Bug Fixes
+- `fix(hooks): skip enforcement when SB not initiated in project` (`8ca25258`) — hooks only engage when `.silver-bullet.json` and `silver-bullet.md` exist; non-initiated workspaces no longer receive enforcement
+- `fix(hooks): gate on .silver-bullet.json presence only` (`fe05b7d9`) — simplified activation check
+
+## Tests
+- `test: fix sentinel manifest for silver-review-fix-ladder` (`47b66330`)
+
+## Chores
+- `chore(sync): align plugin templates with root templates` (`a2412af7`)
+
+---
+
 ## [0.47.0] — 2026-06-22
 
 Recommended-tools opt-in for Graphify, GSD lifecycle namespace removal, atomic-flow composition hardening, and hook/test parity gates.

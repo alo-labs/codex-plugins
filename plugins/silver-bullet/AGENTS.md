@@ -18,6 +18,9 @@
 # Full validation
 bash tests/run-all-tests.sh
 
+# Cursor recommended-tool rules (graphify + agentmemory + umbrella)
+bash scripts/install-recommended-tools-cursor.sh
+
 # Sync physical plugin template mirror after editing templates/
 bash scripts/sync-templates.sh
 
@@ -50,6 +53,10 @@ CI enforces `silver-bullet.md` ↔ `templates/silver-bullet.md.base` parity (`te
 
 ## Working Rules
 
+- **Website and help-center work** (copywriting, `site/` HTML, help pages, `site/help/search.js`, OG cards, and other public-facing docs under `site/`) MUST be authored and reviewed via **Composer 2.5 subagents** (`Task` tool with `model=composer-2.5`), not by the parent agent alone or other models.
+- **Workflow catalog SDLC order** — workflow and atomic-flow listings on the homepage (`site/index.html` both tabs) and Help Center (`site/help/workflows/`, reference tables, composable-workflow concept page) MUST follow typical software-delivery lifecycle order top-to-bottom: entry/router → discovery/planning → primary delivery → fast/specialized paths → infrastructure → ship/release → reusable post-delivery gates → operations/learning. Atomic flows (`AF-*`) order by capability class: orient/bootstrap → plan/specify → research → execute → verify/test → review → ship/deploy → document/process. This is a documentation presentation order, not runtime composition order.
+- **Site/help publish policy** — content under `site/` is publishable as direct commits to `main` without a patch release, version bump, git tag, or GitHub release. Do not bump `package.json` / plugin manifests or run release automation for site/help-only publishes unless the user explicitly requests a release. Before pushing, run the site freshness tests (`bash tests/scripts/test-site-doc-freshness.sh`, `bash tests/scripts/test-site-content-freshness.sh`); do not block on the full `bash tests/run-all-tests.sh` suite for site-only work. **Publish path:** commit + push to `main` only; GitHub Pages deploys automatically via `.github/workflows/pages.yml` (path-filtered to `site/**`). Note: `.github/workflows/ci.yml` still runs on every push (no site-only path filter), but site-only publishes do not require waiting for CI green or cutting a release. **Publish latency:** workflow checkout/upload steps are ~15s; `actions/deploy-pages` often spends **1–5+ minutes** in GitHub's `deployment_queued` state (platform-side, not fixable in-repo). After workflow success, `https://sb.alolabs.dev/` may still serve prior HTML for up to **10 minutes** (`Cache-Control: max-age=600` on GitHub Pages — not configurable without a fronting CDN). Expect **~1–15 minutes** end-to-end during congestion; do not claim instant publication.
+- **Live publish notification** — do **not** tell the user changes are live until you have verified the **actual deployed page content** reflects the expected changes. A commit pushed to `main` or a queued/succeeded Pages workflow is **not** sufficient on its own. Before claiming live status, fetch the relevant public URL(s) (e.g. `https://sb.alolabs.dev/` or the specific `site/help/` path) and confirm key markers match the commit (hero copy, tab labels/counts, table row counts, removed sections, CSS/layout markers). Also inspect response headers (`Last-Modified`, `ETag`, `Cache-Control`, `Age`) and, when needed, wait for `.github/workflows/pages.yml` to finish then re-fetch until content matches or you can report honestly that deploy is pending/failed/CDN-stale with evidence. After verification, notify the user with: commit SHA on `main`; what went live (site/help, plugin release, etc.); explicit **LIVE** or **NOT LIVE** status with fetched-page evidence; GitHub release URL if a release was cut; and confirmation that site freshness tests passed when applicable.
 - Keep `silver-bullet.md` and `templates/silver-bullet.md.base` in sync whenever live instruction text changes.
 - Treat `.planning/` as authoritative for active workflow state.
 - Prefer targeted tests before the full suite when iterating locally.
@@ -60,3 +67,16 @@ CI enforces `silver-bullet.md` ↔ `templates/silver-bullet.md.base` parity (`te
 - `jq` is a required runtime dependency for the hooks.
 - Test fixtures should use temporary directories and leave the repo tree clean.
 - Small config/doc edits are still part of the repo contract if they affect enforcement.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

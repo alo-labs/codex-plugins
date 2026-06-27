@@ -98,10 +98,10 @@
     "evidence_note": "Content unchanged since v0.44.7; prior monolithic SENTINEL audits in docs/audits/ cover canonical skill inventory."
   },
   {
-    "skill": "multi-ai-task",
-    "path": "skills/multi-ai-task/SKILL.md",
+    "skill": "silver-multi-ai-task",
+    "path": "skills/silver-multi-ai-task/SKILL.md",
     "sentinel_version": "2.3.0",
-    "audit_report": "docs/audits/sentinel-skills/SENTINEL-audit-multi-ai-task.md",
+    "audit_report": "docs/audits/sentinel-skills/SENTINEL-audit-silver-multi-ai-task.md",
     "status": "clean",
     "verdict": "Deploy with monitoring",
     "audited_at": "2026-06-27",

@@ -1481,7 +1481,7 @@
         "TP-GRAPHIFY"
       ],
       "owning_skills": [
-        "multi-ai-task",
+        "silver-multi-ai-task",
         "review-research",
         "silver-research"
       ],
@@ -3894,8 +3894,8 @@
     },
     {
       "id": "FS-MULTI_AI_TASK",
-      "skill": "multi-ai-task",
-      "purpose": "Execute the multi-ai-task skill as a catalog-backed step in AF-DECIDE.",
+      "skill": "silver-multi-ai-task",
+      "purpose": "Execute the silver-multi-ai-task skill as a catalog-backed step in AF-DECIDE.",
       "hierarchy_level": "flow_step",
       "classification": "flow-step-skill",
       "inputs": [
@@ -3904,20 +3904,20 @@
         "relevant artifacts and state"
       ],
       "outputs": [
-        "multi-ai-task work product or routing decision",
+        "silver-multi-ai-task work product or routing decision",
         "local step evidence"
       ],
       "v_loop": {
         "id": "VL-FS-MULTI_AI_TASK",
         "rollup_target": "flow_step",
-        "input_contract": "multi-ai-task receives the parent flow intent and only the artifacts needed for its local responsibility.",
-        "work_product": "multi-ai-task produces its documented skill output and evidence marker.",
+        "input_contract": "silver-multi-ai-task receives the parent flow intent and only the artifacts needed for its local responsibility.",
+        "work_product": "silver-multi-ai-task produces its documented skill output and evidence marker.",
         "verification": {
           "methods": [
             "inspection"
           ],
           "artifact_refs": [
-            "skills/multi-ai-task/SKILL.md"
+            "skills/silver-multi-ai-task/SKILL.md"
           ]
         },
         "validation": {
@@ -9212,7 +9212,7 @@
     {
       "id": "EV-FS-MULTI_AI_TASK",
       "producer": "FS-MULTI_AI_TASK",
-      "artifact_or_tool_ref": "skills/multi-ai-task/SKILL.md",
+      "artifact_or_tool_ref": "skills/silver-multi-ai-task/SKILL.md",
       "sufficiency_class": "inspection",
       "staleness_key": "catalog-version+entity-contract",
       "satisfies_v_loop_ref": "VL-FS-MULTI_AI_TASK"
@@ -10141,7 +10141,7 @@
       "devops-skill-router": "AF-DEVOPS-ROUTE",
       "extensibility": "AF-QUALITY-GATE",
       "modularity": "AF-QUALITY-GATE",
-      "multi-ai-task": "AF-DECIDE",
+      "silver-multi-ai-task": "AF-DECIDE",
       "reliability": "AF-QUALITY-GATE",
       "reusability": "AF-QUALITY-GATE",
       "review-context": "AF-PLAN",

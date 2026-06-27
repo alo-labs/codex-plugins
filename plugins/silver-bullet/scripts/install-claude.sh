@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# shellcheck source=hooks/lib/rtk-compat.sh
+source "${REPO_ROOT}/hooks/lib/rtk-compat.sh"
 PURGE_LEGACY_PLUGINS=0
 PUBLIC_RELEASE_ONLY=0
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo "/Users/shafqat/.local/bin/claude")}"
@@ -59,7 +61,7 @@ marketplace_registered() {
 marketplace_catalog_has_plugin() {
   local marketplace="$1"
   local plugin_name="$2"
-  local marketplace_json="${HOME}/.codex/plugins/marketplaces/${marketplace}/.codex-plugin/marketplace.json"
+  local marketplace_json="${HOME}/.codex/plugins/marketplaces/${marketplace}/.claude-plugin/marketplace.json"
 
   [[ -f "$marketplace_json" ]] || return 1
   jq -e --arg name "$plugin_name" 'any(.plugins[]?; .name == $name)' "$marketplace_json" >/dev/null 2>&1
@@ -269,8 +271,9 @@ sync_silver_bullet_hook_cache() {
   [[ -n "$current_version_dir" ]] || return 0
 
   install -d -m 755 "${current_version_dir}/hooks"
-  install -m 755 "${REPO_ROOT}/hooks/session-start" "${current_version_dir}/hooks/session-start"
-  install -m 755 "${REPO_ROOT}/hooks/spec-session-record.sh" "${current_version_dir}/hooks/spec-session-record.sh"
+  # Sync full local hook tree so PostToolUse fixes (e.g. hookEventName) reach live TUI cache.
+  rsync -a --chmod=Du=rwx,go=rx,Fu=rx,Fgo=rx \
+    "${REPO_ROOT}/hooks/" "${current_version_dir}/hooks/"
 }
 
 sync_silver_bullet_skill_cache() {

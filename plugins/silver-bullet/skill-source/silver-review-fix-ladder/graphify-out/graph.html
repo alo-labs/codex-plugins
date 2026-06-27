@@ -152,11 +152,11 @@ function focusNode(nodeId) {
 let hoveredNodeId = null;
 network.on('hoverNode', params => {
   hoveredNodeId = params.node;
-  container.style.codex = 'pointer';
+  container.style.cursor = 'pointer';
 });
 network.on('blurNode', () => {
   hoveredNodeId = null;
-  container.style.codex = 'default';
+  container.style.cursor = 'default';
 });
 container.addEventListener('click', () => {
   if (hoveredNodeId !== null) {

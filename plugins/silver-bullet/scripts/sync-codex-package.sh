@@ -33,7 +33,7 @@ shopt -s dotglob nullglob
 for entry in "${DEST_DIR}"/*; do
   base="$(basename "$entry")"
   case "$base" in
-    .codex-plugin|.codex-plugin|commands|skill-source|cursor-hooks.json|templates)
+    .codex-plugin|.cursor-plugin|commands|skill-source|cursor-hooks.json|templates)
       continue
       ;;
   esac

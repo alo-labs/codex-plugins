@@ -82,8 +82,8 @@ state root, inferred runtime name (`claude`, `codex`, or `cursor`), and capabili
 | Cursor | [alo-labs/alo-labs-cursor-marketplace](https://github.com/alo-labs/alo-labs-cursor-marketplace) | `scripts/install-cursor.sh` |
 
 Release prep runs `scripts/sync-release-marketplace-versions.sh <version>` to
-keep all three marketplace repos aligned with `.codex-plugin/plugin.json` /
-`.codex-plugin/plugin.json` / `plugins/silver-bullet/.codex-plugin/plugin.json`.
+keep all three marketplace repos aligned with `.claude-plugin/plugin.json` /
+`.cursor-plugin/plugin.json` / `plugins/silver-bullet/.codex-plugin/plugin.json`.
 
 Cursor release smoke (no live agent required): `bash scripts/release-live-matrix-cursor-smoke.sh`.
 

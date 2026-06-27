@@ -5,6 +5,21 @@ sb_outcomes_session_file() {
   printf '%s/outcomes-session.json' "${SB_RUNTIME_STATE_DIR:-/tmp}"
 }
 
+# Atomically apply a jq filter to a JSON file (unique mktemp; no fixed .tmp path).
+sb_outcomes_jq_update() {
+  local outfile="$1"
+  local filter="$2"
+  local tmp
+  [[ -f "$outfile" ]] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  tmp="$(mktemp "${outfile}.XXXXXX" 2>/dev/null)" || return 0
+  if jq "$filter" "$outfile" >"$tmp" 2>/dev/null; then
+    mv -f -- "$tmp" "$outfile" 2>/dev/null || rm -f -- "$tmp"
+  else
+    rm -f -- "$tmp"
+  fi
+}
+
 sb_outcomes_prompt_id() {
   local prompt="$1"
   if command -v shasum >/dev/null 2>&1; then
@@ -30,6 +45,25 @@ sb_outcomes_seed_for_prompt() {
 
   now="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   if command -v jq >/dev/null 2>&1; then
+    if declare -f sb_prompt_is_informational_query >/dev/null 2>&1 \
+      && sb_prompt_is_informational_query "$prompt"; then
+      jq -n \
+        --arg pid "$pid" \
+        --arg at "$now" \
+        --arg preview "$(printf '%.120s' "$prompt")" \
+        '{
+          prompt_id: $pid,
+          started_at: $at,
+          prompt_preview: $preview,
+          informational: true,
+          outcomes: [
+            {id:"route", label:"Route via /silver or approved workflow composer", status:"done", evidence:"informational query — no routing required", decision_class:"autonomous_default"},
+            {id:"scope", label:"Define concrete deliverables for this prompt", status:"done", evidence:"informational query", decision_class:"autonomous_default"},
+            {id:"verify", label:"Run verification before claiming completion", status:"done", evidence:"informational query", decision_class:"autonomous_default"}
+          ]
+        }' >"$outfile" 2>/dev/null || true
+      return 0
+    fi
     jq -n \
       --arg pid "$pid" \
       --arg at "$now" \
@@ -61,26 +95,34 @@ sb_outcomes_auto_evaluate() {
 
   # route: composer or router skill recorded (not merely planning-floor skills)
   if printf '%s\n' "$state_contents" | grep -qE '^(silver|silver-feature|silver-ui|silver-devops|silver-bugfix|silver-fast|silver-research|silver-release|silver-migrate|silver-init)$' 2>/dev/null; then
-    jq '(.outcomes[] | select(.id=="route") | .status) = "done"
-        | (.outcomes[] | select(.id=="route") | .evidence) = "workflow composer or /silver router recorded"' \
-      "$outfile" >"${outfile}.tmp" 2>/dev/null && mv "${outfile}.tmp" "$outfile"
+    sb_outcomes_jq_update "$outfile" \
+      '(.outcomes[] | select(.id=="route") | .status) = "done"
+        | (.outcomes[] | select(.id=="route") | .evidence) = "workflow composer or /silver router recorded"'
   fi
 
   # verify: verify-tests marker or silver-verify recorded
   if printf '%s\n' "$state_contents" | grep -Fqx 'verify-tests' 2>/dev/null \
      || printf '%s\n' "$state_contents" | grep -Fqx 'silver-verify' 2>/dev/null; then
-    jq '(.outcomes[] | select(.id=="verify") | .status) = "done"
-        | (.outcomes[] | select(.id=="verify") | .evidence) = "verification skill or verify-tests recorded"' \
-      "$outfile" >"${outfile}.tmp" 2>/dev/null && mv "${outfile}.tmp" "$outfile"
+    sb_outcomes_jq_update "$outfile" \
+      '(.outcomes[] | select(.id=="verify") | .status) = "done"
+        | (.outcomes[] | select(.id=="verify") | .evidence) = "verification skill or verify-tests recorded"'
   fi
 
   # scope: active workflow with composer metadata OR PLAN.md with substantive body
   local scope_done=false
-  if [[ -d ".planning/workflows" ]]; then
+  if printf '%s\n' "$state_contents" | grep -Fqx 'silver-execute' 2>/dev/null; then
+    scope_done=true
+  fi
+  if [[ "$scope_done" != true && -d ".planning/workflows" ]]; then
     shopt -s nullglob
     for _wf in .planning/workflows/*.md; do
       [[ -f "$_wf" && ! -L "$_wf" ]] || continue
       if grep -qE '^composer:' "$_wf" 2>/dev/null; then
+        scope_done=true
+        break
+      fi
+      _wf_body="$(grep -vE '^#|^$|^\s*$' "$_wf" 2>/dev/null | head -5 | tr -d '[:space:]' || true)"
+      if [[ -n "$_wf_body" ]]; then
         scope_done=true
         break
       fi
@@ -101,9 +143,9 @@ sb_outcomes_auto_evaluate() {
     shopt -u nullglob
   fi
   if [[ "$scope_done" == true ]]; then
-    jq '(.outcomes[] | select(.id=="scope") | .status) = "done"
-        | (.outcomes[] | select(.id=="scope") | .evidence) = "composed workflow or substantive PLAN.md"' \
-      "$outfile" >"${outfile}.tmp" 2>/dev/null && mv "${outfile}.tmp" "$outfile"
+    sb_outcomes_jq_update "$outfile" \
+      '(.outcomes[] | select(.id=="scope") | .status) = "done"
+        | (.outcomes[] | select(.id=="scope") | .evidence) = "composed workflow, PLAN.md, or silver-execute recorded"'
   fi
 }
 

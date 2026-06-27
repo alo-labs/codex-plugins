@@ -31,7 +31,7 @@ USAGE
 }
 
 marketplace_manifest_path() {
-  printf '%s/.codex-plugin/marketplace.json\n' "$CURSOR_MARKETPLACE_ROOT"
+  printf '%s/.cursor-plugin/marketplace.json\n' "$CURSOR_MARKETPLACE_ROOT"
 }
 
 ensure_marketplace_checkout() {
@@ -84,11 +84,11 @@ install_cursor_plugin_manifest() {
   local dest="$1"
   local version="$2"
   local source_root="$3"
-  local manifest_src="${source_root}/.codex-plugin/plugin.json"
+  local manifest_src="${source_root}/.cursor-plugin/plugin.json"
   local tmp
 
-  mkdir -p "${dest}/.codex-plugin"
-  [[ -f "$manifest_src" ]] || manifest_src="${REPO_ROOT}/.codex-plugin/plugin.json"
+  mkdir -p "${dest}/.cursor-plugin"
+  [[ -f "$manifest_src" ]] || manifest_src="${REPO_ROOT}/.cursor-plugin/plugin.json"
   [[ -f "$manifest_src" ]] || {
     printf 'ERROR: missing Cursor plugin manifest at %s\n' "$manifest_src" >&2
     exit 1
@@ -100,7 +100,7 @@ install_cursor_plugin_manifest() {
     | .skills = "./agents/cursor"
     | .hooks = "./cursor-hooks.json"
   ' "$manifest_src" > "$tmp"
-  install -m 644 "$tmp" "${dest}/.codex-plugin/plugin.json"
+  install -m 644 "$tmp" "${dest}/.cursor-plugin/plugin.json"
   rm -f -- "$tmp"
   install -m 644 "${dest}/hooks/cursor-hooks.json" "${dest}/cursor-hooks.json"
 }

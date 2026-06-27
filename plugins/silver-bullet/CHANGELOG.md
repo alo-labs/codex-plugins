@@ -1,6 +1,23 @@
 # Changelog
 
-## [0.48.3] — 2026-06-25
+## [0.48.4] — 2026-06-27
+
+Enterprise E2E hardening patch: friction fixes #2–#13 (hooks, orchestrator Bash in Task workers, RTK compat, session-start branch scope), turn-level TUI watcher + matrix monitor, interactive 22/22 matrix harness, multi-ai-task v2.1–2.6 doc/sentinel fixes, and test isolation for semantic-compress / plugin-surface gates. `run-all-tests` **4672 passed, 0 failed** at release SHA.
+
+### Bug Fixes
+- `fix(hooks)`: resolve SB frictions #2–#13 for enterprise E2E (`aaae7b6e`)
+- `fix(hooks)`: allow Bash in orchestrator-spawned Task workers (`18c969e8`, `effeaccb`)
+- `fix(rtk)`: export `RTK_DISABLED` for SB shell entry points (`4024389f`)
+- `fix(install-claude)`: rsync full hooks tree to plugin cache (`97bdfece`)
+- `fix(hooks)`: add `hookEventName` to high-frequency PostToolUse output (`d382165c`)
+- `fix(matrix)`: monitor empty-array crash when all rows complete; retry on API 429
+
+### Tests
+- `test(hooks)`: accept two-line branch scope file in session-start (`ee373397`)
+- Semantic-compress + Claude plugin-surface test isolation; orchestrator parent-guard coverage
+
+---
+
 
 Recommended-tools expansion and global wiring: RTK and Context Mode opt-in gates, Alumnium opt-in, Graphify + agentmemory stack optimizer (synergy_max) across hosts, multi-agent global RTK/Context Mode optimizer, and Context Mode read-deny when enforced. Documentation and site workflow SDLC ordering; enterprise E2E fixture shift; CI/shellcheck and diagnostics fixes. Integrates doc-scheme Graphify exclusion test fix; restores opt-in Graphify gate behavior after mandatory-graphify branch merge.
 
@@ -326,7 +343,7 @@ Independent launch-readiness adversarial review (Round 1–2): enforcement bypas
 - `fix(hooks): orchestrator queues — conditional silver-spec, silver-fast, devops router/security`
 - `fix(skills): router post-exec order, migrate/update routes, bugfix validate→QG, init orchestrator surface`
 - `fix(docs): devops-cycle review-before-verify; full-dev-cycle completion-audit step`
-- `fix(scripts): render-agent-bundle preserves .codex/rules project paths`
+- `fix(scripts): render-agent-bundle preserves .cursor/rules project paths`
 
 ## Tests
 - `test(hooks): apply_patch chain-guard, orchestrator devops/fast/spec, uat-gate sb_initiated fixtures`
@@ -1406,7 +1423,7 @@ Launch-hardening release. Remediates all blocker/high/medium findings from the p
 
 ## Versions bumped
 
-`package.json`, `.silver-bullet.json`, `templates/silver-bullet.config.json.default`, `forge/templates/silver-bullet.config.json.default`, `.codex-plugin/plugin.json`, `.codex-plugin/marketplace.json`, README badge — all → `0.31.0`.
+`package.json`, `.silver-bullet.json`, `templates/silver-bullet.config.json.default`, `forge/templates/silver-bullet.config.json.default`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, README badge — all → `0.31.0`.
 
 ## [0.30.0] — 2026-04-28
 
@@ -1445,7 +1462,7 @@ Seven items deferred to future milestones via `.planning/seeds/`: SEED-001 (#68 
 
 ## Other
 
-- `.codex-plugin/plugin.json` and `.codex-plugin/marketplace.json` bumped to 0.30.0 (were stale at 0.26.0).
+- `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` bumped to 0.30.0 (were stale at 0.26.0).
 - Backlog issue #90 filed for follow-up regex-shape validation on `transient_path_ignore_patterns`.
 - `.planning/milestones/v0.30.0-{REQUIREMENTS,ROADMAP}.md` and `.planning/workflows/<id>.md` document the milestone scope and composed-workflow tracker.
 
@@ -1860,14 +1877,14 @@ bash silver-bullet/forge-sb-install.sh
 **Marketplace hardening.** Fixes version drift, modernizes the marketplace `source` schema, and introduces a dedicated marketplace repo so future Ālo Labs plugins can be cataloged together.
 
 ### Marketplace
-- **MKTP-01**: Fixed stale version in `.codex-plugin/marketplace.json` (`0.13.1` → `0.23.4`). Was 10 releases out of date.
+- **MKTP-01**: Fixed stale version in `.claude-plugin/marketplace.json` (`0.13.1` → `0.23.4`). Was 10 releases out of date.
 - **MKTP-02**: Modernized `source` schema from the older nested `{"source":"url","url":"..."}` form to the current `"source": "github:alo-exp/silver-bullet"` shorthand.
 - **MKTP-03**: Created dedicated marketplace repo [alo-labs/claude-plugins](https://github.com/alo-labs/claude-plugins). End-users can now install via:
   ```
   /plugin marketplace add alo-labs/claude-plugins
   /plugin install silver-bullet@alo-labs
   ```
-  (The self-listed `.codex-plugin/marketplace.json` in this repo remains for direct-repo installs: `/plugin marketplace add alo-exp/silver-bullet`.)
+  (The self-listed `.claude-plugin/marketplace.json` in this repo remains for direct-repo installs: `/plugin marketplace add alo-exp/silver-bullet`.)
 - **MKTP-04**: Added `scripts/sync-marketplace-version.sh` — bumps the in-repo marketplace.json to match plugin.json and prints the remote-sync command for the alo-labs/claude-plugins repo.
 - **MKTP-05**: Added CI guard in `.github/workflows/ci.yml` that fails the build if `plugin.json.version ≠ marketplace.json.plugins[silver-bullet].version`. Prevents future drift.
 
@@ -1933,9 +1950,9 @@ Cleanroom multi-pass audit introduced: scan → fix → re-scan until two consec
 **plugin-dev compliance milestone.** Retroactively aligns 100% of Silver Bullet against the official Anthropic `plugin-dev` plugin standards — manifest, hooks, skills, and writing style.
 
 ### Plugin-dev Compliance (Phase 1 — Manifest & Hooks)
-- **PLUGIN-01**: Added `"hooks": "./hooks/hooks.json"` field to `.codex-plugin/plugin.json` per plugin-dev `plugin-structure` standard.
+- **PLUGIN-01**: Added `"hooks": "./hooks/hooks.json"` field to `.claude-plugin/plugin.json` per plugin-dev `plugin-structure` standard.
 - **PLUGIN-02**: Added explicit `timeout` fields to all 24 hook entries in `hooks/hooks.json` (values: 5–30s per hook criticality).
-- **PLUGIN-03**: Bumped `.codex-plugin/plugin.json` version to `0.23.0`.
+- **PLUGIN-03**: Bumped `.claude-plugin/plugin.json` version to `0.23.0`.
 
 ### plugin-dev Compliance (Phase 2 — Skill Descriptions & Versions)
 - **SKILL-DESC**: Fixed 9 skill descriptions from bare "Use when..." to plugin-dev standard "This skill should be used when..." format: `ai-llm-safety`, `extensibility`, `modularity`, `reliability`, `reusability`, `scalability`, `security`, `testability`, `usability`.
@@ -2166,7 +2183,7 @@ into a single coherent entry. Closes issues [#14](https://github.com/alo-exp/sil
   `hooks/record-skill.sh`, `hooks/ci-status-check.sh`,
   `hooks/dev-cycle-check.sh`. Prevents first-install failures from
   surfacing nonzero hook exits that cause Claude to reject the plugin.
-- Restored `"hooks": "./hooks/hooks.json"` to `.codex-plugin/plugin.json`
+- Restored `"hooks": "./hooks/hooks.json"` to `.claude-plugin/plugin.json`
   so the marketplace registers hooks automatically on install.
 
 ### Added

@@ -5,7 +5,7 @@ Detailed phase-level designs live in `docs/specs/YYYY-MM-DD-<topic>-design.md`.
 
 ## System Overview
 
-Silver Bullet ships two first-class plugin surfaces: a Claude Code plugin (`.codex-plugin/`)
+Silver Bullet ships two first-class plugin surfaces: a Claude Code plugin (`.claude-plugin/`)
 and a Codex bundle (`plugins/silver-bullet/`). Both are composed of shell hook scripts, slash-command
 markdown files, skill markdown files, JSON configuration, and workflow documentation. SB owns
 the lifecycle authority for default software-engineering workflows and calls optional provider,

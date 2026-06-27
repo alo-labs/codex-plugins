@@ -1,6 +1,6 @@
 # Silver Bullet
 
-[![version](https://img.shields.io/badge/version-v0.48.1-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.48.1)
+[![version](https://img.shields.io/badge/version-v0.48.4-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.48.4)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Agentic Process Orchestrator for AI-native Software Engineering and DevOps.**
@@ -487,7 +487,7 @@ docs/                             Product, architecture, enforcement, testing, r
 site/                             Public website and Help Center
 plugins/silver-bullet/            Codex package surface, mostly symlinks to source
 tests/                            Unit, integration, live, and E2E harnesses
-.codex-plugin/                   Claude plugin marketplace metadata
+.claude-plugin/                   Claude plugin marketplace metadata
 .planning/                        SB project lifecycle artifacts for this repo
 ```
 

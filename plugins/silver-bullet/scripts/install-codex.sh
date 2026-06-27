@@ -1705,12 +1705,12 @@ for cache_root in cache_roots:
             continue
         targets.append(version_dir)
 
-path_segment_re = re.compile(r'/\.codex(?=/|$)')
+path_segment_re = re.compile(r'/\.claude(?=/|$)')
 home_claude_replacements = (
-    ("os.homedir(), '.codex'", "os.homedir(), '.codex'"),
-    ('os.homedir(), ".codex"', 'os.homedir(), ".codex"'),
-    ("os.homedir() + '/.codex'", "os.homedir() + '/.codex'"),
-    ('os.homedir() + "/.codex"', 'os.homedir() + "/.codex"'),
+    ("os.homedir(), '.claude'", "os.homedir(), '.codex'"),
+    ('os.homedir(), ".claude"', 'os.homedir(), ".codex"'),
+    ("os.homedir() + '/.claude'", "os.homedir() + '/.codex'"),
+    ('os.homedir() + "/.claude"', 'os.homedir() + "/.codex"'),
 )
 
 def rewrite_hook_manifest(file_path: pathlib.Path) -> bool:
@@ -1734,7 +1734,7 @@ def rewrite_hook_manifest(file_path: pathlib.Path) -> bool:
                     updated = updated.replace(src, dst)
                 updated = updated.replace("\\.codex/", "\\.codex/")
                 updated = updated.replace(".codex/", ".codex/")
-                updated = updated.replace("~/\\.codex", "~/.codex")
+                updated = updated.replace("~/\\.claude", "~/.codex")
                 updated = updated.replace("$HOME/.codex", "$HOME/.codex")
                 updated = updated.replace("${HOME}/.codex", "${HOME}/.codex")
                 updated = path_segment_re.sub("/.codex", updated)
@@ -1833,12 +1833,12 @@ def rewrite_hook_manifest(file_path: pathlib.Path) -> bool:
         file_path.write_text(json.dumps(updated, indent=2) + "\n")
     return changed
 
-path_segment_re = re.compile(r'/\.codex(?=/|$)')
+path_segment_re = re.compile(r'/\.claude(?=/|$)')
 home_claude_replacements = (
-    ("os.homedir(), '.codex'", "os.homedir(), '.codex'"),
-    ('os.homedir(), ".codex"', 'os.homedir(), ".codex"'),
-    ("os.homedir() + '/.codex'", "os.homedir() + '/.codex'"),
-    ('os.homedir() + "/.codex"', 'os.homedir() + "/.codex"'),
+    ("os.homedir(), '.claude'", "os.homedir(), '.codex'"),
+    ('os.homedir(), ".claude"', 'os.homedir(), ".codex"'),
+    ("os.homedir() + '/.claude'", "os.homedir() + '/.codex'"),
+    ('os.homedir() + "/.claude"', 'os.homedir() + "/.codex"'),
 )
 
 for root in targets:
@@ -1864,7 +1864,7 @@ for root in targets:
             updated = updated.replace(src, dst)
         updated = updated.replace("\\.codex/", "\\.codex/")
         updated = updated.replace(".codex/", ".codex/")
-        updated = updated.replace("~/\\.codex", "~/.codex")
+        updated = updated.replace("~/\\.claude", "~/.codex")
         updated = updated.replace("$HOME/.codex", "$HOME/.codex")
         updated = updated.replace("${HOME}/.codex", "${HOME}/.codex")
         updated = path_segment_re.sub("/.codex", updated)

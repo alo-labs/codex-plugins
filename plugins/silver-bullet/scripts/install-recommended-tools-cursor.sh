@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 INSTALL_GLOBAL=0
-RULES_DIR="${REPO_ROOT}/.codex/rules"
+RULES_DIR="${REPO_ROOT}/.cursor/rules"
 
 usage() {
   cat <<'EOF'

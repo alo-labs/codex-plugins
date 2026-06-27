@@ -27,7 +27,7 @@ Ask the user to run this in their terminal and paste the output:
 which rtk && rtk --version
 ```
 
-**Expected output:** A path to the `rtk` binary (e.g., `/Users/shafqat/.local/bin/rtk`) and the version string (e.g., `rtk 0.42.4`).
+**Expected output:** A path to the `rtk` binary (e.g., `$HOME/.local/bin/rtk`) and the version string (e.g., `rtk 0.42.4`).
 
 **Pass criteria:** The output contains a path under `/Users/...`, `/usr/local/...`, or `/opt/homebrew/...` and a version `0.42` or newer. Cursor wiring requires **RTK >= 0.42.0** (older versions mishandle `rtk rewrite` exit code 3 — see [rtk-ai/rtk#1112](https://github.com/rtk-ai/rtk/issues/1112)).
 
@@ -156,10 +156,10 @@ CONTEXT_MODE_PLATFORM=cursor context-mode doctor
 
 **Expected output:** A multi-section report showing:
 
-- `◇ Native hook config: PASS — Loaded /Users/shafqat/.codex/hooks.json`
+- `◇ Native hook config: PASS — Loaded $HOME/.codex/hooks.json`
 - `◆ preToolUse: PASS — preToolUse hook configured`
 - `◆ postToolUse: PASS — postToolUse hook configured`
-- `◆ Plugin enabled: PASS — context-mode found in /Users/shafqat/.codex/mcp.json`
+- `◆ Plugin enabled: PASS — context-mode found in $HOME/.codex/mcp.json`
 - `◆ FTS5 / SQLite: PASS — native module works`
 - `◆ npm (MCP): PASS — v1.0.x`
 
@@ -300,7 +300,7 @@ This check covers the **Cursor-only** wiring that RTK and Context Mode need but 
 
 ### Check D.1 — Cursor rules installed
 
-Context Mode requires `.mdc` rule files to route MCP tool usage — Cursor does NOT surface hook-injected `additional_context` to the model ([forum.codex.com #155689](https://forum.codex.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). The rules must be present at:
+Context Mode requires `.mdc` rule files to route MCP tool usage — Cursor does NOT surface hook-injected `additional_context` to the model ([forum.cursor.com #155689](https://forum.cursor.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). The rules must be present at:
 
 1. **Global rules**: `~/.cursor/rules/`
 2. **Project rules**: `.cursor/rules/` (in the current working directory or each project Cursor is opened against)
@@ -321,7 +321,7 @@ ls -la .cursor/rules/ 2>/dev/null | grep -E "context-mode|token-compression"
 - Missing global rules → install with `bash scripts/install-recommended-tools-cursor.sh --global` (idempotent) or `bash scripts/optimize-rtk-context-mode.sh --host cursor` (also merges allow-list + hooks).
 - Missing project rules → copy `templates/context-mode.mdc` to `.cursor/rules/` in the project, or use SB's `/silver:init` to scaffold.
 - Rules present but stale (mtime > 30 days) → re-run the installer; upstream Context Mode may have updated the rule content.
-- **Doctor loads project `.codex/hooks.json` instead of `$HOME/.codex/hooks.json`** → remove the workspace copy. Global `$HOME/.codex/hooks.json` is authoritative for personal Cursor; a repo-local `.codex/hooks.json` overrides it and causes doctor drift. SB plugin hooks merge into global via `merge-cursor-hooks.py`, not project hooks.
+- **Doctor loads project `.cursor/hooks.json` instead of `$HOME/.codex/hooks.json`** → remove the workspace copy. Global `$HOME/.codex/hooks.json` is authoritative for personal Cursor; a repo-local `.cursor/hooks.json` overrides it and causes doctor drift. SB plugin hooks merge into global via `merge-cursor-hooks.py`, not project hooks.
 
 ### Check D.2 — Hook ordering: RTK before Context Mode
 
@@ -424,9 +424,9 @@ After running all checks, produce a summary table:
 ## What This Verification Does NOT Cover (Known Gaps)
 
 - **Cross-tool combined savings on a single session.** Check E exercises both tools in one session but measures each independently. Combined-compression metrics require Cursor's native token counter, which is not surfaced via MCP.
-- **The `additional_context` bug.** Cursor does not surface hook-injected `additional_context` to the model ([forum.codex.com #155689](https://forum.codex.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). Context Mode's routing MUST go through `.mdc` rules and MCP tool descriptions — never through hook-injected context. Check D.1 is the workaround for this.
+- **The `additional_context` bug.** Cursor does not surface hook-injected `additional_context` to the model ([forum.cursor.com #155689](https://forum.cursor.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). Context Mode's routing MUST go through `.mdc` rules and MCP tool descriptions — never through hook-injected context. Check D.1 is the workaround for this.
 - **Plugin-based Context Mode install.** Cursor also supports installing Context Mode as a plugin (via Cursor's plugin marketplace), which auto-registers the MCP and hooks. This verification assumes the manual `npm install -g context-mode` + manual wiring path. The plugin path should produce identical wire format; if it does not, file an issue upstream.
-- **Workspace team-shared hook configs.** Cursor supports team-shared hooks via `.codex/hooks.json` in version-controlled workspaces. The doctor reports these as `SKIP — no team-shared hook configs found` when absent. If the user is in a workspace with team hooks, those take precedence over global `$HOME/.codex/hooks.json`.
+- **Workspace team-shared hook configs.** Cursor supports team-shared hooks via `.cursor/hooks.json` in version-controlled workspaces. The doctor reports these as `SKIP — no team-shared hook configs found` when absent. If the user is in a workspace with team hooks, those take precedence over global `$HOME/.codex/hooks.json`.
 - **Leftover `.mcp.json` files.** Older Context Mode versions wrote `~/.mcp.json` (Claude Code format). Cursor ignores this file but it may confuse manual inspection. The doctor reports `SKIP — no plugin cache exists yet (Claude Code has not installed context-mode here)` when the file is absent; if it exists, the doctor does not flag it as a problem (Cursor ignores it).
 - **`rtk gain --agent cursor` does not exist.** `rtk gain` is a global tracker across all agents. The misleading "No hook installed" warning is upstream RTK behavior — it tracks Claude Code hook registration specifically. Cursor wiring is verified via `$HOME/.codex/hooks.json` (Check C.1) instead.
 - **The doctor env var `CONTEXT_MODE_PLATFORM=cursor`.** Without this env var, Context Mode guesses the platform from the process tree and may default to Claude Code's adapter (storage under `$HOME/.codex/context-mode/`). On a fresh Cursor install with no Claude Code adapter, this guess may be wrong; the doctor reports low confidence. **Always set the env var for manual doctor runs.**

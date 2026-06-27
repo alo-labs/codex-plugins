@@ -28,6 +28,11 @@ Context Mode is **ELv2** — not OSI-open. Acceptable for personal/internal use.
 
 **Usage enforcement:** When to use `ctx_*` vs `Read` is mandatory in `silver-bullet.md` §2g-ii. When Context Mode is opted in and enforced, SB **`context-mode-read-deny.sh`** (PreToolUse on `Read|Grep`) returns **deny** if the target file exceeds `recommended_tools.context_mode.read_deny_bytes` (default **5120**). Exempt: trivial bypass, SB state/config paths, files at or below the threshold.
 
+**Bypass / tuning:**
+- Raise threshold: set `read_deny_bytes` in `.silver-bullet.json` (e.g. `65536` for header-only reads).
+- One-time research (e.g. large session transcripts): `CONTEXT_MODE_READ_DENY_BYPASS=1` in the session environment before `Read|Grep`.
+- Prefer `ctx_execute_file` for bounded extraction when the full file must not enter context.
+
 **Windows:** Native Windows requires WSL. SB auto-suspends with `install_failure_reason: "Windows requires WSL"`.
 
 ## Prerequisites
@@ -101,11 +106,11 @@ Verification: [docs/rtk-cm/README.md](rtk-cm/README.md) — per-host prompts at 
 
 **Read deny:** Upstream context-mode still has no global Read deny. SB adds **`hooks/context-mode-read-deny.sh`** on the plugin PreToolUse manifest (`Read|Grep`) when `context_mode` is enforced. Threshold: `read_deny_bytes` (default 5120). Global `$HOME/.codex/hooks.json` is unchanged — merge via `/silver:init` docs if you want the same deny outside the plugin bridge.
 
-**Cursor `additional_context` bug:** Hooks accept `additional_context` but Cursor does not surface it to the model ([#155689](https://forum.codex.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). Routing must use `.mdc` rules and MCP tool descriptions, not hook-injected context.
+**Cursor `additional_context` bug:** Hooks accept `additional_context` but Cursor does not surface it to the model ([#155689](https://forum.cursor.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)). Routing must use `.mdc` rules and MCP tool descriptions, not hook-injected context.
 
 **Duplicate hooks:** If both plugin and manual `hooks.json` entries exist, `context-mode doctor` warns — remove one source.
 
-**Project `hooks.json` trap:** Do not add `.codex/hooks.json` inside a repo unless you intend team-shared hooks. Cursor (and `context-mode doctor` when cwd is that repo) prefers the workspace file over `$HOME/.codex/hooks.json`, which breaks global RTK/CM verification. Use global `$HOME/.codex/hooks.json` for personal wiring; SB plugin hooks merge there via `/silver:init`.
+**Project `hooks.json` trap:** Do not add `.cursor/hooks.json` inside a repo unless you intend team-shared hooks. Cursor (and `context-mode doctor` when cwd is that repo) prefers the workspace file over `$HOME/.codex/hooks.json`, which breaks global RTK/CM verification. Use global `$HOME/.codex/hooks.json` for personal wiring; SB plugin hooks merge there via `/silver:init`.
 
 Manual (requires restarted agent):
 

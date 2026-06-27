@@ -21,7 +21,7 @@ TMP_HOME="$(mktemp -d "${TMPDIR:-/tmp}/sb-cursor-smoke-home.XXXXXX")"
 trap 'rm -rf "$TMP_HOME"' EXIT
 
 export HOME="$TMP_HOME"
-export CURSOR_HOME="${TMP_HOME}/.codex"
+export CURSOR_HOME="${TMP_HOME}/.cursor"
 export SILVER_BULLET_RUNTIME=cursor
 
 printf '[cursor-smoke] Running install-cursor.sh in isolated HOME\n'

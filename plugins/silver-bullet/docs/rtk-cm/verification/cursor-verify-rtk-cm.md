@@ -1,6 +1,6 @@
 # Self-Verification: RTK + Context Mode in Cursor (Global)
 
-Machine-level audit for **Cursor** — global `$HOME/.codex/` config only (not project `.codex/`).
+Machine-level audit for **Cursor** — global `$HOME/.codex/` config only (not project `.cursor/`).
 
 **Purpose:** Verify the **RTK + Context Mode** global stack only. This is **not** Graphify+agentmemory verification — see `docs/graphify-am/verification/` for that stack.
 
@@ -97,5 +97,5 @@ Ask Cursor: "Run `git status`, then `mcp__context-mode__ctx_stats`."
 
 ## Known gaps
 
-- Cursor does not surface hook `additional_context` ([#155689](https://forum.codex.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)) — rules required.
-- Repo-local `.codex/hooks.json` overrides global — remove for personal global wiring.
+- Cursor does not surface hook `additional_context` ([#155689](https://forum.cursor.com/t/native-posttooluse-hooks-accept-and-log-additional-context-successfully-but-the-injected-context-is-not-surfaced-to-the-model/155689)) — rules required.
+- Repo-local `.cursor/hooks.json` overrides global — remove for personal global wiring.

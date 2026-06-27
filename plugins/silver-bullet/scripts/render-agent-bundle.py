@@ -28,7 +28,7 @@ CURSOR_REPLACEMENTS = [
     ("${CLAUDE_PLUGIN_ROOT}", "${CURSOR_PLUGIN_ROOT}"),
     ("Claude Code", "Cursor"),
     ("Claude settings", "Cursor hooks.json"),
-    (".codex/settings.json", ".codex/hooks.json"),
+    (".codex/settings.json", ".cursor/hooks.json"),
     ("merge-hooks.py", "merge-cursor-hooks.py"),
     ("Claude Skill event or Codex `silver-bullet invoke-skill`", "PostToolUse/Skill or Codex invoke-skill receipt (Cursor runtime-native skill invocation channel) or `silver-bullet invoke-skill`"),
     ("`context compaction`", "context compaction"),
@@ -36,6 +36,7 @@ CURSOR_REPLACEMENTS = [
 ]
 
 CODEX_REPLACEMENTS = [
+    ("context compaction", "context compaction"),
     ("Claude Skill event or Codex `silver-bullet invoke-skill`", "Claude Skill event or Codex `silver-bullet invoke-skill`"),
     ("No supported skill invocation event/receipt is observed", "No supported skill invocation event/receipt is observed"),
     ("Use supported skill invocation channels in agent-mode sessions", "Use supported skill invocation channels in agent-mode sessions"),
@@ -43,7 +44,7 @@ CODEX_REPLACEMENTS = [
     ("delegate it through the active runtime's supported subagent or delegation mechanism", "delegate it through the active runtime's supported subagent or delegation mechanism"),
     ("active runtime delegation mechanism", "active runtime delegation mechanism"),
     ("If subagent dispatch is not possible, summarize the current context or continue in a fresh context before proceeding, then continue the step at full thoroughness.", "If subagent dispatch is not possible, summarize the current context or continue in a fresh context before proceeding, then continue the step at full thoroughness."),
-    ("If subagent dispatch is not possible, summarize the current context or continue in a fresh context before proceeding, then continue the step at full thoroughness.", "If subagent dispatch is not possible, summarize the current context or continue in a fresh context before proceeding, then continue the step at full thoroughness."),
+    ("If subagent dispatch is not possible, ask the user to run context compaction before proceeding, then continue the step at full thoroughness.", "If subagent dispatch is not possible, summarize the current context or continue in a fresh context before proceeding, then continue the step at full thoroughness."),
     ("bash "$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current/scripts/install-codex.sh" --purge-legacy-skills", "bash \"$HOME/.codex/plugins/cache/alo-labs-codex/silver-bullet/current/scripts/install-codex.sh\" --purge-legacy-skills"),
     ("active runtime file-reading and file-editing mechanisms", "active runtime file-reading and file-editing mechanisms"),
     ("active runtime file-editing mechanisms", "active runtime file-editing mechanisms"),
@@ -67,7 +68,7 @@ CODEX_REPLACEMENTS = [
     ("runtime-native skill invocation channel", "runtime-native skill invocation channel"),
     ("PostToolUse/Skill or Codex invoke-skill receipt", "PostToolUse/Skill or Codex invoke-skill receipt"),
     ("PostToolUse/Skill or Codex invoke-skill receipt" + " or Codex invoke-skill receipt", "PostToolUse/Skill or Codex invoke-skill receipt"),
-    (os.path.join("~", ".codex") + "/", os.path.join("~", ".codex") + "/"),
+    (os.path.join("~", ".claude") + "/", os.path.join("~", ".codex") + "/"),
     ("$HOME" + "/.codex/", "$HOME" + "/.codex/"),
     ("${HOME}" + "/.codex/", "${HOME}" + "/.codex/"),
     (".codex/", ".codex/"),
@@ -252,8 +253,6 @@ def runtime_placeholders(agent: str) -> list[tuple[str, str]]:
                 (f"$HOME/.{opposite}", f"$HOME/.{agent}"),
                 (f"${{HOME}}/.{opposite}/", f"${{HOME}}/.{agent}/"),
                 (f"${{HOME}}/.{opposite}", f"${{HOME}}/.{agent}"),
-                (f".{opposite}/", f".{agent}/"),
-                (f".{opposite}", f".{agent}"),
             ]
         )
     return pairs
@@ -287,6 +286,10 @@ def sanitize_text(text: str, agent: str, preserve_runtime_placeholders: bool = F
         for old, new in runtime_placeholders(agent):
             updated = updated.replace(old, new)
         updated = _unmask_protected_runtime_subs(updated, protected_masks)
+        if agent == "codex":
+            home = os.path.expanduser("~")
+            if home:
+                updated = updated.replace(f"{home}/.codex", "$HOME/.codex")
     if agent == "codex":
         updated = sanitize_codex_text(updated)
     elif agent == "cursor":

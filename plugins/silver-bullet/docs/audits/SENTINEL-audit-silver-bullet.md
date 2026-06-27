@@ -266,7 +266,7 @@ No false authority claims in any hook. `core-rules.md` makes claims on behalf of
 
 **Applicability:** PARTIAL — prior finding carried forward
 
-**FINDING-7.1 (OPEN):** Unpinned GSD dependency version range `@^1.30.0` in `.codex-plugin/marketplace.json`. No change from prior audit. Still Low severity.
+**FINDING-7.1 (OPEN):** Unpinned GSD dependency version range `@^1.30.0` in `.claude-plugin/marketplace.json`. No change from prior audit. Still Low severity.
 
 No new supply chain findings in the new hooks. `core-rules.md` is a local static file — no external fetch.
 
@@ -435,7 +435,7 @@ Semantic enablement check: No PoC enables end-to-end exploitation if copy-pasted
 | FINDING-NEW-2 | CONFIRMED | `hooks/prompt-reminder.sh` — `core_content=$(cat "$core_rules_file")` no integrity check; `hooks/session-start` — same | OPEN |
 | FINDING-9.1 | CONFIRMED | `skills/create-release/SKILL.md:79` | OPEN |
 | FINDING-9.2 | LOW CONFIDENCE | `hooks/session-log-init.sh` — `printf '%s'` with unescaped `basename` | OPEN (Low) |
-| FINDING-7.1 | CONFIRMED | `.codex-plugin/marketplace.json:7` — `@^1.30.0` | OPEN |
+| FINDING-7.1 | CONFIRMED | `.claude-plugin/marketplace.json:7` — `@^1.30.0` | OPEN |
 | FINDING-5.1 | REMEDIATED | State files in `/tmp/` → moved to `$HOME/.codex/.silver-bullet/` | CLOSED |
 | FINDING-5.2 | REMEDIATED | Silent jq bypass → visible warnings added | CLOSED |
 | FINDING-10.1 | PARTIALLY REMEDIATED | Sentinel orphan → old PID killed on new session | DOWNGRADED to Info |

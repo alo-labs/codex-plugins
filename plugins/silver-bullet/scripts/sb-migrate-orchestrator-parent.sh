@@ -38,7 +38,7 @@ if [[ -d "$PLUGIN_ROOT/templates/orchestrator-workers" ]]; then
   echo "Copied worker templates to .silver-bullet/orchestrator-workers/"
 fi
 
-mkdir -p "$proj_root/.codex/rules"
+mkdir -p "$proj_root/.cursor/rules"
 if [[ -f "$PLUGIN_ROOT/templates/cursor-rules/silver-orchestrator.mdc" ]]; then
   cp "$PLUGIN_ROOT/templates/cursor-rules/silver-orchestrator.mdc" "$proj_root/.cursor/rules/silver-orchestrator.mdc"
   echo "Refreshed .cursor/rules/silver-orchestrator.mdc"

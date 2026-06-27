@@ -70,7 +70,7 @@ def detect_host() -> str:
     if plugin_root:
         if "/.codex/" in plugin_root:
             return "codex"
-        if "/.codex/" in plugin_root:
+        if "/.cursor/" in plugin_root:
             return "cursor"
 
     return "claude"

@@ -385,7 +385,7 @@ def runtime_home_candidates(agent_env: str) -> list[Path]:
     if agent_env in {"auto", "codex"}:
         candidates.extend([env_path("CODEX_HOME"), env_path("CODE_HOME"), home / ".codex", home / ".code"])
     if agent_env in {"auto", "claude"}:
-        candidates.extend([env_path("CLAUDE_HOME"), home / ".codex"])
+        candidates.extend([env_path("CLAUDE_HOME"), home / ".claude"])
     if agent_env in {"auto", "kay"}:
         candidates.extend([env_path("KAY_HOME"), home / ".kay"])
     candidates.append(env_path("SB_RUNTIME_HOME_ROOT"))

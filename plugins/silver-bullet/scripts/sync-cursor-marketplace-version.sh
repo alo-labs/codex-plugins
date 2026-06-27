@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Sync .codex-plugin/marketplace.json version with plugin.json before tagging a release.
+# Sync .cursor-plugin/marketplace.json version with plugin.json before tagging a release.
 #
 # Updates BOTH:
-#   - .codex-plugin/marketplace.json (self-hosted entry in this repo)
+#   - .cursor-plugin/marketplace.json (self-hosted entry in this repo)
 #   - The upstream Cursor marketplace repo (defaults to alo-labs/alo-labs-cursor-marketplace),
 #     then commits and pushes the version bump there
 #
@@ -15,8 +15,8 @@ set -euo pipefail
 trap 'exit 1' ERR
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
-plugin_json="$repo_root/.codex-plugin/plugin.json"
-marketplace_json="$repo_root/.codex-plugin/marketplace.json"
+plugin_json="$repo_root/.cursor-plugin/plugin.json"
+marketplace_json="$repo_root/.cursor-plugin/marketplace.json"
 marketplace_repo_url="${CURSOR_MARKETPLACE_REPO_URL:-https://github.com/alo-labs/alo-labs-cursor-marketplace.git}"
 marketplace_repo_root="${CURSOR_MARKETPLACE_REPO_ROOT:-}"
 requested_version="${1:-}"
@@ -54,17 +54,17 @@ else
   exit 1
 fi
 
-package_manifest="$repo_root/plugins/silver-bullet/.codex-plugin/plugin.json"
+package_manifest="$repo_root/plugins/silver-bullet/.cursor-plugin/plugin.json"
 package_v=$(jq -r '.version' "$package_manifest")
 if [[ "$package_v" != "$plugin_v" ]]; then
-  echo "ERROR: plugins/silver-bullet/.codex-plugin/plugin.json is $package_v but release version is $plugin_v" >&2
+  echo "ERROR: plugins/silver-bullet/.cursor-plugin/plugin.json is $package_v but release version is $plugin_v" >&2
   exit 1
 fi
 
 sync_marketplace_repo() {
   local root="$1"
   local version="$2"
-  local manifest="$root/.codex-plugin/marketplace.json"
+  local manifest="$root/.cursor-plugin/marketplace.json"
   local remote_before
   local remote_after
 
@@ -86,12 +86,12 @@ sync_marketplace_repo() {
     rm -f -- "$tmp"
   fi
 
-  if git -C "$root" diff --quiet -- .codex-plugin/marketplace.json; then
+  if git -C "$root" diff --quiet -- .cursor-plugin/marketplace.json; then
     echo "✓ Cursor marketplace repo already at silver-bullet $version: $root"
     return 0
   fi
 
-  git -C "$root" add .codex-plugin/marketplace.json
+  git -C "$root" add .cursor-plugin/marketplace.json
   git -C "$root" commit -m "Bump silver-bullet to $version"
   git -C "$root" push
 

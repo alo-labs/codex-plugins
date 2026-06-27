@@ -274,12 +274,12 @@ mcp_servers:
 
 
 def optimize_cursor(repo_root: pathlib.Path, dry_run: bool, skip_cli_config: bool = False) -> dict:
-    cursor_home = pathlib.Path.home() / ".codex"
+    cursor_home = pathlib.Path.home() / ".cursor"
     hooks_path = cursor_home / "hooks.json"
     mcp_path = cursor_home / "mcp.json"
     cli_config_path = cursor_home / "cli-config.json"
     global_rules = cursor_home / "rules"
-    project_rules = repo_root / ".codex" / "rules"
+    project_rules = repo_root / ".cursor" / "rules"
 
     cm_pkg = context_mode_pkg_root()
     fragments: list[dict] = []
@@ -309,7 +309,7 @@ def optimize_cursor(repo_root: pathlib.Path, dry_run: bool, skip_cli_config: boo
     rules_copied = 0
     rule_sources = [
         (repo_root / "templates" / "cursor" / "token-compression-enforcement.mdc", global_rules / "token-compression-enforcement.mdc"),
-        (repo_root / ".codex" / "rules" / "context-mode.mdc", global_rules / "context-mode.mdc"),
+        (repo_root / ".cursor" / "rules" / "context-mode.mdc", global_rules / "context-mode.mdc"),
     ]
     if cm_pkg:
         rule_sources.insert(
@@ -358,7 +358,7 @@ def optimize_codex(dry_run: bool) -> dict:
 
 def optimize_claude(dry_run: bool) -> dict:
     """Merge npm-global MCP path when Claude plugin is not used."""
-    claude_json = pathlib.Path.home() / ".codex.json"
+    claude_json = pathlib.Path.home() / ".claude.json"
     mcp_added = merge_mcp_server(
         claude_json,
         "context-mode",

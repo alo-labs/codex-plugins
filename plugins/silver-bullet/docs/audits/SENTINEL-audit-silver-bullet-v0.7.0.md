@@ -57,8 +57,8 @@ All are prompt-injection surfaces since they become part of the LLM context. Key
 
 ### Config files
 
-- `.codex-plugin/plugin.json` -- plugin metadata
-- `.codex-plugin/marketplace.json` -- marketplace listing
+- `.claude-plugin/plugin.json` -- plugin metadata
+- `.claude-plugin/marketplace.json` -- marketplace listing
 - `hooks/hooks.json` -- hook registration
 
 ---
@@ -209,7 +209,7 @@ Validate the matched file's parent plugin.json to confirm it belongs
 to the expected "superpowers" plugin (source: obra/superpowers):
   if [[ -n "$sp_file" ]]; then
     plugin_dir=$(dirname "$(dirname "$(dirname "$(dirname "$sp_file")")")")
-    if ! jq -e '.name == "superpowers"' "$plugin_dir/.codex-plugin/plugin.json" >/dev/null 2>&1; then
+    if ! jq -e '.name == "superpowers"' "$plugin_dir/.claude-plugin/plugin.json" >/dev/null 2>&1; then
       sp_file=""
     fi
   fi

@@ -25,6 +25,12 @@ proc dismiss_claude_splash {} {
 }
 
 proc load_claude_settings_env {} {
+  if {[env_or_default SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT "0"] eq "1"} {
+    return
+  }
+  if {[env_or_default CLAUDE_PRINT_SKIP_SETTINGS_EXPORT "0"] eq "1"} {
+    return
+  }
   # Interactive TUI does not always inherit $HOME/.codex/settings.json env like
   # `claude --print`. Inject API-key env before spawn when not in clean-env mode
   # and when claude.ai OAuth is not already active (avoid auth conflicts).
@@ -46,7 +52,7 @@ proc load_claude_settings_env {} {
       return
     }
   }
-  if {[catch {exec jq -e {(.env.ANTHROPIC_API_KEY? // "") != "" or (.env.ANTHROPIC_BASE_URL? // "") != ""} $settings}]} {
+  if {[catch {exec jq -e {(.env.ANTHROPIC_API_KEY? // "") != "" or (.env.ANTHROPIC_AUTH_TOKEN? // "") != "" or (.env.ANTHROPIC_BASE_URL? // "") != ""} $settings}]} {
     return
   }
   if {[catch {exec jq -r {.env // {} | to_entries[] | "\(.key)=\(.value)"} $settings} lines]} {
@@ -66,6 +72,238 @@ proc load_claude_settings_env {} {
       set env($key) $value
     }
   }
+}
+
+
+proc strip_ansi {text} {
+  regsub -all {\[[0-9;?]*[ -/]*[@-~]} $text "" text
+  regsub -all {\][^]*(|\\)} $text "" text
+  regsub -all {.} $text "" text
+  return $text
+}
+
+proc bypass_disclaimer_visible {buffer} {
+  set plain [strip_ansi $buffer]
+  if {![regexp -nocase {Bypass} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Permissions} $plain]} {
+    return 0
+  }
+  if {![regexp {code\.claude\.com/docs/en/security} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {No,exit|No, exit} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Yes,Iaccept|Yes, I accept} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Entertoconfirm|Enter to confirm} $plain]} {
+    return 0
+  }
+  return 1
+}
+
+proc bypass_disclaimer_menu_ready {buffer} {
+  set plain [strip_ansi $buffer]
+  if {![regexp -nocase {No,exit|No, exit} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Yes,Iaccept|Yes, I accept} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Entertoconfirm|Enter to confirm} $plain]} {
+    return 0
+  }
+  return 1
+}
+
+proc should_accept_bypass_disclaimer {buffer} {
+  global bypass_disclaimer_menu_open
+  if {$bypass_disclaimer_menu_open} {
+    return 1
+  }
+  if {[bypass_disclaimer_menu_ready $buffer]} {
+    return 1
+  }
+  if {[bypass_disclaimer_visible $buffer]} {
+    return 1
+  }
+  return 0
+}
+
+proc log_harness_keys {message} {
+  global debug_log
+  if {$debug_log ne ""} {
+    catch {
+      set fh [open $debug_log a]
+      puts $fh $message
+      close $fh
+    }
+  }
+  puts stderr $message
+}
+
+proc accept_bypass_permissions_disclaimer {} {
+  global bypass_disclaimer_accept_attempts
+  if {$bypass_disclaimer_accept_attempts >= 6} {
+    return
+  }
+  incr bypass_disclaimer_accept_attempts
+  set strategy [env_or_default CLAUDE_INTERACTIVE_BYPASS_STRATEGY "keys"]
+  log_harness_keys "\[harness\] accept_bypass_permissions_disclaimer: strategy=$strategy attempt=$bypass_disclaimer_accept_attempts"
+  if {$strategy eq "arrow"} {
+    send -- "\033\[B"
+    after 400
+    send -- "\r"
+  } elseif {$strategy eq "alt-arrow"} {
+    send -- "\033OB"
+    after 400
+    send -- "\r"
+  } else {
+    type_slow "2" 40
+    after 500
+    send -- "\r"
+  }
+  after 900
+}
+
+proc custom_api_key_disclaimer_visible {buffer} {
+  set plain [strip_ansi $buffer]
+  if {![regexp -nocase {Detected} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {custom} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {API} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {ANTHROPIC_API_KEY|Doyouwant|Do you want} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {use.*this.*API.*key|use this API key} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {No.*recommended|No,recommended} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {1\.Yes|1\. Yes|Yes} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Entertoconfirm|Enter to confirm} $plain]} {
+    return 0
+  }
+  return 1
+}
+
+proc custom_api_key_disclaimer_menu_ready {buffer} {
+  set plain [strip_ansi $buffer]
+  if {![regexp -nocase {Doyouwant|Do you want} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {use.*this.*API.*key|use this API key} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {No.*recommended|No,recommended} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {1\.Yes|1\. Yes|Yes} $plain]} {
+    return 0
+  }
+  if {![regexp -nocase {Entertoconfirm|Enter to confirm} $plain]} {
+    return 0
+  }
+  return 1
+}
+
+proc should_accept_custom_api_key_disclaimer {buffer} {
+  global custom_api_key_disclaimer_menu_open
+  if {$custom_api_key_disclaimer_menu_open} {
+    return 1
+  }
+  if {[custom_api_key_disclaimer_menu_ready $buffer]} {
+    return 1
+  }
+  if {[custom_api_key_disclaimer_visible $buffer]} {
+    return 1
+  }
+  return 0
+}
+
+proc accept_custom_api_key_disclaimer {} {
+  global custom_api_key_disclaimer_accept_attempts
+  if {$custom_api_key_disclaimer_accept_attempts >= 6} {
+    return
+  }
+  incr custom_api_key_disclaimer_accept_attempts
+  set strategy [env_or_default CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY "keys"]
+  log_harness_keys "\[harness\] accept_custom_api_key_disclaimer: strategy=$strategy attempt=$custom_api_key_disclaimer_accept_attempts"
+  if {$strategy eq "arrow"} {
+    send -- "\033\[A"
+    after 400
+    send -- "\r"
+  } elseif {$strategy eq "alt-arrow"} {
+    send -- "\033OA"
+    after 400
+    send -- "\r"
+  } elseif {$strategy eq "recommended"} {
+    send -- "\r"
+  } else {
+    type_slow "1" 40
+    after 500
+    send -- "\r"
+  }
+  after 900
+}
+
+proc finish_session_success {} {
+  catch {close}
+  catch {wait}
+  exit 0
+}
+
+proc matrix_evidence_ready {} {
+  global evidence_path work_dir session_started
+  if {$evidence_path eq ""} {
+    return 0
+  }
+  set target "$work_dir/$evidence_path"
+  if {![file exists $target]} {
+    return 0
+  }
+  if {[file mtime $target] + 2 < $session_started} {
+    return 0
+  }
+  return 1
+}
+
+proc maybe_finish_on_matrix_evidence {} {
+  global prompt_submitted saw_prompt require_final_marker final_marker_seen
+  if {!$prompt_submitted || !$saw_prompt} {
+    return 0
+  }
+  if {$require_final_marker == 1 && $final_marker_seen == 0} {
+    return 0
+  }
+  if {[matrix_evidence_ready]} {
+    finish_session_success
+  }
+  return 0
+}
+
+proc extend_quiet_on_new_token_marker {plain_text} {
+  global quiet_timeout last_token_marker
+  set marker ""
+  if {![regexp {([0-9][0-9.,kKmM]*[^0-9]{0,12}tokens)} $plain_text match marker]} {
+    return
+  }
+  if {$marker eq $last_token_marker} {
+    return
+  }
+  set last_token_marker $marker
+  set timeout $quiet_timeout
 }
 
 proc submit_prompt {command_name prompt_body} {
@@ -101,6 +339,7 @@ set effort [env_or_default CLAUDE_EFFORT "low"]
 set permission_mode [env_or_default CLAUDE_PERMISSION_MODE "acceptEdits"]
 set continue_flag [env_or_default CLAUDE_CONTINUE "0"]
 set debug_log [env_or_default CLAUDE_INTERACTIVE_LOG_FILE ""]
+set evidence_path [env_or_default SB_E2E_MATRIX_EVIDENCE_PATH ""]
 set debug_trace [env_or_default CLAUDE_INTERACTIVE_DEBUG "0"]
 set post_prompt_delay_ms [expr {int([env_or_default CLAUDE_INTERACTIVE_READY_DELAY_MS 1000])}]
 set ready_timeout [expr {int([env_or_default CLAUDE_INTERACTIVE_READY_TIMEOUT 60])}]
@@ -144,6 +383,9 @@ if {$debug_trace eq "1"} {
 }
 
 set args [list --model $model --effort $effort --permission-mode $permission_mode --verbose]
+if {$permission_mode eq "bypassPermissions"} {
+  lappend args --allow-dangerously-skip-permissions
+}
 set home [env_or_default HOME ""]
 set settings_file [env_or_default CLAUDE_SETTINGS_FILE ""]
 if {$settings_file eq "" && $home ne ""} {
@@ -162,7 +404,10 @@ spawn -noecho $cli {*}$args
 if {$continue_flag eq "0"} {
   set trust_delay_ms [expr {int([env_or_default CLAUDE_INTERACTIVE_TRUST_DELAY_MS 2000])}]
   after $trust_delay_ms
-  dismiss_claude_splash
+  # Bare Enter during Bypass Permissions disclaimer selects option 1 (exit).
+  if {$permission_mode ne "bypassPermissions"} {
+    dismiss_claude_splash
+  }
 } else {
   after 200
 }
@@ -174,6 +419,15 @@ set saw_prompt 0
 set final_marker_seen 0
 set require_final_marker 0
 set saw_not_logged_in 0
+set last_token_marker ""
+set session_started [clock seconds]
+if {$debug_log ne "" && [file exists $debug_log]} {
+  set session_started [file mtime $debug_log]
+}
+set bypass_disclaimer_menu_open 0
+set bypass_disclaimer_accept_attempts 0
+set custom_api_key_disclaimer_menu_open 0
+set custom_api_key_disclaimer_accept_attempts 0
 if {$command_name eq "silver-init" || $command_name eq "silver:init"} {
   set require_final_marker 1
   if {$quiet_timeout < 600} {
@@ -185,10 +439,59 @@ if {$command_name eq "silver-init" || $command_name eq "silver:init"} {
 }
 
 expect {
-  -re {Yes, I accept} {
-    # Accept the Claude CLI permission confirmation if it appears so the
-    # actual Silver Bullet workflow can start and respond to the prompt chain.
-    send -- "2\r"
+  -re {Enter.*to.*confirm} {
+    if {[should_accept_custom_api_key_disclaimer $expect_out(buffer)]} {
+      accept_custom_api_key_disclaimer
+      set custom_api_key_disclaimer_menu_open 0
+      after 800
+      exp_continue
+    }
+    if {[should_accept_bypass_disclaimer $expect_out(buffer)]} {
+      accept_bypass_permissions_disclaimer
+      set bypass_disclaimer_menu_open 0
+      after 800
+      exp_continue
+    }
+    exp_continue
+  }
+  -re {Esc.*to.*cancel} {
+    if {[should_accept_custom_api_key_disclaimer $expect_out(buffer)]} {
+      accept_custom_api_key_disclaimer
+      set custom_api_key_disclaimer_menu_open 0
+      after 500
+      exp_continue
+    }
+    if {[should_accept_bypass_disclaimer $expect_out(buffer)]} {
+      accept_bypass_permissions_disclaimer
+      set bypass_disclaimer_menu_open 0
+      after 500
+      exp_continue
+    }
+    exp_continue
+  }
+  -re {(?s)Detected.*custom.*API.*key|ANTHROPIC_API_KEY:} {
+    set custom_api_key_disclaimer_menu_open 1
+    exp_continue
+  }
+  -re {(?s)Do you want to use this API key\?|want to use this API key} {
+    if {[should_accept_custom_api_key_disclaimer $expect_out(buffer)]} {
+      accept_custom_api_key_disclaimer
+      set custom_api_key_disclaimer_menu_open 0
+      after 500
+      exp_continue
+    }
+    exp_continue
+  }
+  -re {code.claude.com/docs/en/security} {
+    set bypass_disclaimer_menu_open 1
+    exp_continue
+  }
+  -re {(?s)Bypass Permissions mode.*2\. Yes, I accept} {
+    accept_bypass_permissions_disclaimer
+    exp_continue
+  }
+  -re {2\. Yes, I accept.*Enter.*to.*confirm} {
+    accept_bypass_permissions_disclaimer
     exp_continue
   }
   -re {Quick safety check:|Yes, I trust this folder|1\. Yes, I trust this folder} {
@@ -301,8 +604,10 @@ expect {
   }
   -re {[1-9][0-9]*[^0-9].*tokens} {
     set saw_not_logged_in 0
-    # Claude is actively generating; extend the quiet window.
-    set timeout $quiet_timeout
+    # Extend quiet window only when the token counter changes; idle TUI
+    # status lines repeat the same count and would never reach quiet timeout.
+    extend_quiet_on_new_token_marker [strip_ansi $expect_out(buffer)]
+    maybe_finish_on_matrix_evidence
     exp_continue
   }
   -re {accept.*edits.*on} {
@@ -320,10 +625,33 @@ expect {
         set prompt_submitted 1
         set timeout $quiet_timeout
       }
+    } else {
+      extend_quiet_on_new_token_marker [strip_ansi $expect_out(buffer)]
+      maybe_finish_on_matrix_evidence
     }
     exp_continue
   }
+  -re {(?s)1\. Yes.*2\. No|Yes.*No.*recommended.*Enter.*to.*confirm} {
+    set custom_api_key_disclaimer_menu_open 1
+    accept_custom_api_key_disclaimer
+    exp_continue
+  }
+  -re {(?s)No, exit.*Yes, I accept|Yes, I accept.*Enter.*to.*confirm} {
+    set bypass_disclaimer_menu_open 1
+    accept_bypass_permissions_disclaimer
+    exp_continue
+  }
   -re {❯} {
+    if {[should_accept_custom_api_key_disclaimer $expect_out(buffer)]} {
+      set custom_api_key_disclaimer_menu_open 0
+      accept_custom_api_key_disclaimer
+      exp_continue
+    }
+    if {[should_accept_bypass_disclaimer $expect_out(buffer)]} {
+      set bypass_disclaimer_menu_open 0
+      accept_bypass_permissions_disclaimer
+      exp_continue
+    }
     if {$require_final_marker == 1 && $final_marker_seen == 0} {
       exp_continue
     }
@@ -335,6 +663,7 @@ expect {
     }
     set saw_prompt 1
     set timeout $quiet_timeout
+    maybe_finish_on_matrix_evidence
     exp_continue
   }
   timeout {

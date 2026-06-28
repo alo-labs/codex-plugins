@@ -7,10 +7,15 @@
 set -euo pipefail
 
 SB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export SB_RTK_COMPAT_MODE=verbatim
 # shellcheck source=hooks/lib/rtk-compat.sh
 source "${SB_ROOT}/hooks/lib/rtk-compat.sh"
+# shellcheck source=tests/live/lib/detach-background.sh
+source "${SB_ROOT}/tests/live/lib/detach-background.sh"
+sb_prepend_harness_path
 FIXTURE_DIR="${SB_TEST_ENTERPRISE_APP_ROOT:-/Users/shafqat/projects/enterprise-grade-test-app}"
 LEDGER_FILE="${SB_E2E_LEDGER_FILE:-${SB_ROOT}/.planning/enterprise-e2e/ROUND-1-LEDGER.md}"
+# shellcheck disable=SC2034  # documented matrix doc path for operators
 MATRIX_DOC="${FIXTURE_DIR}/docs/WORKFLOW_E2E_MATRIX.md"
 
 export SB_E2E_ENTERPRISE_MATRIX=1
@@ -33,12 +38,24 @@ export CLAUDE_INTERACTIVE_READY_TIMEOUT="${CLAUDE_INTERACTIVE_READY_TIMEOUT:-60}
 export SB_E2E_LIVE_RUNTIME=claude
 export SILVER_BULLET_RUNTIME=claude
 
+# Export $HOME/.codex/settings.json env for interactive TUI (api_key / proxy hosts).
+# Set SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT=1 to use OAuth/keychain and skip settings env.
+export SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT="${SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT:-0}"
+if [[ "${SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT}" == "1" ]]; then
+  export CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY="${CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY:-recommended}"
+  # Avoid local proxy keys/URLs from the caller shell when using OAuth direct API.
+  unset ANTHROPIC_BASE_URL ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN 2>/dev/null || true
+else
+  export CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY="${CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY:-keys}"
+fi
 # shellcheck source=scripts/lib/claude-matrix-auth.sh
 source "${SB_ROOT}/scripts/lib/claude-matrix-auth.sh"
 claude_matrix_export_settings_env
 
 # shellcheck source=scripts/lib/matrix-quota.sh
 source "${SB_ROOT}/scripts/lib/matrix-quota.sh"
+# shellcheck source=scripts/lib/enterprise-e2e-token-telemetry.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-token-telemetry.sh"
 
 # shellcheck source=tests/e2e-live/helpers.sh
 source "${SB_ROOT}/tests/e2e-live/helpers.sh"
@@ -85,12 +102,13 @@ Environment:
   SB_E2E_MATRIX_DRY_RUN=1     Verify evidence only, skip Claude sessions
   SB_E2E_MATRIX_FORCE=1        Re-run rows even when evidence exists
   SB_E2E_MATRIX_CLEAN_ENV=1    Opt-in env -i for OAuth/key-conflict isolation (default 0 inherits shell)
+  SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT  Skip $HOME/.codex/settings.json env (default 0; set 1 for OAuth-only)
   CLAUDE_INTERACTIVE_READY_TIMEOUT  Seconds to wait for prompt readiness (default 60)
   CLAUDE_MODEL                 Claude model (default haiku for matrix runs)
   CLAUDE_INTERACTIVE_QUIET_TIMEOUT  Seconds of quiet before row completes (default 300)
-  SB_E2E_WORKFLOW_QUIET_TIMEOUT    Quiet window for rows 2-20 (default 600)
+  SB_E2E_WORKFLOW_QUIET_TIMEOUT    Quiet window for rows 2-20 (default 60)
   CLAUDE_INTERACTIVE_READY_TIMEOUT  Seconds to wait for TUI ready before submit (default 60)
-  SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL  Seconds between 429/Token Plan retries (default 600)
+  SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL  Seconds between 429/Token Plan retries (default 60)
   SB_E2E_MATRIX_QUOTA_MAX_RETRIES     Max quota retries per row (0 = unlimited, default 0)
 EOF
 }
@@ -163,6 +181,7 @@ verify_row_success() {
   local row_num="$1"
   local evidence_path="$2"
   local output="${3:-}"
+  local row_log="${4:-}"
   if verify_row_evidence "$evidence_path"; then
     return 0
   fi
@@ -171,6 +190,9 @@ verify_row_success() {
       return 0
     fi
     if [[ -n "$output" ]] && verify_row_routing_output "$output"; then
+      return 0
+    fi
+    if [[ -n "$row_log" && -f "$row_log" ]] && verify_row_routing_output "$(tail -c 2500000 "$row_log" 2>/dev/null || true)"; then
       return 0
     fi
   fi
@@ -212,6 +234,8 @@ run_matrix_row() {
   local evidence_path="$5"
   local graphify_ref prompt output
 
+  local row_telemetry_result="fail"
+
   graphify_ref="$(graphify_query_ref "$slug")"
   echo "=== Row ${row_num}: ${slug} (${route}) ==="
   echo "  graphify: ${graphify_ref}"
@@ -221,16 +245,27 @@ run_matrix_row() {
     if verify_row_evidence "$evidence_path"; then
       echo "  DRY RUN PASS: evidence present"
       PASS_ROWS=$((PASS_ROWS + 1))
+      row_telemetry_result="pass"
     else
       echo "  DRY RUN FAIL: missing evidence"
       FAIL_ROWS=$((FAIL_ROWS + 1))
     fi
+    SB_E2E_TELEMETRY_ROW="$row_num" \
+      SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+      SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+      SB_E2E_TELEMETRY_ROW_LOG="" \
+      enterprise_e2e_telemetry_append "matrix_row_dry_run" || true
     return 0
   fi
 
   if [[ "${SB_E2E_MATRIX_FORCE:-}" != "1" ]] && verify_row_success "$row_num" "$evidence_path"; then
     echo "  SKIP: evidence already present (set SB_E2E_MATRIX_FORCE=1 to re-run)"
     SKIP_ROWS=$((SKIP_ROWS + 1))
+    SB_E2E_TELEMETRY_ROW="$row_num" \
+      SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+      SB_E2E_TELEMETRY_ROW_RESULT="skip" \
+      SB_E2E_TELEMETRY_ROW_LOG="${SB_ROOT}/.e2e-row${row_num}-attempt.log" \
+      enterprise_e2e_telemetry_append "matrix_row_skip" || true
     return 0
   fi
 
@@ -251,7 +286,7 @@ run_matrix_row() {
     # Claude may return to the ❯ prompt between turns while still writing evidence.
     quiet_timeout="${SB_E2E_WORKFLOW_QUIET_TIMEOUT:-600}"
   fi
-  local quota_retry_interval="${SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL:-600}"
+  local quota_retry_interval="${SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL:-60}"
   local quota_max_retries="${SB_E2E_MATRIX_QUOTA_MAX_RETRIES:-0}"
   local attempt=0 quota_retries=0 row_log output
 
@@ -267,16 +302,18 @@ run_matrix_row() {
     else
       echo "  launching interactive Claude session..."
     fi
+    : >"$row_log"
     output="$(
       CLAUDE_INTERACTIVE_QUIET_TIMEOUT="$quiet_timeout" \
         CLAUDE_INTERACTIVE_LOG_FILE="$row_log" \
+        SB_E2E_MATRIX_EVIDENCE_PATH="$evidence_path" \
         run_prompt "$prompt" 2>&1 || true
     )"
     if [[ -n "$output" ]]; then
       printf '%s\n' "$output" | tail -20
     fi
 
-    if verify_row_success "$row_num" "$evidence_path" "$output"; then
+    if verify_row_success "$row_num" "$evidence_path" "$output" "$row_log"; then
       if verify_row_evidence "$evidence_path"; then
         echo "  PASS: evidence at ${evidence_path}"
       elif [[ "$row_num" == "1" ]] && verify_row_routing_state_delta; then
@@ -288,6 +325,12 @@ run_matrix_row() {
         echo "  PASS: succeeded after ${quota_retries} quota retry(ies)"
       fi
       PASS_ROWS=$((PASS_ROWS + 1))
+      row_telemetry_result="pass"
+      SB_E2E_TELEMETRY_ROW="$row_num" \
+        SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+        SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+        SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+        enterprise_e2e_telemetry_append "matrix_row" || true
       break
     fi
 
@@ -296,6 +339,11 @@ run_matrix_row() {
       if [[ "$quota_max_retries" -gt 0 && "$quota_retries" -gt "$quota_max_retries" ]]; then
         echo "  FAIL: quota retries exhausted (${quota_max_retries}) — missing evidence at ${evidence_path}"
         FAIL_ROWS=$((FAIL_ROWS + 1))
+        SB_E2E_TELEMETRY_ROW="$row_num" \
+          SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+          SB_E2E_TELEMETRY_ROW_RESULT="fail" \
+          SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+          enterprise_e2e_telemetry_append "matrix_row" || true
         break
       fi
       echo "  QUOTA: API 429 / Token Plan limit — waiting ${quota_retry_interval}s before retry ${quota_retries}..."
@@ -308,6 +356,11 @@ run_matrix_row() {
       echo "  FAIL: no routing markers in session output or $(claude_routing_state_file)"
     fi
     FAIL_ROWS=$((FAIL_ROWS + 1))
+    SB_E2E_TELEMETRY_ROW="$row_num" \
+      SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+      SB_E2E_TELEMETRY_ROW_RESULT="fail" \
+      SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+      enterprise_e2e_telemetry_append "matrix_row" || true
     break
   done
 }

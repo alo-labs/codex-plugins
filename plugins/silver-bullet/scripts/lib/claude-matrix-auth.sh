@@ -16,6 +16,7 @@ claude_matrix_auth_has_api_key_env() {
   [[ -f "$settings_file" ]] || return 1
   jq -e '
     (.env.ANTHROPIC_API_KEY? // "") != ""
+    or (.env.ANTHROPIC_AUTH_TOKEN? // "") != ""
     or (.env.ANTHROPIC_BASE_URL? // "") != ""
   ' "$settings_file" >/dev/null 2>&1
 }
@@ -30,10 +31,31 @@ claude_matrix_auth_has_conflict() {
   ' >/dev/null 2>&1
 }
 
+claude_matrix_settings_has_proxy_env() {
+  local settings_file="$1"
+  [[ -f "$settings_file" ]] || return 1
+  jq -e '
+    ((.env.ANTHROPIC_BASE_URL? // "") != "")
+    or ((.env.ANTHROPIC_API_KEY? // "") | test("PROXY"; "i"))
+  ' "$settings_file" >/dev/null 2>&1
+}
+
+claude_matrix_auth_should_strip_settings() {
+  local settings_file
+  settings_file="$(claude_matrix_settings_path)"
+  if claude_matrix_auth_has_conflict; then
+    return 0
+  fi
+  if [[ "${SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT:-0}" == "1" ]] && claude_matrix_settings_has_proxy_env "$settings_file"; then
+    return 0
+  fi
+  return 1
+}
+
 claude_matrix_auth_prepare() {
   local settings_file backup_file
   settings_file="$(claude_matrix_settings_path)"
-  if ! claude_matrix_auth_has_conflict; then
+  if ! claude_matrix_auth_should_strip_settings; then
     return 0
   fi
   if ! claude_matrix_auth_has_api_key_env "$settings_file"; then
@@ -52,6 +74,7 @@ claude_matrix_auth_prepare() {
     if .env then
       .env |= del(
         .ANTHROPIC_API_KEY,
+        .ANTHROPIC_AUTH_TOKEN,
         .ANTHROPIC_BASE_URL,
         .ANTHROPIC_DEFAULT_HAIKU_MODEL,
         .ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME,
@@ -83,6 +106,9 @@ claude_matrix_auth_restore() {
 # matches `claude --print` api_key auth. Project-level settings lack API keys;
 # the TUI does not inject global settings env unless it is exported here.
 claude_matrix_should_export_settings_env() {
+  if [[ "${SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT:-0}" == "1" || "${CLAUDE_PRINT_SKIP_SETTINGS_EXPORT:-0}" == "1" ]]; then
+    return 1
+  fi
   local settings_file
   settings_file="$(claude_matrix_settings_path)"
   [[ -f "$settings_file" ]] || return 1

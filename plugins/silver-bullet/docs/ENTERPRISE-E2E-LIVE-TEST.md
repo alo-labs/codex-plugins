@@ -2,6 +2,8 @@
 
 Optional live validation of Silver Bullet against the `enterprise-grade-test-app` fixture via **interactive Claude TUI**. Not run in default CI or `bash tests/run-all-tests.sh` unless explicitly opted in.
 
+**See also:** `docs/testing/ENTERPRISE-E2E-EFFECTIVENESS-PLAN.md` (effectiveness scoring and iteration criteria).
+
 ---
 
 ## Opt-in
@@ -65,6 +67,16 @@ Quiet timeouts (from Round 2):
 
 ---
 
+## Orchestrator / Cursor operator notes
+
+### Subagent model policy
+
+- Parent orchestrator and enterprise E2E workers: use **Composer 2.5** (`composer-2.5`) for all Task/subagent delegations.
+- **Do not** use Composer 2.5 Fast (`composer-2.5-fast`) for subagent work.
+- Ladder nominal model slugs in `review-fix-ladder.py` are separate (Claude TUI matrix); this policy applies to **Cursor Task subagents only**.
+
+---
+
 ## Dual-role monitoring (drive + monitor + watch in persistent shells)
 
 Operator model: **dual-role** — drive the matrix in one persistent shell while monitor + watch run in parallel shells.
@@ -83,7 +95,7 @@ tail -f .e2e-matrix-monitor-status.txt
 tail -f .e2e-tui-watch-findings.jsonl
 ```
 
-**Monitor policies:** 429 / Token Plan → wait **600s**; network → **120–300s** random; stall → kill hung `claude` children and restart incomplete rows only.
+**Monitor policies:** 429 / Token Plan → wait **60s**; network → **120–300s** random; stall → kill hung `claude` children and restart incomplete rows only.
 
 **Watch recovery:** if monitor dies, `watch-enterprise-e2e-tui.sh` restarts it without duplicating the matrix batch.
 
@@ -93,8 +105,8 @@ tail -f .e2e-tui-watch-findings.jsonl
 
 ```bash
 cd /Users/shafqat/projects/silver-bullet/repo
-graphify update .
-curl -sf http://localhost:3111/agentmemory/health || nohup agentmemory > ~/.agentmemory/server.log 2>&1 &
+bash scripts/run-enterprise-e2e-live-test.sh --preflight-only
+# or manually:
 bash tests/e2e-live/hook-delivery-preflight.sh
 bash scripts/install-claude.sh
 
@@ -102,6 +114,17 @@ cd /Users/shafqat/projects/enterprise-grade-test-app
 git status
 npm test
 ```
+
+The live entrypoint runs **code-intel preflight** before hook delivery when tools are opted in (`recommended_tools.*.enabled_by_user: true` in each repo's `.silver-bullet.json`):
+
+| Tool | Checks (when opted in) |
+|------|------------------------|
+| **Graphify** | `graphify-out/graph.json` exists (or `graphify update . --no-cluster`); fresh `graphify query` recorded for task context |
+| **agentmemory** | Server health (`/agentmemory/health`), MCP wired, `.agentmemory/` export root per `docs/AGENTMEMORY.md` |
+| **RTK** | `rtk gain --help` succeeds; host PreToolUse hook wired |
+| **Context Mode** | Node ≥ 22.5; ctx MCP available; `context-mode doctor` passes |
+
+Debug escape (not for production rounds): `--skip-code-intel-preflight`.
 
 Record test-app `git rev-parse HEAD` in the round ledger header.
 
@@ -116,8 +139,18 @@ Branch-scoped session-start runs from **test app CWD** via cursor-hook-bridge / 
 | **Graphify** | `graphify query` before each row; `graphify update .` after SB edits |
 | **agentmemory** | MCP capture; retrieve via Graphify, not raw dumps |
 | **Alumnium** | Browser/visual evidence for UI rows |
-| **RTK** | Shell token compression (`RTK_DISABLED=1` exported in SB scripts) |
+| **RTK** | Shell token compression (see RTK coexistence below) |
 | **Context Mode** | MCP / large-file compression |
+
+### RTK coexistence (scoped `RTK_DISABLED`)
+
+RTK transparently rewrites allow-listed agent shell commands via PreToolUse hooks (e.g. `git status` → `rtk git status`) to compress output. That is desirable for **agent** sessions when `recommended_tools.rtk.enabled_by_user` is true.
+
+SB hook subprocesses are not Shell tool calls — RTK PreToolUse does not rewrite them. When the user opts in to RTK, `hooks/lib/rtk-compat.sh` does **not** export `RTK_DISABLED` in the hook bridge, so nested git/gh inside hooks can use RTK filters. Gate regexes (`completion-audit.sh`, etc.) unwrap `rtk` / `RTK_DISABLED=1` prefixes for classification.
+
+**Harness scripts** that parse exact command output (`run-enterprise-e2e-matrix.sh`, `install-claude.sh`, live-test entrypoint) set `SB_RTK_COMPAT_MODE=verbatim` before sourcing `rtk-compat.sh`, which forces `RTK_DISABLED=1` for deterministic behavior.
+
+Agents needing verbatim output can still prefix `RTK_DISABLED=1 git diff main...HEAD` — upstream RTK skips rewrite.
 
 ---
 
@@ -129,6 +162,22 @@ claude
 ```
 
 In TUI: run **`/silver:init`**, opt in Graphify + agentmemory, `graphify update .`, **do not commit** SB init artifacts.
+
+### Session 0 gate (before matrix rows)
+
+`run-enterprise-e2e-live-test.sh` blocks matrix launch unless Session 0 is satisfied:
+
+- Ledger Session 0 table shows **Pass** for Graphify + agentmemory (or Enterprise preflight), **or**
+- Fixture `.silver-bullet.json` has `recommended_tools.graphify.enabled_by_user` and `recommended_tools.agentmemory.enabled_by_user` both `true`.
+
+Debug / operator waiver (log reason):
+
+```bash
+export SB_E2E_SESSION0_SKIP=1
+export SB_E2E_SESSION0_SKIP_REASON="programmatic opt-in verified manually"
+```
+
+`--preflight-only` does not require Session 0 (preflight runs before the gate).
 
 ---
 
@@ -142,7 +191,11 @@ SB_ENTERPRISE_E2E_LIVE=1 bash scripts/run-enterprise-e2e-live-test.sh --resume
 SB_ENTERPRISE_E2E_LIVE=1 bash scripts/run-enterprise-e2e-live-test.sh 3 14
 ```
 
-Per row: `graphify query "<slug> routes hooks skills orchestrator"` → paste matrix prompt card → update ledger with Pass/Fail + refs.
+Per row: `graphify query "<slug> routes hooks skills orchestrator"` → paste matrix prompt card → update ledger with Pass/Fail, optional `failure_class` (`harness` | `product` | `environmental`), and refs.
+
+Classify failures from log snippets: `bash scripts/lib/matrix-failure-class.sh .e2e-rowN-attempt.log`
+
+**Ledger↔monitor reconciliation:** monitor emits `COMPLETE` only when `scripts/lib/enterprise-e2e-ledger-reconcile.sh` reports 22/22 Pass in `SB_E2E_LEDGER_FILE`. Log-only 22/22 without ledger agreement surfaces `LEDGER_MISMATCH` or `STALE`.
 
 ---
 
@@ -150,12 +203,14 @@ Per row: `graphify query "<slug> routes hooks skills orchestrator"` → paste ma
 
 | Symptom | Action |
 |---------|--------|
-| **429 / Token Plan** | Wait **600s**, retry same row (`SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL`) |
+| **429 / Token Plan** | Wait **60s**, retry same row (`SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL`) |
 | **Network blip** | Wait 120–300s; monitor auto-restarts batch |
 | **Provider change / bad state** | Kill claude children; **provider restart procedure**: stop batch → `install-claude.sh` → resume incomplete rows |
 | **SB hook bug** | SB repo: `/silver:add` label `enterprise-test-app` → fix → commit → **`bash scripts/install-claude.sh`** → re-run **failed row only** |
 | **Branch/worktree drift** | Confirm fixture branch; reset skill state; re-run session-start from test app |
 | **Pause for P1 fix** | Stop batch; fix SB; deploy via `install-claude.sh`; resume with `--resume` |
+| **Monitor LEDGER_MISMATCH** | Matrix log says 22/22 but ledger &lt; 22 Pass — update ledger or re-run failed rows; monitor stays alive |
+| **failure_class** | Record in ledger: `harness` (expect/TUI), `product` (hook/router), `environmental` (429/network) — helper: `matrix-failure-class.sh` |
 
 ---
 
@@ -195,7 +250,7 @@ Operator monitors in parallel:
 - SB repo: bash scripts/watch-enterprise-e2e-tui.sh
 - Matrix log: /Users/shafqat/projects/silver-bullet/repo/.e2e-matrix-live.log
 
-On 429/Token Plan: wait 10 minutes and retry. On SB hook fix: reinstall plugin before re-running failed rows.
+On 429/Token Plan: wait 1 minute and retry. On SB hook fix: reinstall plugin before re-running failed rows.
 ```
 
 ---

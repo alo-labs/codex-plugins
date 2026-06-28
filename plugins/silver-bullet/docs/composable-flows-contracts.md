@@ -57,7 +57,7 @@ Flow numbers are stable identifiers — not always runtime order. For `silver:fe
 | `AF-BOOTSTRAP` | project_bootstrap | `templates/orchestrator-workers/BOOTSTRAP.md` | `silver-bootstrap-milestone`, `silver-bootstrap-project`, `silver-init` |
 | `AF-ORIENT` | context_orientation | `templates/orchestrator-workers/ORIENT.md` | `silver-context`, `silver-orient`, `silver-review-stats`, `silver-scan` |
 | `AF-CLARIFY` | scope_clarification | `templates/orchestrator-workers/CLARIFY.md` | `silver-clarify` |
-| `AF-DECIDE` | decision_research | `templates/orchestrator-workers/DECIDE.md` | `silver-multi-ai-task`, `review-research`, `silver-research` |
+| `AF-DECIDE` | decision_research | `templates/orchestrator-workers/DECIDE.md` | `review-research`, `silver-multi-ai-task`, `silver-research` |
 | `AF-SPECIFY` | requirements_specification | `templates/orchestrator-workers/SPECIFY.md` | `review-ingestion-manifest`, `review-requirements`, `review-spec`, `silver-ingest` |
 | `AF-PLAN` | execution_planning | `templates/orchestrator-workers/PLAN.md` | `review-context`, `review-plan`, `silver-plan` |
 | `AF-DESIGN-CONTRACT` | design_contract | `templates/orchestrator-workers/DESIGN-CONTRACT.md` | `review-design`, `silver-ui-contract` |
@@ -78,7 +78,7 @@ Flow numbers are stable identifiers — not always runtime order. For `silver:fe
 | `AF-BLAST-RADIUS` | blast_radius_assessment | `templates/orchestrator-workers/BLAST-RADIUS.md` | `silver-blast-radius` |
 | `AF-DEVOPS-ROUTE` | devops_toolchain_routing | `templates/orchestrator-workers/DEVOPS-SKILL-ROUTER.md` | `devops-skill-router`, `silver-devops` |
 | `AF-VALIDATE` | gap_validation | `templates/orchestrator-workers/VALIDATE.md` | `silver-validate` |
-| `AF-PHASE-MANAGE` | phase_and_state_management | `templates/orchestrator-workers/PHASE.md` | `silver-add`, `silver-migrate`, `silver-phase`, `silver-rem` |
+| `AF-PHASE-MANAGE` | phase_and_state_management | `templates/orchestrator-workers/PHASE.md` | `silver-add`, `silver-doctor`, `silver-migrate`, `silver-phase`, `silver-rem` |
 | `AF-FAST-PATH` | bounded_fast_path | `templates/orchestrator-workers/FAST.md` | `silver-benchmark`, `silver-fast`, `silver-feature`, `silver-incident` |
 
 ## Skill-Dispatched Worker Templates
@@ -409,7 +409,6 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-DEVOPS_SKILL_ROUTER` | `devops-skill-router` | `AF-DEVOPS-ROUTE` | `EV-FS-DEVOPS_SKILL_ROUTER` |
 | `FS-EXTENSIBILITY` | `extensibility` | `AF-QUALITY-GATE` | `EV-FS-EXTENSIBILITY` |
 | `FS-MODULARITY` | `modularity` | `AF-QUALITY-GATE` | `EV-FS-MODULARITY` |
-| `FS-MULTI_AI_TASK` | `silver-multi-ai-task` | `AF-DECIDE` | `EV-FS-MULTI_AI_TASK` |
 | `FS-RELIABILITY` | `reliability` | `AF-QUALITY-GATE` | `EV-FS-RELIABILITY` |
 | `FS-REUSABILITY` | `reusability` | `AF-QUALITY-GATE` | `EV-FS-REUSABILITY` |
 | `FS-REVIEW_CONTEXT` | `review-context` | `AF-PLAN` | `EV-FS-REVIEW_CONTEXT` |
@@ -442,6 +441,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SILVER_DEBUG` | `silver-debug` | `AF-DEBUG` | `EV-FS-SILVER_DEBUG` |
 | `FS-SILVER_DEPLOY` | `silver-deploy` | `AF-SHIP` | `EV-FS-SILVER_DEPLOY` |
 | `FS-SILVER_DEVOPS` | `silver-devops` | `AF-DEVOPS-ROUTE` | `EV-FS-SILVER_DEVOPS` |
+| `FS-SILVER_DOCTOR` | `silver-doctor` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_DOCTOR` |
 | `FS-SILVER_DOMAIN_AUDIT` | `silver-domain-audit` | `AF-REVIEW` | `EV-FS-SILVER_DOMAIN_AUDIT` |
 | `FS-SILVER_ENSURE_DOCS` | `silver-ensure-docs` | `AF-DOCUMENT` | `EV-FS-SILVER_ENSURE_DOCS` |
 | `FS-SILVER_EXECUTE` | `silver-execute` | `AF-EXECUTE` | `EV-FS-SILVER_EXECUTE` |
@@ -453,6 +453,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SILVER_INGEST` | `silver-ingest` | `AF-SPECIFY` | `EV-FS-SILVER_INGEST` |
 | `FS-SILVER_INIT` | `silver-init` | `AF-BOOTSTRAP` | `EV-FS-SILVER_INIT` |
 | `FS-SILVER_MIGRATE` | `silver-migrate` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_MIGRATE` |
+| `FS-SILVER_MULTI_AI_TASK` | `silver-multi-ai-task` | `AF-DECIDE` | `EV-FS-SILVER_MULTI_AI_TASK` |
 | `FS-SILVER_ORCHESTRATOR` | `silver-orchestrator` | `AF-ROUTE` | `EV-FS-SILVER_ORCHESTRATOR` |
 | `FS-SILVER_ORIENT` | `silver-orient` | `AF-ORIENT` | `EV-FS-SILVER_ORIENT` |
 | `FS-SILVER_PHASE` | `silver-phase` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_PHASE` |
@@ -518,7 +519,6 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `devops-skill-router` | `AF-DEVOPS-ROUTE` |
 | `extensibility` | `AF-QUALITY-GATE` |
 | `modularity` | `AF-QUALITY-GATE` |
-| `silver-multi-ai-task` | `AF-DECIDE` |
 | `reliability` | `AF-QUALITY-GATE` |
 | `reusability` | `AF-QUALITY-GATE` |
 | `review-context` | `AF-PLAN` |
@@ -551,6 +551,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-debug` | `AF-DEBUG` |
 | `silver-deploy` | `AF-SHIP` |
 | `silver-devops` | `AF-DEVOPS-ROUTE` |
+| `silver-doctor` | `AF-PHASE-MANAGE` |
 | `silver-domain-audit` | `AF-REVIEW` |
 | `silver-ensure-docs` | `AF-DOCUMENT` |
 | `silver-execute` | `AF-EXECUTE` |
@@ -562,6 +563,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-ingest` | `AF-SPECIFY` |
 | `silver-init` | `AF-BOOTSTRAP` |
 | `silver-migrate` | `AF-PHASE-MANAGE` |
+| `silver-multi-ai-task` | `AF-DECIDE` |
 | `silver-orchestrator` | `AF-ROUTE` |
 | `silver-orient` | `AF-ORIENT` |
 | `silver-phase` | `AF-PHASE-MANAGE` |

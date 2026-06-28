@@ -14,7 +14,7 @@
 set -uo pipefail
 
 SB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$SB_ROOT"
+cd "$SB_ROOT" || exit
 
 OFFSETS_FILE="${SB_E2E_TUI_OFFSETS:-${SB_ROOT}/.e2e-tui-watch-offsets.json}"
 FINDINGS_FILE="${SB_E2E_TUI_FINDINGS:-${SB_ROOT}/.e2e-tui-watch-findings.jsonl}"
@@ -227,7 +227,9 @@ PY
 }
 
 count_matrix_passes() {
-  grep -cE '^\s*PASS:' "$MATRIX_LOG" 2>/dev/null || echo 0
+  local n
+  n="$(grep -cE '^\s*PASS:' "$MATRIX_LOG" 2>/dev/null || true)"
+  echo "${n:-0}"
 }
 
 matrix_complete() {

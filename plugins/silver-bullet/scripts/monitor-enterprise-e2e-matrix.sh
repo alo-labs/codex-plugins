@@ -11,9 +11,17 @@
 set -uo pipefail
 
 SB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export SB_RTK_COMPAT_MODE=verbatim
 # shellcheck source=hooks/lib/rtk-compat.sh
 source "${SB_ROOT}/hooks/lib/rtk-compat.sh"
-cd "$SB_ROOT"
+cd "$SB_ROOT" || exit
+# shellcheck source=scripts/lib/enterprise-e2e-live-common.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-live-common.sh"
+# shellcheck source=tests/live/lib/detach-background.sh
+source "${SB_ROOT}/tests/live/lib/detach-background.sh"
+sb_prepend_harness_path
+# shellcheck source=scripts/lib/enterprise-e2e-ledger-reconcile.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-ledger-reconcile.sh"
 
 MATRIX_LOG="${SB_E2E_MATRIX_LOG:-${SB_ROOT}/.e2e-matrix-rows5-7-22-resume2.log}"
 BATCH_PID_FILE="${SB_E2E_MATRIX_BATCH_PID_FILE:-${SB_ROOT}/.e2e-matrix-batch.pid}"
@@ -25,7 +33,7 @@ STATE_FILE="${SB_ROOT}/.e2e-matrix-monitor-state"
 POLL_INTERVAL="${SB_E2E_MATRIX_MONITOR_INTERVAL:-300}"
 STALL_SEC="${SB_E2E_MATRIX_STALL_SEC:-2700}"
 HUNG_SEC="${SB_E2E_MATRIX_HUNG_SEC:-5400}"
-QUOTA_WAIT="${SB_E2E_MATRIX_QUOTA_WAIT:-600}"
+QUOTA_WAIT="${SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL:-${SB_E2E_MATRIX_QUOTA_WAIT:-60}}"
 NETWORK_WAIT_MIN="${SB_E2E_MATRIX_NETWORK_WAIT_MIN:-120}"
 NETWORK_WAIT_MAX="${SB_E2E_MATRIX_NETWORK_WAIT_MAX:-300}"
 
@@ -79,6 +87,14 @@ discover_batch_pid() {
 is_batch_running() {
   local pid="$1"
   [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+live_test_driver_running() {
+  pgrep -f 'run-enterprise-e2e-live-test\.sh' >/dev/null 2>&1
+}
+
+any_matrix_runner_pid() {
+  pgrep -f 'bash scripts/run-enterprise-e2e-matrix\.sh' 2>/dev/null | head -1 || true
 }
 
 claude_child_lines() {
@@ -173,13 +189,39 @@ incomplete_rows() {
   fi
 }
 
+matrix_log_reports_complete() {
+  grep -qE 'Total: 22 / 22|Pass:  22' "$MATRIX_LOG" 2>/dev/null
+}
+
 matrix_all_done() {
-  if grep -qE 'Total: 22 / 22|Pass:  22' "$MATRIX_LOG" 2>/dev/null; then
+  if matrix_log_reports_complete; then
     return 0
   fi
   local inc
   inc="$(incomplete_rows | wc -l | tr -d ' ')"
   [[ "$inc" -eq 0 ]]
+}
+
+# Monitor must agree with human-auditable ledger before emitting COMPLETE.
+matrix_reconcile_state() {
+  local log_done ledger_status
+  log_done=0
+  matrix_log_reports_complete && log_done=1
+  ledger_status="$(enterprise_e2e_ledger_reconcile_status 2>/dev/null || echo UNREADABLE)"
+  if [[ "$log_done" -eq 1 && "$ledger_status" == "COMPLETE" ]]; then
+    printf '%s\n' "COMPLETE"
+    return 0
+  fi
+  if [[ "$log_done" -eq 1 ]]; then
+    printf '%s\n' "LEDGER_MISMATCH"
+    return 1
+  fi
+  if [[ "$ledger_status" == "STALE" || "$ledger_status" == "UNREADABLE" ]]; then
+    printf '%s\n' "STALE"
+    return 1
+  fi
+  printf '%s\n' "IN_PROGRESS"
+  return 1
 }
 
 parse_recent_issues() {
@@ -229,7 +271,7 @@ start_batch() {
   fi
   log_poll "$(utc_now) ACTION: starting batch rows: ${rows[*]}"
   (
-    cd "$SB_ROOT"
+    cd "$SB_ROOT" || exit
     env -u SB_E2E_MATRIX_DRY_RUN \
       SB_E2E_MATRIX_FORCE=1 \
       SB_E2E_MATRIX_CLEAN_ENV=0 \
@@ -302,8 +344,13 @@ on_stall_detected() {
   if [[ "$idle_sec" -ge "$HUNG_SEC" ]]; then
     log_poll "$(utc_now) HUNG: killing claude children after ${idle_sec}s idle"
     kill_claude_children TERM
+    if live_test_driver_running; then
+      log_poll "$(utc_now) defer hung restart: live-test driver active"
+      write_state_kv LAST_GROWTH_EPOCH "$(date +%s)"
+      return 0
+    fi
     local inc
-    inc=($(incomplete_rows))
+    enterprise_e2e_read_lines_to_array inc incomplete_rows
     # If batch dead, full restart; else row will retry via harness quota loop
     local bpid
     bpid="$(cat "$BATCH_PID_FILE" 2>/dev/null || true)"
@@ -319,17 +366,37 @@ poll_once() {
   batch_pid="$(discover_batch_pid 2>/dev/null || true)"
 
   if matrix_all_done; then
-    log_poll "$(utc_now) COMPLETE: matrix 22/22 — monitor exiting"
-    write_status "$(build_status_block "${batch_pid:-done}" "COMPLETE")"
-    rm -f "$BATCH_PID_FILE"
-    exit 0
+    local reconcile_state
+    reconcile_state="$(matrix_reconcile_state)"
+    case "$reconcile_state" in
+      COMPLETE)
+        log_poll "$(utc_now) COMPLETE: matrix 22/22 — ledger reconcile OK — monitor exiting"
+        write_status "$(build_status_block "${batch_pid:-done}" "COMPLETE")"
+        rm -f "$BATCH_PID_FILE"
+        exit 0
+        ;;
+      LEDGER_MISMATCH)
+        log_poll "$(utc_now) LEDGER_MISMATCH: matrix log 22/22 but ledger is not 22 PASS — not exiting"
+        write_status "$(build_status_block "${batch_pid:-done}" "LEDGER_MISMATCH")"
+        ;;
+      STALE)
+        log_poll "$(utc_now) STALE: matrix log complete but ledger missing/stale — not exiting"
+        write_status "$(build_status_block "${batch_pid:-done}" "STALE")"
+        ;;
+      *)
+        log_poll "$(utc_now) IN_PROGRESS: matrix log complete; ledger reconcile=$reconcile_state"
+        write_status "$(build_status_block "${batch_pid:-done}" "IN_PROGRESS")"
+        ;;
+    esac
   fi
 
   local now_epoch last_growth_epoch last_bytes cur_bytes idle_sec row attempt_log
   now_epoch="$(date +%s)"
   cur_bytes="$(log_bytes "$MATRIX_LOG")"
-  # shellcheck disable=SC1090
-  [[ -f "$STATE_FILE" ]] && source "$STATE_FILE" 2>/dev/null || true
+  if [[ -f "$STATE_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$STATE_FILE" 2>/dev/null || true
+  fi
   last_growth_epoch="${LAST_GROWTH_EPOCH:-0}"
   last_bytes="${LAST_GROWTH_BYTES:-0}"
 
@@ -392,15 +459,29 @@ poll_once() {
     printf '%s\n' "$batch_pid" >"$BATCH_PID_FILE"
   else
     batch_state="STOPPED"
-    log_poll "$(utc_now) ACTION: batch not running — restarting incomplete rows"
-    local inc
-    inc=($(incomplete_rows))
-    if [[ "${#inc[@]}" -gt 0 ]]; then
-      start_batch "${inc[@]}"
-      batch_pid="$(cat "$BATCH_PID_FILE")"
-      batch_state="RESTARTED"
+    if live_test_driver_running; then
+      local adopted
+      adopted="$(any_matrix_runner_pid)"
+      if [[ -n "$adopted" ]] && kill -0 "$adopted" 2>/dev/null; then
+        batch_pid="$adopted"
+        batch_state="RUNNING"
+        printf '%s\n' "$batch_pid" >"$BATCH_PID_FILE"
+        log_poll "$(utc_now) defer restart: live-test driver active — adopted matrix pid ${batch_pid}"
+      else
+        log_poll "$(utc_now) defer restart: live-test driver pre-matrix (skip duplicate FORCE batch)"
+        batch_state="WAIT_LIVE_TEST"
+      fi
     else
-      batch_state="COMPLETE?"
+      log_poll "$(utc_now) ACTION: batch not running — restarting incomplete rows"
+      local inc
+      enterprise_e2e_read_lines_to_array inc incomplete_rows
+      if [[ "${#inc[@]}" -gt 0 ]]; then
+        start_batch "${inc[@]}"
+        batch_pid="$(cat "$BATCH_PID_FILE")"
+        batch_state="RESTARTED"
+      else
+        batch_state="$(matrix_reconcile_state 2>/dev/null || echo IN_PROGRESS)"
+      fi
     fi
   fi
 
@@ -411,13 +492,17 @@ poll_once() {
     if [[ "$row" != "?" ]] && ! row_is_complete "$row"; then
       idle_sec=$((now_epoch - last_growth_epoch))
       if [[ "$idle_sec" -ge "$HUNG_SEC" ]]; then
+        if live_test_driver_running; then
+          log_poll "$(utc_now) defer no-claude restart: live-test driver active"
+        else
         log_poll "$(utc_now) ACTION: no claude child ${idle_sec}s — restarting batch"
         kill -TERM "$batch_pid" 2>/dev/null || true
         sleep 5
-        inc=($(incomplete_rows))
+        enterprise_e2e_read_lines_to_array inc incomplete_rows
         start_batch "${inc[@]}"
         batch_pid="$(cat "$BATCH_PID_FILE")"
         batch_state="RESTARTED(no-claude)"
+        fi
       fi
     fi
   fi

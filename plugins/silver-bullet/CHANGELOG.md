@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.48.8] — 2026-06-29
+
+Host-aware silver-doctor checks and enterprise E2E credential preflight.
+
+### Bug Fixes
+- `fix(doctor)`: host-aware checks — D8 orchestrator rule Cursor-only; D2/D3/D13 use active host plugin paths via `runtime-paths.sh` (no Cursor deps on Claude/Codex) (`e0f2234a`)
+- `fix(e2e)`: fail fast when Claude token gateway credentials missing — preflight after install-claude, default settings export in live defaults (`7dd82097`)
+
+### Tests
+- `test(doctor)`: mocked-host unit tests for Claude/Codex/Cursor doctor paths (`e0f2234a`)
+
+---
+
 ## [0.48.7] — 2026-06-29
 
 Instruction-following reduction closure, silver-doctor coverage, subagent model gates, and enterprise E2E harness hardening.

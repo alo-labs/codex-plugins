@@ -26,5 +26,5 @@ if ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
   exit 1
 fi
 
-echo "MiniMax proxy: http://127.0.0.1:${PORT}/v1 -> ${ALUMNIUM_MINIMAX_UPSTREAM:-https://api.minimax.io/v1}"
+echo "MiniMax proxy: http://127.0.0.1:${PORT}/v1 -> ${ALUMNIUM_MINIMAX_UPSTREAM:-https://api.minimax.io}/v1"
 echo "Set OPENAI_CUSTOM_URL=http://127.0.0.1:${PORT}/v1 in ~/.config/alumnium/env"

@@ -131,7 +131,7 @@ Silver Bullet ships a local OpenAI-compatible proxy that rewrites boolean `parse
 |----------|---------|
 | [`scripts/alumnium-minimax-proxy.mjs`](../scripts/alumnium-minimax-proxy.mjs) | HTTP proxy: `http://127.0.0.1:8787/v1` → `https://api.minimax.io/v1` |
 | [`scripts/start-alumnium-minimax-proxy.sh`](../scripts/start-alumnium-minimax-proxy.sh) | Start proxy in background |
-| [`scripts/alumnium-minimax-shim.mjs`](../scripts/alumnium-minimax-shim.mjs) | Preload: sanitize `serializeGeneration` output |
+| [`scripts/patch-alumnium-minimax.mjs`](../scripts/patch-alumnium-minimax.mjs) | Patch alumnium Zod schema for boolean `parsed` (post-`npm install`) |
 
 **Setup:**
 
@@ -144,8 +144,8 @@ export ALUMNIUM_MODEL='openai/MiniMax-M3'
 # 2. Start proxy (or let Sidekick .visual-audit script start it)
 bash scripts/start-alumnium-minimax-proxy.sh
 
-# 3. MCP / Node — preload shim before importing alumnium
-node --import ./scripts/alumnium-minimax-shim.mjs your-script.mjs
+# 3. After npm install alumnium — patch bundled schema (Sidekick script runs this automatically)
+node scripts/patch-alumnium-minimax.mjs path/to/node_modules/alumnium/src/client/index.js
 ```
 
 **Cursor MCP** — point `OPENAI_CUSTOM_URL` at the proxy and run the proxy before starting Cursor:

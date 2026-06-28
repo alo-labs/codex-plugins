@@ -117,56 +117,43 @@ OPENAI_API_KEY = "<your-key>"
 ALUMNIUM_MODEL = "openai/MiniMax-M3"
 ```
 
-### Verified behavior (v0.21.0)
+### MiniMax vision proxy (Alumnium v0.21.0)
 
-- Auth against MiniMax OpenAI-compatible API returns HTTP 200.
-- Alumnium `start` works with this configuration.
-- `check` / `do` with vision require the **MiniMax compatibility proxy** below — MiniMax returns `"parsed": true` (boolean) in API payloads; Alumnium v0.21.0's LangChain layer expects `parsed` to be a record or absent (`LchainSchema.MessageDataAdditionalKwargs`, `alumnium` `src/llm/LchainSchema.ts` ~line 334).
+MiniMax returns `"parsed": true` (boolean) in Responses API payloads. Alumnium's LangChain layer expects `parsed` to be a **record or absent** (`LchainSchema.MessageDataAdditionalKwargs`, bundled in `alumnium` `src/client/index.js` ~line 4943).
 
-### MiniMax vision fix (SB proxy + shim)
-
-Silver Bullet ships a local OpenAI-compatible proxy that rewrites boolean `parsed` fields before LangChain/Alumnium consume responses, plus an optional preload shim for cached generations.
-
-| Artifact | Purpose |
-|----------|---------|
-| [`scripts/alumnium-minimax-proxy.mjs`](../scripts/alumnium-minimax-proxy.mjs) | HTTP proxy: `http://127.0.0.1:8787/v1` → `https://api.minimax.io/v1` |
-| [`scripts/start-alumnium-minimax-proxy.sh`](../scripts/start-alumnium-minimax-proxy.sh) | Start proxy in background |
-| [`scripts/patch-alumnium-minimax.mjs`](../scripts/patch-alumnium-minimax.mjs) | Patch alumnium Zod schema for boolean `parsed` (post-`npm install`) |
-
-**Setup:**
+**Fix:** run the local proxy and point `OPENAI_CUSTOM_URL` at it.
 
 ```bash
-# 1. ~/.config/alumnium/env (keep API key here only)
+# Terminal 1 — proxy (forwards to https://api.minimax.io/v1)
+bash scripts/start-minimax-openai-proxy.sh
+
+# ~/.config/alumnium/env
 export OPENAI_API_KEY='<your-minimax-key>'
-export OPENAI_CUSTOM_URL='http://127.0.0.1:8787/v1'
+export OPENAI_CUSTOM_URL='http://127.0.0.1:18721/v1'
 export ALUMNIUM_MODEL='openai/MiniMax-M3'
-
-# 2. Start proxy (or let Sidekick .visual-audit script start it)
-bash scripts/start-alumnium-minimax-proxy.sh
-
-# 3. After npm install alumnium — patch bundled schema (Sidekick script runs this automatically)
-node scripts/patch-alumnium-minimax.mjs path/to/node_modules/alumnium/src/client/index.js
 ```
 
-**Cursor MCP** — point `OPENAI_CUSTOM_URL` at the proxy and run the proxy before starting Cursor:
-
-```json
-"env": {
-  "OPENAI_CUSTOM_URL": "http://127.0.0.1:8787/v1",
-  "OPENAI_API_KEY": "<your-key>",
-  "ALUMNIUM_MODEL": "openai/MiniMax-M3"
-}
-```
+| Artifact | Role |
+|----------|------|
+| [`scripts/minimax-openai-proxy.mjs`](../scripts/minimax-openai-proxy.mjs) | Rewrites `parsed: true` → `parsed: {}`, fixes missing `logprobs` |
+| [`scripts/start-minimax-openai-proxy.sh`](../scripts/start-minimax-openai-proxy.sh) | Start proxy on `127.0.0.1:18721` |
+| [`scripts/patch-alumnium-minimax.mjs`](../scripts/patch-alumnium-minimax.mjs) | Post-`npm install` — coerce MiniMax plain-text retriever output |
 
 **Verify:**
 
 ```bash
-bash tests/scripts/test-alumnium-minimax-proxy.sh
-# Sidekick pixel pass with vision checks:
-ALUMNIUM_CHECKS=1 bash .visual-audit/run-alumnium-pixel-pass.sh
+bash tests/scripts/test-minimax-proxy.sh
+# Sidekick pixel pass with LLM checks:
+ALUMNIUM_CHECKS=1 bash /path/to/sidekick/.visual-audit/run-alumnium-pixel-pass.sh
 ```
 
-Upstream: [alumnium-hq/alumnium](https://github.com/alumnium-hq/alumnium) — consider widening `parsed` Zod to accept boolean and coerce.
+**Cursor MCP** — use proxy URL in `OPENAI_CUSTOM_URL`; start proxy before Cursor.
+
+### Verified behavior (v0.21.0)
+
+- Auth against MiniMax OpenAI-compatible API returns HTTP 200.
+- Alumnium `start` works with this configuration.
+- `check` / `do` with vision require the proxy above (direct MiniMax URL fails LangChain serialization on `parsed: true`).
 
 ## SB Skill Integration
 

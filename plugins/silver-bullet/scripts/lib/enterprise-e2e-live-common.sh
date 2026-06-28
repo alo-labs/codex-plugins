@@ -95,7 +95,7 @@ enterprise_e2e_incomplete_rows() {
 
 enterprise_e2e_assert_no_auth_mutations() {
   local script="$1"
-  if grep -qE 'claude auth (login|logout)|claude /logout|setup-token|/login|/logout' "$script" 2>/dev/null; then
+  if grep -vE '^[[:space:]]*#' "$script" 2>/dev/null | grep -qE 'claude auth (login|logout)|claude /logout|setup-token|/login|/logout'; then
     echo "ERROR: $script must not invoke login/logout (API key auth only)" >&2
     return 1
   fi
@@ -188,7 +188,7 @@ enterprise_e2e_export_live_defaults() {
   # Default ON for live matrix — inherited SKIP=1 from run-all-tests / live wrappers
   # skips claude_matrix_export_settings_env and leaves interactive TUI at /login.
   export SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT="${SB_E2E_MATRIX_SKIP_SETTINGS_EXPORT:-0}"
-  export CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY="${CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY:-keys}"
+  export CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY="${CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY:-arrow}"
   export SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL="${SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL:-60}"
   export SB_E2E_WORKFLOW_QUIET_TIMEOUT="${SB_E2E_WORKFLOW_QUIET_TIMEOUT:-600}"
   export CLAUDE_MODEL="${CLAUDE_MODEL:-haiku}"

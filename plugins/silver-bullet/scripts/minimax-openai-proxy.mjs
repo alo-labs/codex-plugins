@@ -1,36 +1,34 @@
 #!/usr/bin/env node
 /**
- * Local OpenAI-compatible proxy for MiniMax + Alumnium v0.21.0.
+ * MiniMax OpenAI-compatible proxy for Alumnium v0.21.0.
  *
- * MiniMax may return `"parsed": true` (boolean) in chat/responses payloads.
- * Alumnium's LangChain layer expects `parsed` to be a record or absent
- * (LchainSchema.MessageDataAdditionalKwargs / MetadataOutputText).
+ * MiniMax returns `"parsed": true` (boolean); Alumnium/LangChain expect a record
+ * or absent (LchainSchema in alumnium src/llm/LchainSchema.ts).
  *
- * Usage:
- *   OPENAI_CUSTOM_URL=http://127.0.0.1:8787/v1 node your-alumnium-script.mjs
+ *   OPENAI_CUSTOM_URL=http://127.0.0.1:18721/v1
+ *   node scripts/minimax-openai-proxy.mjs
  *
  * Env:
- *   ALUMNIUM_MINIMAX_UPSTREAM — upstream base URL (default https://api.minimax.io/v1)
- *   ALUMNIUM_MINIMAX_PROXY_PORT — listen port (default 8787)
+ *   MINIMAX_OPENAI_UPSTREAM  — default https://api.minimax.io
+ *   MINIMAX_OPENAI_PROXY_PORT — default 18721
  */
 import http from 'node:http';
 import https from 'node:https';
 import { URL } from 'node:url';
 
-const UPSTREAM = (
-  process.env.ALUMNIUM_MINIMAX_UPSTREAM || 'https://api.minimax.io'
-).replace(/\/$/, '');
-const PORT = Number(process.env.ALUMNIUM_MINIMAX_PROXY_PORT || 8787);
+const UPSTREAM = (process.env.MINIMAX_OPENAI_UPSTREAM || 'https://api.minimax.io').replace(
+  /\/$/,
+  '',
+);
+const PORT = Number(process.env.MINIMAX_OPENAI_PROXY_PORT || 18721);
 
 function upstreamPath(path) {
-  // Client base URL ends with /v1 — requests arrive as /v1/chat/completions.
-  // Upstream is https://api.minimax.io — forward /v1/... unchanged.
   if (path.startsWith('/v1/') || path === '/v1') return path;
   if (path.startsWith('/')) return `/v1${path}`;
   return `/v1/${path}`;
 }
 
-/** Recursively coerce MiniMax/OpenAI-compat payloads for Alumnium LchainSchema. */
+/** Recursively fix MiniMax fields that break Alumnium Zod serialization. */
 export function normalizeMiniMaxJson(value) {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map(normalizeMiniMaxJson);
@@ -39,7 +37,7 @@ export function normalizeMiniMaxJson(value) {
   const out = {};
   for (const [key, child] of Object.entries(value)) {
     if (key === 'parsed' && typeof child === 'boolean') {
-      // MiniMax boolean sentinel — not structured output; omit for Alumnium Zod.
+      if (child) out[key] = {};
       continue;
     }
     if (key === 'user' && child === undefined) {
@@ -48,13 +46,10 @@ export function normalizeMiniMaxJson(value) {
     }
     out[key] = normalizeMiniMaxJson(child);
   }
-
-  // MetadataOutputText requires logprobs + annotations arrays
   if (out.type === 'output_text') {
     if (!Array.isArray(out.logprobs)) out.logprobs = [];
     if (!Array.isArray(out.annotations)) out.annotations = [];
   }
-
   return out;
 }
 
@@ -88,11 +83,7 @@ function forwardRequest(method, path, headers, body) {
         const chunks = [];
         res.on('data', (c) => chunks.push(c));
         res.on('end', () =>
-          resolve({
-            status: res.statusCode || 500,
-            headers: res.headers,
-            body: Buffer.concat(chunks),
-          }),
+          resolve({ status: res.statusCode || 500, headers: res.headers, body: Buffer.concat(chunks) }),
         );
       },
     );
@@ -102,12 +93,6 @@ function forwardRequest(method, path, headers, body) {
   });
 }
 
-function isSseResponse(headers) {
-  const ct = headers['content-type'] || '';
-  return ct.includes('text/event-stream');
-}
-
-/** Normalize SSE data lines when content-type is event-stream. */
 function normalizeSseBody(text) {
   return text
     .split('\n')
@@ -116,8 +101,7 @@ function normalizeSseBody(text) {
       const payload = line.slice(5).trim();
       if (!payload || payload === '[DONE]') return line;
       try {
-        const parsed = JSON.parse(payload);
-        return `data: ${JSON.stringify(normalizeMiniMaxJson(parsed))}`;
+        return `data: ${JSON.stringify(normalizeMiniMaxJson(JSON.parse(payload)))}`;
       } catch {
         return line;
       }
@@ -135,24 +119,18 @@ const server = http.createServer(async (req, res) => {
     const upstream = await forwardRequest(req.method || 'GET', path, headers, body);
     let outBody = upstream.body;
     const outHeaders = { ...upstream.headers };
+    const ct = outHeaders['content-type'] || '';
 
-    if (!isSseResponse(outHeaders)) {
-      const ct = outHeaders['content-type'] || '';
-      if (ct.includes('application/json') && outBody.length) {
-        try {
-          const json = JSON.parse(outBody.toString('utf8'));
-          outBody = Buffer.from(JSON.stringify(normalizeMiniMaxJson(json)));
-          outHeaders['content-length'] = String(outBody.length);
-        } catch {
-          /* pass through non-JSON */
-        }
+    if (ct.includes('text/event-stream')) {
+      outBody = Buffer.from(normalizeSseBody(outBody.toString('utf8')));
+    } else if (ct.includes('application/json') && outBody.length) {
+      try {
+        outBody = Buffer.from(JSON.stringify(normalizeMiniMaxJson(JSON.parse(outBody.toString('utf8')))));
+      } catch {
+        /* non-JSON */
       }
-    } else {
-      const text = outBody.toString('utf8');
-      const normalized = normalizeSseBody(text);
-      outBody = Buffer.from(normalized);
-      outHeaders['content-length'] = String(outBody.length);
     }
+    outHeaders['content-length'] = String(outBody.length);
 
     res.writeHead(upstream.status, outHeaders);
     res.end(outBody);
@@ -164,8 +142,6 @@ const server = http.createServer(async (req, res) => {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(PORT, '127.0.0.1', () => {
-    console.error(
-      `alumnium-minimax-proxy listening on http://127.0.0.1:${PORT}/v1 -> ${UPSTREAM}/v1`,
-    );
+    console.error(`minimax-openai-proxy http://127.0.0.1:${PORT}/v1 -> ${UPSTREAM}/v1`);
   });
 }

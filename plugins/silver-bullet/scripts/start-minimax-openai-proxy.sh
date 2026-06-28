@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# start-alumnium-minimax-proxy.sh — background MiniMax OpenAI-compatible proxy for Alumnium.
+# start-minimax-openai-proxy.sh — background MiniMax OpenAI proxy for Alumnium.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROXY="${REPO_ROOT}/scripts/alumnium-minimax-proxy.mjs"
-PORT="${ALUMNIUM_MINIMAX_PROXY_PORT:-8787}"
-PID_FILE="${ALUMNIUM_MINIMAX_PROXY_PID_FILE:-/tmp/alumnium-minimax-proxy.pid}"
-LOG_FILE="${ALUMNIUM_MINIMAX_PROXY_LOG:-/tmp/alumnium-minimax-proxy.log}"
+PROXY="${REPO_ROOT}/scripts/minimax-openai-proxy.mjs"
+PORT="${MINIMAX_OPENAI_PROXY_PORT:-18721}"
+PID_FILE="${MINIMAX_OPENAI_PROXY_PID_FILE:-/tmp/minimax-openai-proxy.pid}"
+LOG_FILE="${MINIMAX_OPENAI_PROXY_LOG:-/tmp/minimax-openai-proxy.log}"
 
 if [[ -f "${PID_FILE}" ]]; then
   old_pid="$(cat "${PID_FILE}")"
@@ -16,8 +16,7 @@ if [[ -f "${PID_FILE}" ]]; then
   fi
 fi
 
-nohup env ALUMNIUM_MINIMAX_PROXY_PORT="${PORT}" \
-  node "${PROXY}" >"${LOG_FILE}" 2>&1 &
+nohup env MINIMAX_OPENAI_PROXY_PORT="${PORT}" node "${PROXY}" >"${LOG_FILE}" 2>&1 &
 echo $! >"${PID_FILE}"
 sleep 0.3
 
@@ -26,5 +25,5 @@ if ! kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
   exit 1
 fi
 
-echo "MiniMax proxy: http://127.0.0.1:${PORT}/v1 -> ${ALUMNIUM_MINIMAX_UPSTREAM:-https://api.minimax.io}/v1"
+echo "MiniMax proxy: http://127.0.0.1:${PORT}/v1"
 echo "Set OPENAI_CUSTOM_URL=http://127.0.0.1:${PORT}/v1 in ~/.config/alumnium/env"

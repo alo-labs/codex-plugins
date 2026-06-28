@@ -143,7 +143,7 @@ main() {
       if version_lt "$plugin_ver" "$template_ver"; then
         record fail D2 "plugin version ${plugin_ver} < template config_version ${template_ver}"
       else
-        record pass D2 "silver-bullet@alo-labs version ${plugin_ver} (registry: ${reg})"
+        record pass D2 "silver-bullet@alo-labs version ${plugin_ver} (install: ${install_path:-unknown}, registry: ${reg})"
       fi
     else
       record fail D2 "no silver-bullet plugin entry in ${reg}"
@@ -264,9 +264,9 @@ main() {
             fi
           fi
           if [[ "$suspended" == "true" ]]; then
-            record warn D10 "${tool} opted in but enforcement suspended"
+            record warn D10 "${tool} ${consent} but enforcement suspended"
           else
-            record pass D10 "${tool} opted in (enforcement active)"
+            record pass D10 "${tool} ${consent} (enforcement active)"
           fi
         fi
       fi
@@ -323,7 +323,7 @@ main() {
   # D13 — no Claude import contamination (Cursor only)
   if [[ "$runtime" == "cursor" ]]; then
     if [[ -f "${HOME}/.codex/hooks.json" ]] && grep -q '\.codex/plugins' "${HOME}/.codex/hooks.json" 2>/dev/null; then
-      record fail D13 "$HOME/.codex/hooks.json contains .codex/plugins paths"
+      record fail D13 "${HOME}/.codex/hooks.json contains .codex/plugins paths"
     else
       record pass D13 "no .codex/plugins contamination in Cursor hooks"
     fi

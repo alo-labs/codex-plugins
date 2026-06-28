@@ -121,7 +121,52 @@ ALUMNIUM_MODEL = "openai/MiniMax-M3"
 
 - Auth against MiniMax OpenAI-compatible API returns HTTP 200.
 - Alumnium `start` works with this configuration.
-- `check` / `do` may fail with a LangChain serialization error when MiniMax returns reasoning-format responses — an upstream compatibility issue, not an authentication problem.
+- `check` / `do` with vision require the **MiniMax compatibility proxy** below — MiniMax returns `"parsed": true` (boolean) in API payloads; Alumnium v0.21.0's LangChain layer expects `parsed` to be a record or absent (`LchainSchema.MessageDataAdditionalKwargs`, `alumnium` `src/llm/LchainSchema.ts` ~line 334).
+
+### MiniMax vision fix (SB proxy + shim)
+
+Silver Bullet ships a local OpenAI-compatible proxy that rewrites boolean `parsed` fields before LangChain/Alumnium consume responses, plus an optional preload shim for cached generations.
+
+| Artifact | Purpose |
+|----------|---------|
+| [`scripts/alumnium-minimax-proxy.mjs`](../scripts/alumnium-minimax-proxy.mjs) | HTTP proxy: `http://127.0.0.1:8787/v1` → `https://api.minimax.io/v1` |
+| [`scripts/start-alumnium-minimax-proxy.sh`](../scripts/start-alumnium-minimax-proxy.sh) | Start proxy in background |
+| [`scripts/alumnium-minimax-shim.mjs`](../scripts/alumnium-minimax-shim.mjs) | Preload: sanitize `serializeGeneration` output |
+
+**Setup:**
+
+```bash
+# 1. ~/.config/alumnium/env (keep API key here only)
+export OPENAI_API_KEY='<your-minimax-key>'
+export OPENAI_CUSTOM_URL='http://127.0.0.1:8787/v1'
+export ALUMNIUM_MODEL='openai/MiniMax-M3'
+
+# 2. Start proxy (or let Sidekick .visual-audit script start it)
+bash scripts/start-alumnium-minimax-proxy.sh
+
+# 3. MCP / Node — preload shim before importing alumnium
+node --import ./scripts/alumnium-minimax-shim.mjs your-script.mjs
+```
+
+**Cursor MCP** — point `OPENAI_CUSTOM_URL` at the proxy and run the proxy before starting Cursor:
+
+```json
+"env": {
+  "OPENAI_CUSTOM_URL": "http://127.0.0.1:8787/v1",
+  "OPENAI_API_KEY": "<your-key>",
+  "ALUMNIUM_MODEL": "openai/MiniMax-M3"
+}
+```
+
+**Verify:**
+
+```bash
+bash tests/scripts/test-alumnium-minimax-proxy.sh
+# Sidekick pixel pass with vision checks:
+ALUMNIUM_CHECKS=1 bash .visual-audit/run-alumnium-pixel-pass.sh
+```
+
+Upstream: [alumnium-hq/alumnium](https://github.com/alumnium-hq/alumnium) — consider widening `parsed` Zod to accept boolean and coerce.
 
 ## SB Skill Integration
 

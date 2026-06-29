@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.48.9] — 2026-06-30
+
+## Bug Fixes
+- `fix(e2e): detach TUI batch monitor via sb_run_detached` (0fa84a2a)
+- `fix(e2e): recover from context exhaustion in interactive harness` (d94eb630)
+- `fix(e2e): repair TCL syntax in slash-route prompt gate` (4ea81263)
+- `fix(e2e): wait for ❯ prompt before submitting /silver slash routes` (7784001e)
+- `fix(e2e): ignore comment lines in auth mutation guard` (6528b75a)
+
+## Documentation
+- `docs(release): make Help Center and public changelog mandatory in pre-release gate` (3a9401f0)
+- `docs(site): align help center with v0.48.7–0.48.8` (3f9dcbf8)
+- `Simplify license section in README.md` (3428bb5e)
+
+## Chores
+- `chore(release): consolidate v0.48.7 — fold doctor/E2E fixes, fix Claude bundle parity test` (29ae3b8e)
+
+---
+
 ## [0.48.7] — 2026-06-29
 
 Instruction-following reduction closure, silver-doctor coverage, subagent model gates, and enterprise E2E harness hardening.

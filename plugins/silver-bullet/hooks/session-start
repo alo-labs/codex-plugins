@@ -486,7 +486,23 @@ if [[ -f "$_lib_dir/capability-tier.sh" ]]; then
 
 ---
 
-}Cursor: merge ~/.cursor/hooks.json via skills/silver-init/scripts/merge-cursor-hooks.py — orchestrator directive blocks Edit/Write/Bash until expected skill is recorded via PostToolUse/Skill or Codex invoke-skill receipt."
+}Task host: merge host hooks manifest via scripts/lib/install-cursor/merge-cursor-hooks.py — orchestrator directive blocks Edit/Write/Bash until expected skill is recorded via PostToolUse/Skill or Codex invoke-skill receipt."
+  fi
+fi
+
+# SB update check (§0 step 5.1) — startup/clear only; fail-soft when offline
+if [[ "$sb_should_mutate" == true && "${SILVER_BULLET_UPDATE_CHECK_DISABLED:-}" != "1" ]]; then
+  if [[ -f "$_lib_dir/check-sb-update.sh" ]]; then
+    # shellcheck source=lib/check-sb-update.sh
+    source "$_lib_dir/check-sb-update.sh"
+    _upd_ctx="$(sb_check_sb_update_prompt_block 2>/dev/null || true)"
+    if [[ -n "$_upd_ctx" ]]; then
+      combined="${combined:+$combined
+
+---
+
+}${_upd_ctx}"
+    fi
   fi
 fi
 

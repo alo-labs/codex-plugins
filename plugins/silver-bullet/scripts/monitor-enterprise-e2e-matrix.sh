@@ -23,7 +23,8 @@ sb_prepend_harness_path
 # shellcheck source=scripts/lib/enterprise-e2e-ledger-reconcile.sh
 source "${SB_ROOT}/scripts/lib/enterprise-e2e-ledger-reconcile.sh"
 
-MATRIX_LOG="${SB_E2E_MATRIX_LOG:-${SB_ROOT}/.e2e-matrix-rows5-7-22-resume2.log}"
+MATRIX_LOG="${SB_E2E_MATRIX_LOG:-${SB_ROOT}/.e2e-matrix-round5-batch-resume.log}"
+MONITOR_AUTO_RESTART="${SB_E2E_MONITOR_AUTO_RESTART:-1}"
 BATCH_PID_FILE="${SB_E2E_MATRIX_BATCH_PID_FILE:-${SB_ROOT}/.e2e-matrix-batch.pid}"
 MONITOR_PID_FILE="${SB_E2E_MATRIX_MONITOR_PID_FILE:-${SB_ROOT}/.e2e-matrix-monitor.pid}"
 POLL_LOG="${SB_E2E_MATRIX_MONITOR_POLL_LOG:-${SB_ROOT}/.e2e-matrix-monitor-poll.log}"
@@ -104,6 +105,7 @@ claude_child_lines() {
 
 current_row_from_log() {
   local row
+  enterprise_e2e_ensure_matrix_log "$MATRIX_LOG" 2>/dev/null || true
   row="$(grep -E '^=== Row [0-9]+:' "$MATRIX_LOG" 2>/dev/null | tail -1 | sed -n 's/^=== Row \([0-9]*\):.*/\1/p')"
   if [[ -n "$row" ]]; then
     printf '%s\n' "$row"
@@ -120,6 +122,10 @@ row_attempt_log() {
 }
 
 log_bytes() {
+  if declare -f enterprise_e2e_matrix_log_bytes >/dev/null 2>&1; then
+    enterprise_e2e_matrix_log_bytes "$1"
+    return 0
+  fi
   [[ -f "$1" ]] && wc -c <"$1" | tr -d ' ' || echo 0
 }
 
@@ -263,8 +269,16 @@ kill_claude_children() {
   pkill -KILL -f '/claude --model' 2>/dev/null || true
 }
 
+monitor_auto_restart_enabled() {
+  [[ "${MONITOR_AUTO_RESTART}" != "0" && "${MONITOR_AUTO_RESTART}" != "false" ]]
+}
+
 start_batch() {
   local -a rows=("$@")
+  if ! monitor_auto_restart_enabled; then
+    log_poll "$(utc_now) start_batch: SB_E2E_MONITOR_AUTO_RESTART=0 — operator owns batch (rows: ${rows[*]:-none})"
+    return 1
+  fi
   if [[ "${#rows[@]}" -eq 0 ]]; then
     log_poll "$(utc_now) start_batch: no incomplete rows — skip"
     return 1
@@ -365,7 +379,11 @@ on_stall_detected() {
     local bpid
     bpid="$(cat "$BATCH_PID_FILE" 2>/dev/null || true)"
     if [[ -z "$bpid" ]] || ! kill -0 "$bpid" 2>/dev/null; then
-      start_batch "${inc[@]}"
+      if monitor_auto_restart_enabled; then
+        start_batch "${inc[@]}"
+      else
+        log_poll "$(utc_now) defer hung restart: SB_E2E_MONITOR_AUTO_RESTART=0"
+      fi
     fi
     write_state_kv LAST_GROWTH_EPOCH "$(date +%s)"
   fi
@@ -482,15 +500,29 @@ poll_once() {
         batch_state="WAIT_LIVE_TEST"
       fi
     else
-      log_poll "$(utc_now) ACTION: batch not running — restarting incomplete rows"
-      local inc
-      enterprise_e2e_read_lines_to_array inc incomplete_rows
-      if [[ "${#inc[@]}" -gt 0 ]]; then
-        start_batch "${inc[@]}"
-        batch_pid="$(cat "$BATCH_PID_FILE")"
-        batch_state="RESTARTED"
+      if monitor_auto_restart_enabled; then
+        log_poll "$(utc_now) ACTION: batch not running — restarting incomplete rows"
+        local inc
+        enterprise_e2e_read_lines_to_array inc incomplete_rows
+        if [[ "${#inc[@]}" -gt 0 ]]; then
+          start_batch "${inc[@]}"
+          batch_pid="$(cat "$BATCH_PID_FILE")"
+          batch_state="RESTARTED"
+        else
+          batch_state="$(matrix_reconcile_state 2>/dev/null || echo IN_PROGRESS)"
+        fi
       else
-        batch_state="$(matrix_reconcile_state 2>/dev/null || echo IN_PROGRESS)"
+        local adopted_manual
+        adopted_manual="$(any_matrix_runner_pid)"
+        if [[ -n "$adopted_manual" ]] && kill -0 "$adopted_manual" 2>/dev/null; then
+          batch_pid="$adopted_manual"
+          batch_state="RUNNING"
+          printf '%s\n' "$batch_pid" >"$BATCH_PID_FILE"
+          log_poll "$(utc_now) adopt manual batch pid ${batch_pid} (SB_E2E_MONITOR_AUTO_RESTART=0)"
+        else
+          log_poll "$(utc_now) defer restart: SB_E2E_MONITOR_AUTO_RESTART=0 — no operator batch"
+          batch_state="WAIT_OPERATOR"
+        fi
       fi
     fi
   fi
@@ -505,13 +537,17 @@ poll_once() {
         if live_test_driver_running; then
           log_poll "$(utc_now) defer no-claude restart: live-test driver active"
         else
-        log_poll "$(utc_now) ACTION: no claude child ${idle_sec}s — restarting batch"
-        kill -TERM "$batch_pid" 2>/dev/null || true
-        sleep 5
-        enterprise_e2e_read_lines_to_array inc incomplete_rows
-        start_batch "${inc[@]}"
-        batch_pid="$(cat "$BATCH_PID_FILE")"
-        batch_state="RESTARTED(no-claude)"
+        if monitor_auto_restart_enabled; then
+          log_poll "$(utc_now) ACTION: no claude child ${idle_sec}s — restarting batch"
+          kill -TERM "$batch_pid" 2>/dev/null || true
+          sleep 5
+          enterprise_e2e_read_lines_to_array inc incomplete_rows
+          start_batch "${inc[@]}"
+          batch_pid="$(cat "$BATCH_PID_FILE")"
+          batch_state="RESTARTED(no-claude)"
+        else
+          log_poll "$(utc_now) defer no-claude restart: SB_E2E_MONITOR_AUTO_RESTART=0"
+        fi
         fi
       fi
     fi

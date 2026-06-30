@@ -1,6 +1,52 @@
 # Changelog
 
+## [0.49.1] — 2026-07-01
+
+## Bug Fixes
+- `fix(ci): restore create-release marketplace git-add paths` (fa47e747)
+- `fix(ci): seed graphify config in outcome assessment fixture` (28527b61)
+- `fix(ci): use temp fixture when enterprise app path absent` (de78be98)
+- `fix(ci): allow merge-cursor-hooks refs in host-agnostic scan` (201857a3)
+- `fix(ci): sync site v0.49.0 and silver-migrate Cursor hook docs` (42fb4923)
+- `fix(ci): codex runtime state pinning and sb-doctor test paths` (bad9a7c9)
+- `fix(ci): align bundle tests with host-bundles layout and test bugs` (33e9523d)
+- `fix(ci): resolve ShellCheck warnings blocking CI on main` (54ca5029)
+- `fix(release): unblock v0.49.0 CI and Claude plugin install` (066806cf)
+
+## Tests
+- `test: align recommended-tools contracts with skill reference split` (db5d31d1)
+- `test: point silver-init agentmemory checks at reference doc` (c7276f5a)
+
+---
+
+## [0.49.0] — 2026-07-01
+
+## Features
+- `feat(hooks): run SB update check on SessionStart startup/clear` (fee7ede2)
+- `feat(core): enforce host-agnostic SB core with pre-release validator` (807b6871)
+- `feat(e2e): enforce autonomy outcome criteria in matrix harness` (dfb451d8)
+- `refactor(hooks): completion-audit policy pipeline + hook-bootstrap` (7490bd69)
+- `refactor(install): decompose install-codex.sh into lib modules` (9ed84aac)
+- `refactor: close thermo-nuclear WARN monoliths on main` (bfd77344)
+
+## Bug Fixes
+- `fix(hooks): canonicalize shell write paths for macOS /var symlinks` (b0670b53)
+- `fix(install): cross-host surface audit, host-bundles isolation, doctor D14-D17` (4ccea894)
+- `fix(install): align codex tests and bundles with host-bundles layout` (f99eae52)
+- `fix(release): host-bundles smoke paths + classify dedup + hook-bootstrap` (95c50892)
+- `fix(install): restore validate-host-install-surface.sh for D16 gate` (9bbbcf88)
+- `fix(site): contain mobile horizontal overflow on help docs` (667114ef)
+- `fix(e2e): routing-only row 1 outcome scoring without WBS supervisor` (ee62a820)
+
+## Other
+- Enterprise E2E harness, matrix, and site polish commits since v0.48.9 (50 commits total)
+
+---
+
 ## [0.48.9] — 2026-06-30
+
+### Enterprise E2E (main)
+- Merged `enterprise-e2e/round4-continuation`: outcome assessment harness, matrix tooling, Round 6 docs. Active Round 6 work continues on `enterprise-e2e/round6`.
 
 ## Features
 - `feat(release): official Cursor isolation for pre-release smoke` (73e3244d)

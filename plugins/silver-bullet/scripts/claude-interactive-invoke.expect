@@ -310,11 +310,11 @@ proc context_exhaustion_visible {buffer} {
 proc recover_from_context_exhaustion {} {
   global context_recovery_attempts
   if {$context_recovery_attempts >= 1} {
-    log_harness_keys "\[harness\] context exhaustion persists after /clear — allowing quiet timeout"
+    log_harness_keys "\[harness\] context exhaustion persists after /clear - allowing quiet timeout"
     return 0
   }
   incr context_recovery_attempts
-  log_harness_keys "\[harness\] context exhaustion detected — sending /clear"
+  log_harness_keys "\[harness\] context exhaustion detected - sending /clear"
   send -- "/clear"
   after 400
   send -- "\r"
@@ -559,11 +559,11 @@ expect {
     }
     exp_continue
   }
-  -re {(?s)Detected.*custom.*API.*key|ANTHROPIC_API_KEY:} {
+  -re {Detected.*custom.*API.*key|ANTHROPIC_API_KEY:} {
     set custom_api_key_disclaimer_menu_open 1
     exp_continue
   }
-  -re {(?s)Do you want to use this API key\?|want to use this API key} {
+  -re {Do you want to use this API key\?|want to use this API key} {
     if {[should_accept_custom_api_key_disclaimer $expect_out(buffer)]} {
       accept_custom_api_key_disclaimer
       set custom_api_key_disclaimer_menu_open 0
@@ -576,7 +576,7 @@ expect {
     set bypass_disclaimer_menu_open 1
     exp_continue
   }
-  -re {(?s)Bypass Permissions mode.*2\. Yes, I accept} {
+  -re {Bypass Permissions mode.*2\. Yes, I accept} {
     accept_bypass_permissions_disclaimer
     exp_continue
   }
@@ -600,7 +600,7 @@ expect {
   }
   -re {Not logged in|Please run /login} {
     if {[token_gateway_configured]} {
-      log_harness_keys "\[harness\] ignoring OAuth banner — token gateway env configured"
+      log_harness_keys "\[harness\] ignoring OAuth banner - token gateway env configured"
       exp_continue
     }
     set saw_not_logged_in 1
@@ -610,7 +610,21 @@ expect {
     }
     exp_continue
   }
-  -re {(?s)bypass.*permissions.*on} {
+
+  -re {MCP servers need authentication|Needs authentication.*run /mcp} {
+    log_harness_keys "\[harness\] dismissing MCP auth banner - servers disabled in settings.local.json"
+    dismiss_claude_splash
+    exp_continue
+  }
+  -re {SessionStart:.*hook error|startup hook error|SessionStart:clear hook error} {
+    log_harness_keys "\[harness\] ignoring SessionStart hook error (non-blocking)"
+    exp_continue
+  }
+  -re {Failed with non-blocking status code} {
+    log_harness_keys "\[harness\] ignoring non-blocking hook failure"
+    exp_continue
+  }
+  -re {bypass.*permissions.*on} {
     maybe_submit_prompt $expect_out(buffer)
     exp_continue
   }
@@ -674,18 +688,18 @@ expect {
   }
   -re {Which validation library should} {
     if {$prompt_submitted == 0} { exp_continue }
-    # silver:clarify / silver:feature interactive picker — pick first option.
+    # silver:clarify / silver:feature interactive picker - pick first option.
     send -- "1\r"
     set timeout $quiet_timeout
     exp_continue
   }
-  -re {Enter to select.*Tab/Arrow keys to navigate.*Esc to cancel} {
+  -re {Enter to select.*navigate.*Esc to cancel} {
     if {$prompt_submitted == 0} { exp_continue }
     send -- "1\r"
     set timeout $quiet_timeout
     exp_continue
   }
-  -re {Submit.*→|✔.*Submit} {
+  -re {Submit.*(->|Submit)|Submit} {
     if {$prompt_submitted == 0} { exp_continue }
     send -- "\r"
     set timeout $quiet_timeout
@@ -716,12 +730,12 @@ expect {
     }
     exp_continue
   }
-  -re {(?s)1\. Yes.*2\. No|Yes.*No.*recommended.*Enter.*to.*confirm} {
+  -re {1\. Yes.*2\. No|Yes.*No.*recommended.*Enter.*to.*confirm} {
     set custom_api_key_disclaimer_menu_open 1
     accept_custom_api_key_disclaimer
     exp_continue
   }
-  -re {(?s)No, exit.*Yes, I accept|Yes, I accept.*Enter.*to.*confirm} {
+  -re {No, exit.*Yes, I accept|Yes, I accept.*Enter.*to.*confirm} {
     set bypass_disclaimer_menu_open 1
     accept_bypass_permissions_disclaimer
     exp_continue

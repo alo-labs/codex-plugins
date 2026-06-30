@@ -13,6 +13,8 @@ source "${SB_ROOT}/hooks/lib/rtk-compat.sh"
 # shellcheck source=tests/live/lib/detach-background.sh
 source "${SB_ROOT}/tests/live/lib/detach-background.sh"
 sb_prepend_harness_path
+# shellcheck source=scripts/lib/enterprise-e2e-live-common.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-live-common.sh"
 FIXTURE_DIR="${SB_TEST_ENTERPRISE_APP_ROOT:-/Users/shafqat/projects/enterprise-grade-test-app}"
 LEDGER_FILE="${SB_E2E_LEDGER_FILE:-${SB_ROOT}/.planning/enterprise-e2e/ROUND-1-LEDGER.md}"
 # shellcheck disable=SC2034  # documented matrix doc path for operators
@@ -54,6 +56,9 @@ else
   export CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY="${CLAUDE_INTERACTIVE_CUSTOM_API_KEY_STRATEGY:-arrow}"
 fi
 claude_matrix_export_settings_env
+if declare -f enterprise_e2e_prepare_matrix_mcp_env >/dev/null 2>&1; then
+  enterprise_e2e_prepare_matrix_mcp_env "$FIXTURE_DIR"
+fi
 
 # shellcheck source=scripts/lib/matrix-quota.sh
 source "${SB_ROOT}/scripts/lib/matrix-quota.sh"
@@ -64,6 +69,10 @@ source "${SB_ROOT}/scripts/lib/enterprise-e2e-token-telemetry.sh"
 source "${SB_ROOT}/tests/e2e-live/helpers.sh"
 # shellcheck source=tests/e2e-live/lib/skill-prompt.sh
 source "${SB_ROOT}/tests/e2e-live/lib/skill-prompt.sh"
+# shellcheck source=scripts/lib/enterprise-e2e-matrix-quiesce.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-matrix-quiesce.sh"
+# shellcheck source=hooks/lib/e2e-matrix-routing.sh
+source "${SB_ROOT}/hooks/lib/e2e-matrix-routing.sh"
 
 declare -a MATRIX_ROWS=(
   '1|silver-router|/silver|I need to add order validation to the API — route me.|.planning/workflows/router-session.md'
@@ -177,6 +186,13 @@ verify_row_routing_state_delta() {
   printf '%s\n' "$new_skills" | grep -qE '^(silver-feature|silver-fast|silver-clarify|silver-context|silver-quality-gates)$'
 }
 
+verify_row_routing_state_present() {
+  local state_file
+  state_file="$(claude_routing_state_file)"
+  [[ -f "$state_file" ]] || return 1
+  grep -qE '^(silver-feature|silver-fast|silver-clarify|silver-context|silver-quality-gates)$' "$state_file"
+}
+
 verify_row_routing_output() {
   local output="$1"
   printf '%s\n' "$output" | grep -qE 'SILVER BULLET.*ROUTING|Skill\(silver-bullet:silver-(feature|fast|clarify|context|quality-gates)'
@@ -192,6 +208,9 @@ verify_row_success() {
   fi
   if [[ "$row_num" == "1" ]]; then
     if verify_row_routing_state_delta; then
+      return 0
+    fi
+    if verify_row_routing_state_present; then
       return 0
     fi
     if [[ -n "$output" ]] && verify_row_routing_output "$output"; then
@@ -276,7 +295,11 @@ run_matrix_row() {
 
   if [[ "$row_num" == "1" ]]; then
     snapshot_routing_state
+    enterprise_e2e_matrix_quiesce_orchestrator_queue "$SB_ROOT"
+    sb_e2e_matrix_set_routing_row_marker
   fi
+
+  matrix_quiesce_active_workflows
 
   if command -v graphify >/dev/null 2>&1; then
     (cd "$SB_ROOT" && graphify query "${slug} routes hooks skills orchestrator" >/dev/null 2>&1) || true
@@ -293,7 +316,10 @@ run_matrix_row() {
   fi
   local quota_retry_interval="${SB_E2E_MATRIX_QUOTA_RETRY_INTERVAL:-60}"
   local quota_max_retries="${SB_E2E_MATRIX_QUOTA_MAX_RETRIES:-0}"
-  local attempt=0 quota_retries=0 row_log output
+  local attempt=0 quota_retries=0 row_log output routing_row_env="0"
+  if [[ "$row_num" == "1" ]]; then
+    routing_row_env="1"
+  fi
 
   while true; do
     attempt=$((attempt + 1))
@@ -312,6 +338,8 @@ run_matrix_row() {
       CLAUDE_INTERACTIVE_QUIET_TIMEOUT="$quiet_timeout" \
         CLAUDE_INTERACTIVE_LOG_FILE="$row_log" \
         SB_E2E_MATRIX_EVIDENCE_PATH="$evidence_path" \
+        SB_E2E_ENTERPRISE_MATRIX=1 \
+        SB_E2E_MATRIX_ROUTING_ROW="$routing_row_env" \
         run_prompt "$prompt" 2>&1 || true
     )"
     if [[ -n "$output" ]]; then
@@ -319,6 +347,9 @@ run_matrix_row() {
     fi
 
     if verify_row_success "$row_num" "$evidence_path" "$output" "$row_log"; then
+      if [[ "$row_num" == "1" ]] && ! verify_row_evidence "$evidence_path"; then
+        matrix_write_router_session_evidence "$evidence_path"
+      fi
       if verify_row_evidence "$evidence_path"; then
         echo "  PASS: evidence at ${evidence_path}"
       elif [[ "$row_num" == "1" ]] && verify_row_routing_state_delta; then
@@ -326,8 +357,44 @@ run_matrix_row() {
       elif [[ "$row_num" == "1" ]] && verify_row_routing_output "$output"; then
         echo "  PASS: routing markers in session output (row 1 routing-only criterion)"
       fi
+      if [[ "$row_num" == "1" ]]; then
+        sb_e2e_matrix_clear_routing_row_marker
+        enterprise_e2e_matrix_quiesce_orchestrator_queue "$SB_ROOT"
+      fi
       if [[ "$quota_retries" -gt 0 ]]; then
         echo "  PASS: succeeded after ${quota_retries} quota retry(ies)"
+      fi
+      if [[ -f "${SB_ROOT}/scripts/lib/enterprise-e2e-outcome-assessment.sh" ]]; then
+        # shellcheck source=scripts/lib/enterprise-e2e-outcome-assessment.sh
+        source "${SB_ROOT}/scripts/lib/enterprise-e2e-outcome-assessment.sh"
+        local outcome_dir="${WORK_DIR}/.planning/enterprise-e2e/outcomes"
+        mkdir -p "$outcome_dir"
+        enterprise_e2e_outcome_write_workflow_checklist "$row_num" \
+          "${outcome_dir}/row-${row_num}-outcomes.md" \
+          "$WORK_DIR" "${SB_RUNTIME_STATE_DIR:-${HOME}/.codex/.silver-bullet}" \
+          "$row_log" "${SB_E2E_LEDGER_FILE:-}" "$evidence_path" 2>/dev/null || true
+        echo "  OUTCOMES: checklist at .planning/enterprise-e2e/outcomes/row-${row_num}-outcomes.md"
+        if ! enterprise_e2e_outcome_row_passes "$row_num" "$WORK_DIR" \
+          "${SB_RUNTIME_STATE_DIR:-${HOME}/.codex/.silver-bullet}" \
+          "$row_log" "${SB_E2E_LEDGER_FILE:-}" "$evidence_path"; then
+          echo "  FAIL: outcome assessment — mandatory criteria not all pass (evidence alone insufficient)"
+          local fail_line
+          while IFS= read -r fail_line; do
+            [[ -z "$fail_line" ]] && continue
+            echo "    OUTCOME-FAIL: $fail_line"
+          done < <(enterprise_e2e_outcome_row_failures "$row_num" "$WORK_DIR" \
+            "${SB_RUNTIME_STATE_DIR:-${HOME}/.codex/.silver-bullet}" \
+            "$row_log" "${SB_E2E_LEDGER_FILE:-}" "$evidence_path")
+          FAIL_ROWS=$((FAIL_ROWS + 1))
+          row_telemetry_result="fail"
+          SB_E2E_TELEMETRY_ROW="$row_num" \
+            SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+            SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+            SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+            enterprise_e2e_telemetry_append "matrix_row" || true
+          break
+        fi
+        echo "  OUTCOMES: all applicable criteria pass (OUT-WORLD-01 composite)"
       fi
       PASS_ROWS=$((PASS_ROWS + 1))
       row_telemetry_result="pass"
@@ -359,6 +426,8 @@ run_matrix_row() {
     echo "  FAIL: missing evidence at ${evidence_path}"
     if [[ "$row_num" == "1" ]]; then
       echo "  FAIL: no routing markers in session output or $(claude_routing_state_file)"
+      sb_e2e_matrix_clear_routing_row_marker
+      enterprise_e2e_matrix_quiesce_orchestrator_queue "$SB_ROOT"
     fi
     FAIL_ROWS=$((FAIL_ROWS + 1))
     SB_E2E_TELEMETRY_ROW="$row_num" \
@@ -391,9 +460,19 @@ main() {
   echo ""
 
   if [[ "${SB_E2E_MATRIX_DRY_RUN:-}" != "1" ]]; then
+  local _matrix_batch_pid_file=""
+  if declare -f enterprise_e2e_matrix_batch_pid_file >/dev/null 2>&1; then
+    _matrix_batch_pid_file="$(enterprise_e2e_matrix_batch_pid_file)"
+    printf '%s\n' "$$" >"$_matrix_batch_pid_file"
+  fi
   bootstrap_claude_dependencies || true
   setup_workspace
-  trap cleanup_workspace EXIT
+  if [[ -n "$_matrix_batch_pid_file" ]]; then
+    trap 'rm -f "$_matrix_batch_pid_file"; cleanup_workspace' EXIT
+  else
+    trap cleanup_workspace EXIT
+  fi
+  enterprise_e2e_matrix_quiesce_orchestrator_queue "$SB_ROOT"
   fi
   WORK_DIR="${WORK_DIR:-$FIXTURE_DIR}"
 

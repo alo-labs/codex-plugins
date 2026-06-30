@@ -26,6 +26,102 @@ enterprise_e2e_matrix_log() {
   printf '%s\n' "${SB_E2E_MATRIX_LOG:-${SB_ROOT}/.e2e-matrix-live.log}"
 }
 
+enterprise_e2e_matrix_batch_pid_file() {
+  printf '%s\n' "${SB_E2E_MATRIX_BATCH_PID_FILE:-${SB_ROOT}/.e2e-matrix-batch.pid}"
+}
+
+enterprise_e2e_matrix_batch_pid() {
+  local pid_file pid
+  pid_file="$(enterprise_e2e_matrix_batch_pid_file)"
+  [[ -f "$pid_file" ]] || return 1
+  pid="$(tr -d '[:space:]' <"$pid_file" 2>/dev/null || true)"
+  [[ -n "$pid" ]] || return 1
+  printf '%s\n' "$pid"
+}
+
+enterprise_e2e_matrix_batch_running() {
+  local pid
+  pid="$(enterprise_e2e_matrix_batch_pid 2>/dev/null || true)"
+  [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+# Keep matrix log path on disk while a batch holds an open tee fd.
+# Operators must not rm/truncate the log mid-run; recreate the pathname if unlinked.
+enterprise_e2e_ensure_matrix_log() {
+  local log_path="${1:-$(enterprise_e2e_matrix_log)}"
+  local log_dir driver_log bytes
+
+  log_dir="$(dirname "$log_path")"
+  mkdir -p "$log_dir"
+
+  if [[ -e "$log_path" ]]; then
+    return 0
+  fi
+
+  driver_log="${SB_E2E_MATRIX_DRIVER_LOG:-}"
+  if enterprise_e2e_matrix_batch_running; then
+    if [[ -n "$driver_log" && -f "$driver_log" ]]; then
+      echo "WARN: matrix log unlinked during active batch — symlink ${log_path} -> ${driver_log}" >&2
+      ln -sf "$(basename "$driver_log")" "$log_path"
+      return 0
+    fi
+    echo "WARN: matrix log missing during active batch — recreating ${log_path} (tee fd may still hold bytes)" >&2
+    touch "$log_path"
+    return 0
+  fi
+
+  touch "$log_path"
+}
+
+# Refuse truncate/delete while batch driver is alive (harness guard).
+enterprise_e2e_assert_matrix_log_mutable() {
+  local log_path="${1:-$(enterprise_e2e_matrix_log)}"
+  if enterprise_e2e_matrix_batch_running; then
+    echo "ERROR: refusing to truncate/delete matrix log ${log_path} while batch is running" >&2
+    echo "       Stop the driver or wait for batch exit; tail row attempt logs meanwhile." >&2
+    return 1
+  fi
+  return 0
+}
+
+enterprise_e2e_matrix_log_bytes() {
+  local log_path="${1:-$(enterprise_e2e_matrix_log)}"
+  local bytes fallback row_log row
+
+  enterprise_e2e_ensure_matrix_log "$log_path"
+  bytes="0"
+  if [[ -f "$log_path" && ! -L "$log_path" ]]; then
+    bytes="$(wc -c <"$log_path" 2>/dev/null | tr -d ' ' || echo 0)"
+  elif [[ -L "$log_path" ]]; then
+    fallback="$(readlink "$log_path" 2>/dev/null || true)"
+    if [[ -n "$fallback" && -f "$(dirname "$log_path")/${fallback}" ]]; then
+      bytes="$(wc -c <"$(dirname "$log_path")/${fallback}" 2>/dev/null | tr -d ' ' || echo 0)"
+    fi
+  fi
+
+  if [[ "${bytes:-0}" -gt 0 ]]; then
+    printf '%s\n' "$bytes"
+    return 0
+  fi
+
+  fallback="${SB_E2E_MATRIX_LOG_FALLBACK:-${SB_E2E_MATRIX_DRIVER_LOG:-}}"
+  if [[ -n "$fallback" && -f "$fallback" ]]; then
+    bytes="$(wc -c <"$fallback" 2>/dev/null | tr -d ' ' || echo 0)"
+    if [[ "${bytes:-0}" -gt 0 ]]; then
+      printf '%s\n' "$bytes"
+      return 0
+    fi
+  fi
+
+  # Last resort: sum row attempt logs when canonical log is unlinked (0-byte stat).
+  for row in $(enterprise_e2e_all_row_nums); do
+    row_log="${SB_ROOT}/.e2e-row${row}-attempt.log"
+    [[ -f "$row_log" ]] || continue
+    bytes=$((bytes + $(wc -c <"$row_log" 2>/dev/null | tr -d ' ' || echo 0)))
+  done
+  printf '%s\n' "${bytes:-0}"
+}
+
 enterprise_e2e_ledger_file() {
   printf '%s\n' "${SB_E2E_LEDGER_FILE:-${SB_ROOT}/.planning/enterprise-e2e/ROUND-1-LEDGER.md}"
 }
@@ -171,6 +267,47 @@ enterprise_e2e_run_install_claude() {
   return 1
 }
 
+# At Round N start, seek TUI monitor offsets to EOF so historical row attempt logs
+# are not re-ingested into findings or ENTERPRISE-E2E-SB-ISSUES.md.
+enterprise_e2e_quiesce_orchestrator_queue() {
+  local sb_root="${1:-${SB_ROOT:-}}"
+  [[ -n "$sb_root" && -d "$sb_root" ]] || return 1
+  # shellcheck source=scripts/lib/enterprise-e2e-matrix-quiesce.sh
+  source "${sb_root}/scripts/lib/enterprise-e2e-matrix-quiesce.sh"
+  enterprise_e2e_matrix_quiesce_orchestrator_queue "$sb_root"
+}
+
+enterprise_e2e_reset_tui_monitor_offsets() {
+  local sb_root="${1:-${SB_ROOT:-}}"
+  local offsets_file findings_file agent_offset line_count
+  [[ -n "$sb_root" && -d "$sb_root" ]] || return 1
+
+  offsets_file="${SB_E2E_TUI_OFFSETS:-${sb_root}/.e2e-tui-watch-offsets.json}"
+  findings_file="${SB_E2E_TUI_FINDINGS:-${sb_root}/.e2e-tui-watch-findings.jsonl}"
+  agent_offset="${sb_root}/.planning/enterprise-e2e/.tui-monitor-agent-offset.json"
+
+  python3 - "$sb_root" "$offsets_file" <<'PY'
+import glob, json, os, sys
+root, offsets_path = sys.argv[1:3]
+offsets = {}
+for path in sorted(glob.glob(os.path.join(root, ".e2e-row*-attempt.log"))):
+    key = os.path.basename(path)
+    offsets[key] = os.path.getsize(path) if os.path.isfile(path) else 0
+with open(offsets_path, "w", encoding="utf-8") as f:
+    json.dump(offsets, f, indent=2)
+print(f"tui-watch offsets reset ({len(offsets)} row logs) -> {offsets_path}")
+PY
+
+  line_count=0
+  if [[ -f "$findings_file" ]]; then
+    line_count="$(wc -l <"$findings_file" | tr -d ' ')"
+  fi
+  mkdir -p "$(dirname "$agent_offset")"
+  printf '{"findings_line": %s, "ts": "%s", "reset_reason": "round_start"}\n' \
+    "$line_count" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >"$agent_offset"
+  echo "tui-monitor-agent-offset reset findings_line=${line_count} -> ${agent_offset}"
+}
+
 enterprise_e2e_prepend_harness_path() {
   local sb_root="${SB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
   if [[ -f "${sb_root}/tests/live/lib/detach-background.sh" ]]; then
@@ -178,6 +315,75 @@ enterprise_e2e_prepend_harness_path() {
     source "${sb_root}/tests/live/lib/detach-background.sh"
     sb_prepend_harness_path
   fi
+}
+
+# Suppress Claude TUI MCP OAuth banner during enterprise matrix (token gateway auth).
+# Disables unauthenticated plugin MCP servers so the TUI reaches the ❯ prompt and accrues tokens.
+enterprise_e2e_prepare_matrix_mcp_env() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local mcp_cache="${HOME}/.codex/mcp-needs-auth-cache.json"
+  local claude_bin="${CLAUDE_BIN:-${HOME}/.local/bin/claude}"
+  mkdir -p "${fixture_dir}/.claude" "$(dirname "$mcp_cache")"
+  python3 - "$mcp_cache" "${fixture_dir}/.codex/settings.local.json" "$claude_bin" <<'PY'
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+mcp_cache_path = Path(sys.argv[1])
+settings_path = Path(sys.argv[2])
+claude_bin = sys.argv[3]
+home = Path(os.environ.get("HOME", ""))
+names: set[str] = set()
+
+def add_name(name: str) -> None:
+    name = (name or "").strip()
+    if name:
+        names.add(name)
+
+if Path(claude_bin).is_file():
+    try:
+        proc = subprocess.run(
+            [claude_bin, "mcp", "list"],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            env=os.environ.copy(),
+        )
+        text = (proc.stdout or "") + (proc.stderr or "")
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("Checking "):
+                continue
+            if "Connected" in line:
+                continue
+            if "Needs authentication" not in line and "Failed to connect" not in line:
+                continue
+            m = re.match(r"^(plugin:.+?):\s", line)
+            if not m:
+                m = re.match(r"^([^:]+):\s", line)
+            if m:
+                add_name(m.group(1))
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+# Clear needs-auth cache so the TUI does not stall on the OAuth banner; disabled
+# servers are enforced via fixture settings.local.json instead.
+mcp_cache_path.parent.mkdir(parents=True, exist_ok=True)
+mcp_cache_path.write_text("{}\n")
+
+settings_path.parent.mkdir(parents=True, exist_ok=True)
+payload = {
+    "permissions": {"defaultMode": "auto"},
+    "enableAllProjectMcpServers": False,
+    "disabledMcpjsonServers": sorted(names),
+}
+settings_path.write_text(json.dumps(payload, indent=2) + "\n")
+print(f"matrix MCP env: disabled {len(names)} server(s) for TUI")
+PY
 }
 
 enterprise_e2e_export_live_defaults() {
@@ -373,10 +579,19 @@ enterprise_e2e_preflight_agentmemory() {
   fi
 
   if ! sb_agentmemory_server_healthy "$config_file"; then
+    if command -v lsof >/dev/null 2>&1 && lsof -tiTCP:3111 -sTCP:LISTEN >/dev/null 2>&1; then
+      echo "    agentmemory port 3111 in use but health failed — recycling stale listener"
+      lsof -tiTCP:3111 -sTCP:LISTEN | xargs kill -9 2>/dev/null || true
+      sleep 1
+    fi
     echo "    agentmemory server not healthy — starting background server"
     mkdir -p "${HOME}/.agentmemory"
     nohup agentmemory >"${HOME}/.agentmemory/server.log" 2>&1 &
-    sleep 2
+    local _am_wait=0
+    while [[ "$_am_wait" -lt 20 ]] && ! sb_agentmemory_server_healthy "$config_file"; do
+      sleep 1
+      _am_wait=$((_am_wait + 1))
+    done
     if ! sb_agentmemory_server_healthy "$config_file"; then
       enterprise_e2e_preflight_fail "agentmemory server not healthy — see docs/AGENTMEMORY.md and ~/.agentmemory/server.log"
     fi

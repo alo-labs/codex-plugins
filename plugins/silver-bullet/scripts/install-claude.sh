@@ -3,9 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-export SB_RTK_COMPAT_MODE=verbatim
-# shellcheck source=hooks/lib/rtk-compat.sh
-source "${REPO_ROOT}/hooks/lib/rtk-compat.sh"
+# shellcheck source=scripts/lib/install-common.sh
+source "${REPO_ROOT}/scripts/lib/install-common.sh"
 PURGE_LEGACY_PLUGINS=0
 PUBLIC_RELEASE_ONLY=0
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo "/Users/shafqat/.local/bin/claude")}"
@@ -22,7 +21,6 @@ LEGACY_PLUGINS=(
 TARGET_PLUGINS=(
   "silver-bullet@alo-labs"
 )
-AGENT_RENDERER="${REPO_ROOT}/scripts/render-agent-bundle.py"
 
 usage() {
   cat <<'USAGE'
@@ -119,16 +117,6 @@ ensure_marketplace_ready() {
   fi
 }
 
-render_agent_bundle() {
-  local agent="$1"
-
-  mkdir -p "${REPO_ROOT}/agents"
-  python3 "$AGENT_RENDERER" render \
-    --agent "$agent" \
-    --source-root "${REPO_ROOT}/skills" \
-    --dest-root "${REPO_ROOT}/agents/${agent}"
-}
-
 uninstall_plugin_scope() {
   local plugin_id="$1"
   local scope="$2"
@@ -153,8 +141,19 @@ purge_plugin_cache() {
   local marketplace="${plugin_id#*@}"
   local name="${plugin_id%@*}"
   local cache_dir="${HOME}/.codex/plugins/cache/${marketplace}/${name}"
+  local attempt=0
 
-  rm -rf "$cache_dir"
+  # Drop stable alias before purge — concurrent install / claude CLI can race with plain rm.
+  rm -f "${cache_dir}/current" 2>/dev/null || true
+
+  while (( attempt < 5 )); do
+    if rm -rf "$cache_dir" 2>/dev/null; then
+      return 0
+    fi
+    sleep 0.3
+    attempt=$((attempt + 1))
+  done
+  rm -rf "$cache_dir" || true
 }
 
 sync_silver_bullet_settings_paths() {
@@ -277,25 +276,40 @@ sync_silver_bullet_hook_cache() {
     "${REPO_ROOT}/hooks/" "${current_version_dir}/hooks/"
 }
 
+prune_claude_cross_host_agent_surfaces() {
+  local plugin_root="$1"
+  [[ -n "$plugin_root" && -d "$plugin_root" ]] || return 0
+  rm -rf \
+    "${plugin_root}/agents/codex" \
+    "${plugin_root}/agents/cursor" \
+    "${plugin_root}/host-bundles"
+  if [[ -d "${plugin_root}/agents" ]]; then
+    find "${plugin_root}/agents" -mindepth 1 -maxdepth 1 -type d ! -name 'claude' -exec rm -rf {} +
+  fi
+}
+
 sync_silver_bullet_skill_cache() {
   local cache_root="${HOME}/.codex/plugins/cache/alo-labs/silver-bullet"
   local current_version_dir=""
-  local source_root="${REPO_ROOT}/agents/claude"
+  local source_root
+  source_root="$(sb_agent_bundle_root "$REPO_ROOT" claude)"
 
   [[ -d "$cache_root" ]] || return 0
   current_version_dir="$(find "$cache_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -n 1)"
   [[ -n "$current_version_dir" ]] || return 0
 
   rm -rf "${current_version_dir}/commands"
+  prune_claude_cross_host_agent_surfaces "$current_version_dir"
 
   if [[ "$PUBLIC_RELEASE_ONLY" -eq 0 && -d "$source_root" ]]; then
     rm -rf "${current_version_dir}/skills"
-    rm -rf "${current_version_dir}/agents"
-    mkdir -p "${current_version_dir}/agents"
+    mkdir -p "${current_version_dir}/agents/claude"
     rsync -a --delete "${source_root}/" "${current_version_dir}/agents/claude/"
   elif [[ -d "${current_version_dir}/skills" && ! -L "${current_version_dir}/skills" ]]; then
     rm -rf "${current_version_dir}/skills"
   fi
+
+  prune_claude_cross_host_agent_surfaces "$current_version_dir"
 
   if [[ -d "${current_version_dir}/agents/claude" ]]; then
     ln -sfn "agents/claude" "${current_version_dir}/skills"
@@ -343,7 +357,7 @@ ensure_github_https_rewrite
 ensure_marketplace_ready "$SB_MARKETPLACE_NAME" "$CLAUDE_SB_MARKETPLACE_SOURCE" "$CLAUDE_SB_MARKETPLACE_PLUGIN"
 if [[ "$PUBLIC_RELEASE_ONLY" -eq 0 ]]; then
   render_agent_bundle "claude"
-  render_agent_bundle "codex"
+  prune_claude_cross_host_agent_surfaces "$REPO_ROOT"
 fi
 
 if [[ "$PURGE_LEGACY_PLUGINS" -eq 1 ]]; then

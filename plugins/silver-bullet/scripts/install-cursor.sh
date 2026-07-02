@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-# shellcheck source=scripts/lib/install-common.sh
-source "${REPO_ROOT}/scripts/lib/install-common.sh"
+# shellcheck source=scripts/lib/agent-bundle-paths.sh
+source "${REPO_ROOT}/scripts/lib/agent-bundle-paths.sh"
 VERSION="$(jq -r '.version // "0.0.0"' "${REPO_ROOT}/package.json" 2>/dev/null || echo 0.0.0)"
 PUBLIC_RELEASE_ONLY=0
 CURSOR_HOME="${CURSOR_HOME:-${HOME}/.codex}"
@@ -17,6 +17,7 @@ CURSOR_GITHUB_REPO_URL="${CURSOR_GITHUB_REPO_URL:-https://github.com/alo-exp/sil
 DEST_ROOT="${CURSOR_HOME}/plugins/cache/alo-labs/silver-bullet/${VERSION}"
 INSTALL_COMMIT_SHA=""
 MERGE_HOOKS="${REPO_ROOT}/scripts/lib/install-cursor/merge-cursor-hooks.py"
+AGENT_RENDERER="${REPO_ROOT}/scripts/render-agent-bundle.py"
 
 usage() {
   cat <<'USAGE'
@@ -114,11 +115,24 @@ cursor_github_marketplace_gitpath_root() {
 
 resolve_install_commit_sha() {
   local source_root="$1"
-  if [[ -d "${source_root}/.git" ]]; then
+  if git -C "$source_root" rev-parse HEAD >/dev/null 2>&1; then
     git -C "$source_root" rev-parse HEAD
     return 0
   fi
   git -C "$REPO_ROOT" rev-parse HEAD
+}
+
+cursor_git_common_dir() {
+  local source_root="$1"
+  local git_dir=""
+
+  git_dir="$(git -C "$source_root" rev-parse --git-common-dir 2>/dev/null || true)"
+  [[ -n "$git_dir" ]] || git_dir="$(git -C "$source_root" rev-parse --git-dir 2>/dev/null || true)"
+  [[ -n "$git_dir" ]] || return 1
+  if [[ "$git_dir" != /* ]]; then
+    git_dir="$(cd "$source_root" && cd "$git_dir" && pwd)"
+  fi
+  printf '%s' "$git_dir"
 }
 
 ensure_cursor_github_marketplace_gitpath() {
@@ -141,8 +155,17 @@ ensure_cursor_github_marketplace_gitpath() {
   fi
   mkdir -p "$(dirname "$base_root")"
 
-  if [[ -d "${source_root}/.git" ]] && [[ "$(git -C "$source_root" rev-parse HEAD)" == "$commit_sha" ]]; then
-    git clone --local "$source_root" "$dest_root" >/dev/null
+  if git -C "$source_root" rev-parse HEAD >/dev/null 2>&1 \
+    && [[ "$(git -C "$source_root" rev-parse HEAD)" == "$commit_sha" ]]; then
+    local git_common_dir=""
+    git_common_dir="$(cursor_git_common_dir "$source_root" 2>/dev/null || true)"
+    if [[ -n "$git_common_dir" ]]; then
+      git clone --local "$git_common_dir" "$dest_root" >/dev/null 2>&1 || \
+        git clone --local "$source_root" "$dest_root" >/dev/null
+    else
+      git clone --local "$source_root" "$dest_root" >/dev/null
+    fi
+    git -C "$dest_root" checkout -f "$commit_sha" >/dev/null 2>&1 || true
     return 0
   fi
 
@@ -282,10 +305,20 @@ fi
 
 python3 "$MERGE_HOOKS" "$DEST_ROOT"
 ln -sfn "$DEST_ROOT" "${CURSOR_HOME}/plugins/cache/alo-labs/silver-bullet/current"
-if [[ -z "$INSTALL_COMMIT_SHA" && -d "$REPO_ROOT/.git" ]]; then
+if [[ -z "${INSTALL_COMMIT_SHA:-}" ]] && git -C "$REPO_ROOT" rev-parse HEAD >/dev/null 2>&1; then
   INSTALL_COMMIT_SHA="$(resolve_install_commit_sha "$REPO_ROOT")"
 fi
 ensure_cursor_installed_plugins_registry "$DEST_ROOT" "$VERSION" "$INSTALL_COMMIT_SHA"
+
+# Record install version key for enterprise E2E single-pass-at-version skip (matrix / T1).
+if [[ -f "${REPO_ROOT}/scripts/enterprise-e2e/lib/core.sh" ]]; then
+  # shellcheck source=scripts/enterprise-e2e/lib/core.sh
+  source "${REPO_ROOT}/scripts/enterprise-e2e/lib/core.sh"
+  SB_ROOT="$REPO_ROOT"
+  export SB_ROOT
+  _install_ver="$(enterprise_e2e_write_sb_install_version "$REPO_ROOT" "$VERSION" "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "${INSTALL_COMMIT_SHA:0:8}")")"
+  printf 'SB install version key: %s (see .e2e-cursor-install-version.txt)\n' "$_install_ver"
+fi
 
 printf '\nCursor hook merge complete. SB hooks are in %s/hooks.json.\n' "$CURSOR_HOME"
 printf 'If skills do not appear, reload the window or run: bash scripts/install-cursor.sh --merge-hooks-only\n'

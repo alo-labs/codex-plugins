@@ -2,7 +2,7 @@
 
 Optional live validation of Silver Bullet against the `enterprise-grade-test-app` fixture via **interactive Claude TUI**. Not run in default CI or `bash tests/run-all-tests.sh` unless explicitly opted in.
 
-**See also:** `docs/testing/ENTERPRISE-E2E-EFFECTIVENESS-PLAN.md` (effectiveness scoring and iteration criteria).
+**See also:** `docs/testing/ENTERPRISE-E2E-HOST-CERTIFICATION-METHODOLOGY.md` (staged Tier A/B/C gates — **share with Codex, Cursor, Claude agents**); `docs/testing/ENTERPRISE-E2E-EFFECTIVENESS-PLAN.md` (effectiveness scoring and iteration criteria).
 
 ---
 
@@ -224,6 +224,7 @@ Minimum **2 consecutive clean rounds**:
 3. **`bash tests/run-all-tests.sh`** → 0 failures
 4. **`graphify update .`** in SB repo post-fixes
 5. No open MUST-FIX issues
+Harness (optional): `SB_E2E_REQUIRE_CONSECUTIVE_ROUNDS=1 bash scripts/lib/enterprise-e2e-consecutive-rounds-check.sh --host <claude|codex|cursor>` enforces **2/2** strict-clean PASS from the host gate file pair.
 
 ---
 

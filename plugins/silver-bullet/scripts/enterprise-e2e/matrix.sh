@@ -198,13 +198,69 @@ build_matrix_prompt() {
   local slug="${5:-}"
   route="$(enterprise_e2e_matrix_host_route "$route")"
   if [[ "$row_num" == "1" ]]; then
-    # Row 1 validates interactive routing only — same scope as the direct /silver probe.
-    printf '%s %s Enterprise E2E routing validation only. Route this request through the Silver Bullet orchestrator and invoke the composed workflow skill. Stop when routing completes.' \
-      "$route" "$prompt_card"
+    local workflow_route="/silver"
+    if [[ "$(enterprise_e2e_matrix_host)" == "codex" ]]; then
+      workflow_route="$(enterprise_e2e_matrix_host_route "/silver")"
+    fi
+    local prompt
+    prompt="$(matrix_router_workflow_prompt "silver-router" "$prompt_card" "$evidence_path" "$workflow_route")"
+    prompt="${prompt} $(matrix_row1_evidence_clause)"
+    printf '%s' "$prompt"
     return 0
   fi
-  # Native /silver:* subcommands are not registered in Claude TUI — route via /silver + workflow card.
-  matrix_router_workflow_prompt "$slug" "$prompt_card" "$evidence_path"
+  # Claude TUI: /silver:* subcommands are not registered — always use /silver + slug in prose.
+  # Codex TUI: use $silver (slash→dollar); subcommand tokens are not registered.
+  local workflow_route="/silver"
+  if [[ "$(enterprise_e2e_matrix_host)" == "codex" ]]; then
+    workflow_route="$(enterprise_e2e_matrix_host_route "/silver")"
+  fi
+  local prompt
+  prompt="$(matrix_router_workflow_prompt "$slug" "$prompt_card" "$evidence_path" "$workflow_route")"
+  if [[ "$row_num" == "3" ]]; then
+    prompt="${prompt} $(matrix_row3_outcome_clause)"
+    if enterprise_e2e_row_outcome_only_rerun "$row_num"; then
+      prompt="${prompt} $(matrix_row3_outcome_only_clause)"
+    elif [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+         enterprise_e2e_row_requires_product_commit "$row_num"; then
+      prompt="${prompt} $(matrix_row3_product_commit_clause)"
+    fi
+  elif [[ "$row_num" == "6" ]]; then
+    if [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+         enterprise_e2e_row_requires_product_commit "$row_num"; then
+      prompt="${prompt} $(matrix_row6_product_commit_clause)"
+    fi
+  elif [[ "$row_num" == "11" ]]; then
+    prompt="${prompt} $(matrix_row11_outcome_clause)"
+    if [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+         enterprise_e2e_row_requires_product_commit "$row_num"; then
+      prompt="${prompt} $(matrix_row11_product_commit_clause)"
+    fi
+  elif [[ "$row_num" == "14" ]]; then
+    prompt="${prompt} $(matrix_row14_outcome_clause)"
+    if enterprise_e2e_row_outcome_only_rerun "$row_num"; then
+      prompt="${prompt} $(matrix_row14_outcome_only_clause)"
+    elif [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+         [[ "$(enterprise_e2e_matrix_host)" == "codex" ]] && \
+         enterprise_e2e_row_requires_product_commit "$row_num"; then
+      prompt="${prompt} $(matrix_product_commit_clause)"
+    fi
+  elif [[ "$row_num" == "15" ]]; then
+    prompt="${prompt} $(matrix_row15_outcome_clause)"
+  elif [[ "$row_num" == "16" ]]; then
+    prompt="${prompt} $(matrix_row16_outcome_clause)"
+    if enterprise_e2e_row_outcome_only_rerun "$row_num"; then
+      prompt="${prompt} $(matrix_row16_outcome_only_clause)"
+    elif [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+         [[ "$(enterprise_e2e_matrix_host)" == "codex" ]] && \
+         enterprise_e2e_row_requires_product_commit "$row_num"; then
+      prompt="${prompt} $(matrix_product_commit_clause)"
+    fi
+  elif [[ "${SB_E2E_PRODUCT_WORK_GATE:-}" == "1" ]] && \
+       [[ "$(enterprise_e2e_matrix_host)" == "codex" ]] && \
+       enterprise_e2e_row_requires_product_commit "$row_num"; then
+    prompt="${prompt} $(matrix_product_commit_clause)"
+  fi
+  printf '%s' "$prompt"
 }
 
 claude_routing_state_file() {
@@ -368,6 +424,10 @@ enterprise_e2e_matrix_ensure_internal_gate_markers() {
   done
 }
 
+matrix_force_rerun() {
+  [[ "${SB_E2E_MATRIX_FORCE:-}" == "1" || "${SB_E2E_MATRIX_FORCE_ALL:-}" == "1" ]]
+}
+
 run_matrix_row() {
   local row_num="$1"
   local slug="$2"
@@ -413,8 +473,8 @@ run_matrix_row() {
     return 0
   fi
 
-  if [[ "${SB_E2E_MATRIX_FORCE:-}" != "1" ]] && verify_row_success "$row_num" "$evidence_path"; then
-    echo "  SKIP: evidence already present (set SB_E2E_MATRIX_FORCE=1 to re-run)"
+  if ! matrix_force_rerun && verify_row_success "$row_num" "$evidence_path"; then
+    echo "  SKIP: evidence already present (set SB_E2E_MATRIX_FORCE=1 or SB_E2E_MATRIX_FORCE_ALL=1 to re-run)"
     SKIP_ROWS=$((SKIP_ROWS + 1))
     SB_E2E_TELEMETRY_ROW="$row_num" \
       SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
@@ -446,6 +506,8 @@ run_matrix_row() {
   local quiet_timeout="${CLAUDE_INTERACTIVE_QUIET_TIMEOUT:-300}"
   if [[ "$row_num" == "1" ]]; then
     quiet_timeout="${SB_E2E_ROW1_QUIET_TIMEOUT:-300}"
+  elif [[ "$row_num" == "3" ]] && [[ "$(enterprise_e2e_matrix_host)" == "codex" ]]; then
+    quiet_timeout="${SB_E2E_ROW3_QUIET_TIMEOUT:-1800}"
   elif [[ "$row_num" =~ ^[0-9]+$ && "$row_num" -ge 2 && "$row_num" -le 20 ]]; then
     # Full workflow rows need a wider quiet window than routing-only row 1.
     # Claude may return to the ❯ prompt between turns while still writing evidence.
@@ -459,10 +521,39 @@ run_matrix_row() {
     11) agent_timeout="${SB_E2E_ROW11_TIMEOUT:-5400}" ;;
   esac
   local attempt=0 quota_retries=0 row_log output routing_row_env="0"
+  local fixture_head_before=""
+  local fixture_baseline_rev_before=0
+  if enterprise_e2e_row_requires_product_commit "$row_num"; then
+    fixture_head_before="$(enterprise_e2e_fixture_head_snapshot "$FIXTURE_DIR")"
+  fi
+  if enterprise_e2e_row_uses_matrix_baseline_rev_gate "$row_num"; then
+    fixture_baseline_rev_before="$(enterprise_e2e_fixture_baseline_rev_count "$FIXTURE_DIR")"
+    echo "  §5b row ${row_num} start: baseline ${SB_E2E_TEST_APP_BASELINE_SHA:-unset} rev-count=${fixture_baseline_rev_before} HEAD=${fixture_head_before:0:12}"
+  fi
   if [[ "$row_num" == "1" ]]; then
     routing_row_env="1"
   fi
   export SB_E2E_MATRIX_GRAPHIFY_REF="$graphify_ref"
+
+  if ! enterprise_e2e_fixture_ensure_branch; then
+    echo "  FAIL: cannot pin fixture branch before row ${row_num}" >&2
+    FAIL_ROWS=$((FAIL_ROWS + 1))
+    SB_E2E_TELEMETRY_ROW="$row_num" \
+      SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+      SB_E2E_TELEMETRY_ROW_RESULT="fail" \
+      SB_E2E_TELEMETRY_ROW_LOG="" \
+      enterprise_e2e_telemetry_append "matrix_row" || true
+    return 0
+  fi
+  if ! enterprise_e2e_fixture_assert_branch_lock "$FIXTURE_DIR" "pre-invoke fixture branch (row ${row_num})"; then
+    FAIL_ROWS=$((FAIL_ROWS + 1))
+    SB_E2E_TELEMETRY_ROW="$row_num" \
+      SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+      SB_E2E_TELEMETRY_ROW_RESULT="fail" \
+      SB_E2E_TELEMETRY_ROW_LOG="" \
+      enterprise_e2e_telemetry_append "matrix_row" || true
+    return 0
+  fi
 
   while true; do
     attempt=$((attempt + 1))
@@ -517,6 +608,31 @@ run_matrix_row() {
       if [[ "$quota_retries" -gt 0 ]]; then
         echo "  PASS: succeeded after ${quota_retries} quota retry(ies)"
       fi
+      # §5b early gate: fail planning-only rows before outcome scorer awards partial credit.
+      if enterprise_e2e_row_requires_product_commit "$row_num"; then
+        if ! enterprise_e2e_assert_row_matrix_baseline_rev_increase "$row_num" "$fixture_baseline_rev_before" "$FIXTURE_DIR"; then
+          echo "  FAIL: §5b matrix baseline rev gate (early — no commit since row start)"
+          FAIL_ROWS=$((FAIL_ROWS + 1))
+          row_telemetry_result="fail"
+          SB_E2E_TELEMETRY_ROW="$row_num" \
+            SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+            SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+            SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+            enterprise_e2e_telemetry_append "matrix_row" || true
+          break
+        fi
+        if ! enterprise_e2e_assert_row_product_commit_delta "$row_num" "$fixture_head_before" "$FIXTURE_DIR"; then
+          echo "  FAIL: §5b product delta (early gate — evidence without fixture commit)"
+          FAIL_ROWS=$((FAIL_ROWS + 1))
+          row_telemetry_result="fail"
+          SB_E2E_TELEMETRY_ROW="$row_num" \
+            SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+            SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+            SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+            enterprise_e2e_telemetry_append "matrix_row" || true
+          break
+        fi
+      fi
       if [[ -f "${SB_ROOT}/scripts/enterprise-e2e/lib/deterministic/outcome-assessment.sh" ]]; then
         # shellcheck source=scripts/enterprise-e2e/lib/deterministic/outcome-assessment.sh
         source "${SB_ROOT}/scripts/enterprise-e2e/lib/deterministic/outcome-assessment.sh"
@@ -550,6 +666,36 @@ run_matrix_row() {
           break
         fi
         echo "  OUTCOMES: all applicable criteria pass (OUT-WORLD-01 composite)"
+      fi
+      if ! enterprise_e2e_fixture_assert_branch_lock "$FIXTURE_DIR" "post-invoke fixture branch (row ${row_num})"; then
+        FAIL_ROWS=$((FAIL_ROWS + 1))
+        row_telemetry_result="fail"
+        SB_E2E_TELEMETRY_ROW="$row_num" \
+          SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+          SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+          SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+          enterprise_e2e_telemetry_append "matrix_row" || true
+        break
+      fi
+      if ! enterprise_e2e_assert_row_matrix_baseline_rev_increase "$row_num" "$fixture_baseline_rev_before" "$FIXTURE_DIR"; then
+        FAIL_ROWS=$((FAIL_ROWS + 1))
+        row_telemetry_result="fail"
+        SB_E2E_TELEMETRY_ROW="$row_num" \
+          SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+          SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+          SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+          enterprise_e2e_telemetry_append "matrix_row" || true
+        break
+      fi
+      if ! enterprise_e2e_assert_row_product_commit_delta "$row_num" "$fixture_head_before" "$FIXTURE_DIR"; then
+        FAIL_ROWS=$((FAIL_ROWS + 1))
+        row_telemetry_result="fail"
+        SB_E2E_TELEMETRY_ROW="$row_num" \
+          SB_E2E_TELEMETRY_ROW_SLUG="$slug" \
+          SB_E2E_TELEMETRY_ROW_RESULT="$row_telemetry_result" \
+          SB_E2E_TELEMETRY_ROW_LOG="$row_log" \
+          enterprise_e2e_telemetry_append "matrix_row" || true
+        break
       fi
       enterprise_e2e_record_row_pass_at_install_version "$row_num" "${SB_E2E_LEDGER_FILE:-}" "$row_log"
       PASS_ROWS=$((PASS_ROWS + 1))
@@ -601,6 +747,7 @@ run_matrix_row() {
 main() {
   local requested=("$@")
   local row slug route prompt_card evidence_path row_num
+  local _matrix_batch_pid_file=""
 
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
@@ -622,20 +769,28 @@ main() {
   echo ""
 
   if [[ "${SB_E2E_MATRIX_DRY_RUN:-}" != "1" ]]; then
-  local _matrix_batch_pid_file=""
   if declare -f enterprise_e2e_matrix_batch_pid_file >/dev/null 2>&1; then
     _matrix_batch_pid_file="$(enterprise_e2e_matrix_batch_pid_file)"
     printf '%s\n' "$$" >"$_matrix_batch_pid_file"
   fi
   setup_workspace
   if [[ -n "$_matrix_batch_pid_file" ]]; then
-    trap "rm -f $(printf '%q' "$_matrix_batch_pid_file"); cleanup_workspace" EXIT
+    trap "rm -f '$_matrix_batch_pid_file'; cleanup_workspace" EXIT
   else
     trap cleanup_workspace EXIT
   fi
   enterprise_e2e_matrix_quiesce_orchestrator_queue "$SB_ROOT"
   fi
   WORK_DIR="${WORK_DIR:-$FIXTURE_DIR}"
+
+  if ! enterprise_e2e_fixture_ensure_branch; then
+    echo "ERROR: cannot pin fixture branch before matrix" >&2
+    exit 1
+  fi
+  if ! enterprise_e2e_fixture_assert_branch_lock "$FIXTURE_DIR" "matrix-start fixture branch"; then
+    echo "ERROR: fixture branch lock failed before matrix — reset test app to host branch" >&2
+    exit 1
+  fi
 
   if should_run_row 21 "${requested[@]+"${requested[@]}"}" || should_run_row 22 "${requested[@]+"${requested[@]}"}"; then
     enterprise_e2e_matrix_ensure_internal_gate_markers

@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.50.5] — 2026-07-05
+
+Patch release: **tri-host pre-release smoke gate** — mandatory 12/12 isolated host smoke before tag (closes v0.50.4 gap); agent-codex harness improvements; Cursor CLI smoke timeout aligned to live API latency.
+
+## Features
+- `feat(agent-codex)`: v0.2.0 harness dir, R9 learnings, pilot PASS (`5ad16128`)
+
+## Fixes
+- `fix(agent-codex)`: close sibling-prompt gaps from compliance audit (`b7d3b76e`)
+- `fix(agent-codex)`: unify runtime env for direct delegate worker path (`da752ec5`)
+- `fix(pre-release)`: HOST_API_KEY alias and operator `~/.silver-bullet/cursor-api-key` fallback (`7b451552`)
+- `fix(pre-release)`: Cursor CLI smoke default timeout 120s → 300s for live API routing check
+
+## Verification
+- `RTK_DISABLED=1 bash scripts/run-pre-release-host-smoke.sh` — **12/12 PASS** (tri-host isolated smoke)
+- `bash tests/run-all-tests.sh` — **5068 passed, 0 failed (6/6 suites green)**
+- `bash scripts/run-apo-authoring-compliance.sh` — 26/26 PASS
+- `test-site-content-freshness.sh` + `test-site-doc-freshness.sh` — PASS
+
+---
+
+## [0.50.4] — 2026-07-05
+
+Patch release: **pre-release test hardening** — full `run-all-tests.sh` green gate (5349/5349) before ship; fixes delegation v0.50.3 fallout and version-alignment drift.
+
+## Fixes
+- `fix(tests): outcomes-check teardown clears stop-coalesce state; jq-less Stop preserves SB_RUNTIME_STATE_DIR`
+- `fix(hooks): SEC-04 hardened rm -f -- in agent-delegation-state and stop-coalesce`
+- `fix(tests): e2e-live suite assert_file_contains arity for clarify-picker check`
+- `fix(tests): flow-step V-loop excludes catalog pseudo-skills (distribution-only, pipe-composites)`
+- `fix(tests): no-gsd-runtime allowlist for legacy GSD cleanup scripts`
+- `fix(validate): host-agnostic allowlist for AF-AGENT-DELEGATE skills, worker template, delegate scripts`
+- `fix(release): config/site version alignment to package.json; sentinel manifest 90 skills clean`
+- `fix(tests): skill scenarios for silver-agent-codex, silver-agent-cursor, silver-agent-worker`
+
+## Verification
+- `bash tests/run-all-tests.sh` — **5349 passed, 0 failed (6/6 suites green)**
+- `bash scripts/run-apo-authoring-compliance.sh` — 26/26 PASS
+- ShellCheck on hooks/scripts — PASS
+- `test-site-content-freshness.sh` + `test-site-doc-freshness.sh` — PASS
+
+---
+
+## [0.50.3] — 2026-07-05
+
+Patch release: AF-AGENT-DELEGATE migration stage 5/6 — `SB_AGENT_DELEGATE_V2` default-on, parent delegate-wrapper whitelist removed (degraded fallback only).
+
+## Features
+- `feat(delegation): SB_AGENT_DELEGATE_V2 default-on when unset; SB_AGENT_DELEGATE_V2=0 rollback` — `agent-delegation-state.sh`
+- `feat(delegation): stage 6 parent guard — direct delegate Bash requires SB_AGENT_DELEGATE_DIRECT_FALLBACK=1` — `orchestrator-parent.sh`
+
+## Documentation
+- Updated host skills, AGENT-DELEGATE worker template, and APO authoring compliance for default-on V2
+- RFL close-out: `.planning/reviews/AGENT-DELEGATE-AF-RFL-CLOSEOUT.md`
+
+## Verification
+- Dual-host live smoke (unset V2) on enterprise-e2e temp branches: Cursor `502ebe0`, Codex `6ffe2d9`
+- Delegation structural suite + `run-apo-authoring-compliance.sh` 26/26 PASS
+
+---
+
 ## [0.50.2] — 2026-07-03
 
 Patch release: Cursor-3 REAL enterprise E2E certification (22/22 strict-clean), anti-faking methodology (void Cursor-1/2), and harness fixes E2E-091–E2E-100.

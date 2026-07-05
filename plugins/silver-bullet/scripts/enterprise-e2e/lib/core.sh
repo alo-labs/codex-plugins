@@ -40,14 +40,279 @@ enterprise_e2e_fixture_dir() {
   printf '%s\n' "$(cd "${sb_root}/../.." && pwd)/enterprise-grade-test-app"
 }
 
-# claude | codex | cursor — honors pre-set SB_E2E_LIVE_RUNTIME / SILVER_BULLET_RUNTIME.
+# Host-isolated test-app git branch (enterprise-grade-test-app). Override with
+# SB_TEST_ENTERPRISE_APP_FIXTURE_BRANCH or SB_E2E_TEST_APP_BRANCH; disable pin with SB_E2E_FIXTURE_BRANCH_PIN=0.
+enterprise_e2e_fixture_branch() {
+  if [[ -n "${SB_TEST_ENTERPRISE_APP_FIXTURE_BRANCH:-}" ]]; then
+    printf '%s\n' "$SB_TEST_ENTERPRISE_APP_FIXTURE_BRANCH"
+    return 0
+  fi
+  if [[ -n "${SB_E2E_TEST_APP_BRANCH:-}" ]]; then
+    printf '%s\n' "$SB_E2E_TEST_APP_BRANCH"
+    return 0
+  fi
+  enterprise_e2e_host_config_get fixture_branch 2>/dev/null || true
+}
 
-# Default host-isolated artifact paths (Claude keeps legacy names for Round 6).
+
+enterprise_e2e_fixture_is_git_repo() {
+  local fixture_dir="$1"
+  git -C "$fixture_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+enterprise_e2e_fixture_ensure_branch() {
+  local fixture_dir branch current
+  [[ "${SB_E2E_FIXTURE_BRANCH_PIN:-1}" != "0" ]] || return 0
+  fixture_dir="$(enterprise_e2e_fixture_dir)"
+  branch="$(enterprise_e2e_fixture_branch)"
+  [[ -n "$branch" ]] || return 0
+  enterprise_e2e_fixture_is_git_repo "$fixture_dir" || {
+    echo "WARN: fixture branch pin skipped — not a git repo: ${fixture_dir}" >&2
+    return 0
+  }
+  current="$(git -C "$fixture_dir" branch --show-current 2>/dev/null || true)"
+  if [[ "$current" == "$branch" ]]; then
+    echo "Fixture branch: ${branch} @ $(git -C "$fixture_dir" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    return 0
+  fi
+  echo "Fixture branch pin: checkout ${branch} (was: ${current:-detached}) in ${fixture_dir}"
+  if ! git -C "$fixture_dir" checkout "$branch" 2>/dev/null; then
+    echo "ERROR: fixture branch ${branch} missing in ${fixture_dir} — create host-isolated branch before live matrix" >&2
+    return 1
+  fi
+  echo "Fixture branch: ${branch} @ $(git -C "$fixture_dir" rev-parse --short HEAD)"
+}
+
+# Verify fixture stayed on host-isolated branch (anti-contamination after agent git checkout).
+enterprise_e2e_fixture_assert_branch_lock() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local label="${2:-fixture branch lock}"
+  [[ "${SB_E2E_FIXTURE_BRANCH_LOCK:-1}" != "0" ]] || return 0
+  [[ "${SB_E2E_FIXTURE_BRANCH_PIN:-1}" != "0" ]] || return 0
+
+  local expected_branch current_branch current_sha exclude_ancestor
+  expected_branch="$(enterprise_e2e_fixture_branch)"
+  [[ -n "$expected_branch" ]] || return 0
+  enterprise_e2e_fixture_is_git_repo "$fixture_dir" || {
+    echo "  FAIL: ${label} — not a git repo: ${fixture_dir}" >&2
+    return 1
+  }
+
+  current_branch="$(git -C "$fixture_dir" branch --show-current 2>/dev/null || true)"
+  current_sha="$(git -C "$fixture_dir" rev-parse --short HEAD 2>/dev/null || true)"
+
+  if [[ "$current_branch" != "$expected_branch" ]]; then
+    echo "  FAIL: ${label} — expected branch ${expected_branch}, got ${current_branch:-detached} @ ${current_sha}" >&2
+    return 1
+  fi
+
+  if [[ "${SB_E2E_TEST_APP_EXCLUDE_ANCESTOR+set}" == set ]]; then
+    exclude_ancestor="$SB_E2E_TEST_APP_EXCLUDE_ANCESTOR"
+  else
+    exclude_ancestor="826cb5c"
+  fi
+  if [[ -n "$exclude_ancestor" ]] && git -C "$fixture_dir" merge-base --is-ancestor "$exclude_ancestor" HEAD 2>/dev/null; then
+    echo "  FAIL: ${label} — HEAD includes forbidden ancestor ${exclude_ancestor} (§5b pre-seed contamination)" >&2
+    return 1
+  fi
+
+  echo "  fixture branch lock: ${expected_branch} @ ${current_sha}"
+  return 0
+}
+
+# §5b product-work gate — rows that must produce a fixture-branch commit (Codex-3 REAL).
+enterprise_e2e_row_requires_product_commit() {
+  local row_num="${1:-}"
+  case "$row_num" in
+    1|15|21|22) return 1 ;;
+    *) return 0 ;;
+  esac
+}
 
 
+# Rows 6/11 matrix §5b — require rev-list count from test-app baseline to increase during the row.
+enterprise_e2e_row_uses_matrix_baseline_rev_gate() {
+  local row_num="${1:-}"
+  case "$row_num" in
+    6|11) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
+enterprise_e2e_fixture_baseline_rev_count() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local baseline="${SB_E2E_TEST_APP_BASELINE_SHA:-}"
+  [[ -n "$baseline" ]] || { printf '0'; return 1; }
+  git -C "$fixture_dir" rev-list --count "${baseline}..HEAD" 2>/dev/null || printf '0'
+}
 
-# Translate MATRIX_ROWS route column for non-Claude hosts.
+enterprise_e2e_assert_row_matrix_baseline_rev_increase() {
+  local row_num="${1:-}"
+  local count_before="${2:-0}"
+  local fixture_dir="${3:-$(enterprise_e2e_fixture_dir)}"
+  [[ "${SB_E2E_PRODUCT_WORK_GATE:-1}" == "1" ]] || return 0
+  enterprise_e2e_row_uses_matrix_baseline_rev_gate "$row_num" || return 0
+  enterprise_e2e_row_requires_product_commit "$row_num" || return 0
+  if enterprise_e2e_row_outcome_only_rerun "$row_num"; then
+    return 0
+  fi
+  local baseline="${SB_E2E_TEST_APP_BASELINE_SHA:-}"
+  local count_after head_now
+  if [[ -z "$baseline" ]]; then
+    echo "  FAIL: §5b matrix baseline gate — SB_E2E_TEST_APP_BASELINE_SHA unset (row ${row_num})" >&2
+    return 1
+  fi
+  count_after="$(enterprise_e2e_fixture_baseline_rev_count "$fixture_dir")"
+  head_now="$(enterprise_e2e_fixture_head_snapshot "$fixture_dir")"
+  if [[ "${count_after:-0}" -le "${count_before:-0}" ]]; then
+    if enterprise_e2e_product_work_cumulative_mode &&        enterprise_e2e_assert_row_product_commit_rescore "$row_num" "$fixture_dir"; then
+      echo "  §5b matrix baseline gate row ${row_num} (cumulative): ${baseline:0:12}..HEAD count ${count_after} (no per-row Δ; rescore OK)"
+      return 0
+    fi
+    echo "  FAIL: §5b matrix baseline gate — rev-list --count ${baseline:0:12}..HEAD did not increase (${count_before} → ${count_after}; HEAD ${head_now:0:12}; row ${row_num})" >&2
+    return 1
+  fi
+  echo "  §5b matrix baseline gate row ${row_num}: ${baseline:0:12}..HEAD count ${count_before} → ${count_after} (HEAD ${head_now:0:12})"
+  return 0
+}
+
+enterprise_e2e_fixture_head_snapshot() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  git -C "$fixture_dir" rev-parse HEAD 2>/dev/null || true
+}
+
+# Outcome-only matrix rerun (e.g. row 6 @ frozen README commit) — §5b satisfied without new delta.
+enterprise_e2e_row_outcome_only_rerun() {
+  local row_num="${1:-}"
+  [[ -n "${SB_E2E_OUTCOME_ONLY_ROWS:-}" ]] || return 1
+  [[ " ${SB_E2E_OUTCOME_ONLY_ROWS} " == *" ${row_num} "* ]]
+}
+
+# FP migration / honest re-pilot: §5b satisfied by cumulative fixture commits since baseline + row evidence (not per-row HEAD delta).
+enterprise_e2e_product_work_cumulative_mode() {
+  [[ "${SB_E2E_PRODUCT_WORK_CUMULATIVE:-0}" == "1" ]]
+}
+
+# Row 3 §5b — at least one fixture commit after anchor touching api/currency paths.
+enterprise_e2e_commit_touches_api_currency() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local sha="${2:-}"
+  [[ -n "$sha" ]] || return 1
+  local paths
+  paths="$(git -C "$fixture_dir" diff-tree --no-commit-id --name-only -r "$sha" 2>/dev/null || true)"
+  if printf '%s\n' "$paths" | grep -qE '^api/.*(currency|orders)|^api/src/(orders|currency)'; then
+    return 0
+  fi
+  if printf '%s\n' "$paths" | grep -qE '^api/' && \
+     git -C "$fixture_dir" log -1 --format='%s' "$sha" 2>/dev/null | grep -qiE 'currency|orders'; then
+    return 0
+  fi
+  return 1
+}
+
+enterprise_e2e_row3_api_currency_commit_count() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local from_sha="${2:-}"
+  local to_sha="${3:-HEAD}"
+  [[ -n "$from_sha" ]] || return 1
+  local sha count=0
+  for sha in $(git -C "$fixture_dir" rev-list "${from_sha}..${to_sha}" 2>/dev/null); do
+    if enterprise_e2e_commit_touches_api_currency "$fixture_dir" "$sha"; then
+      count=$((count + 1))
+    fi
+  done
+  printf '%s' "$count"
+  [[ "$count" -gt 0 ]]
+}
+
+enterprise_e2e_assert_row3_api_currency_commit() {
+  local fixture_dir="${1:-$(enterprise_e2e_fixture_dir)}"
+  local anchor="${2:-}"
+  anchor="${anchor:-${SB_E2E_ROW3_PRODUCT_ANCHOR_SHA:-${SB_E2E_ROW6_FROZEN_COMMIT:-}}}"
+  [[ -n "$anchor" ]] || anchor="${SB_E2E_TEST_APP_BASELINE_SHA:-}"
+  [[ -n "$anchor" ]] || return 1
+  local count
+  count="$(enterprise_e2e_row3_api_currency_commit_count "$fixture_dir" "$anchor" HEAD 2>/dev/null || echo 0)"
+  if [[ "$count" -gt 0 ]]; then
+    echo "  §5b row 3: ${count} api/currency commit(s) after anchor ${anchor:0:12}"
+    return 0
+  fi
+  echo "  FAIL: §5b row 3 — no api/currency fixture commit after anchor ${anchor:0:12}" >&2
+  return 1
+}
+
+# Poll/rescore §5b — row 3 needs api/currency commits after anchor; row 6 needs any commit since baseline.
+enterprise_e2e_assert_row_product_commit_rescore() {
+  local row_num="${1:-}"
+  local fixture_dir="${2:-$(enterprise_e2e_fixture_dir)}"
+  [[ "${SB_E2E_PRODUCT_WORK_GATE:-1}" == "1" ]] || return 0
+  enterprise_e2e_row_requires_product_commit "$row_num" || return 0
+  local baseline="${SB_E2E_TEST_APP_BASELINE_SHA:-}"
+  local anchor="" count=0
+  case "$row_num" in
+    6)
+      [[ -n "$baseline" ]] || return 1
+      count="$(git -C "$fixture_dir" rev-list --count "${baseline}..HEAD" 2>/dev/null || echo 0)"
+      if [[ "$count" -gt 0 ]]; then
+        echo "  §5b rescore row 6: ${count} commit(s) since baseline"
+        return 0
+      fi
+      ;;
+    3)
+      enterprise_e2e_assert_row3_api_currency_commit "$fixture_dir"
+      return $?
+      ;;
+    *)
+      [[ -n "$baseline" ]] || return 1
+      count="$(git -C "$fixture_dir" rev-list --count "${baseline}..HEAD" 2>/dev/null || echo 0)"
+      if [[ "$count" -gt 0 ]]; then
+        echo "  §5b rescore row ${row_num}: ${count} commit(s) since baseline"
+        return 0
+      fi
+      ;;
+  esac
+  echo "  FAIL: §5b rescore — no product commit for row ${row_num}" >&2
+  return 1
+}
+
+# Fail when implement row passes outcome but fixture HEAD unchanged (anti-faking).
+enterprise_e2e_assert_row_product_commit_delta() {
+  local row_num="${1:-}"
+  local head_before="${2:-}"
+  local fixture_dir="${3:-$(enterprise_e2e_fixture_dir)}"
+  [[ "${SB_E2E_PRODUCT_WORK_GATE:-1}" == "1" ]] || return 0
+  enterprise_e2e_row_requires_product_commit "$row_num" || return 0
+  local head_after count=0
+  head_after="$(enterprise_e2e_fixture_head_snapshot "$fixture_dir")"
+  if [[ -z "$head_before" || -z "$head_after" ]]; then
+    echo "  FAIL: §5b product delta — cannot read fixture HEAD (row ${row_num})" >&2
+    return 1
+  fi
+  if [[ "$head_before" == "$head_after" ]]; then
+    if enterprise_e2e_row_outcome_only_rerun "$row_num"; then
+      if enterprise_e2e_assert_row_product_commit_rescore "$row_num" "$fixture_dir"; then
+        return 0
+      fi
+    fi
+    if enterprise_e2e_product_work_cumulative_mode &&        enterprise_e2e_assert_row_product_commit_rescore "$row_num" "$fixture_dir"; then
+      echo "  §5b product delta row ${row_num} (cumulative): HEAD ${head_after:0:12} unchanged; rescore OK"
+      return 0
+    fi
+    echo "  FAIL: §5b product delta — no fixture commit after row ${row_num} (HEAD still ${head_after:0:12})" >&2
+    return 1
+  fi
+  if [[ "$row_num" == "3" ]]; then
+    count="$(enterprise_e2e_row3_api_currency_commit_count "$fixture_dir" "$head_before" "$head_after" 2>/dev/null || echo 0)"
+    if [[ "$count" -eq 0 ]]; then
+      echo "  FAIL: §5b product delta — row 3 requires api/currency commit (${head_before:0:12} → ${head_after:0:12}, docs/planning-only insufficient)" >&2
+      return 1
+    fi
+    echo "  §5b product delta row 3: ${count} api/currency commit(s) ${head_before:0:12} → ${head_after:0:12}"
+    return 0
+  fi
+  echo "  §5b product delta: ${head_before:0:12} → ${head_after:0:12} ($(git -C "$fixture_dir" log -1 --format='%s' "$head_after" 2>/dev/null || echo commit))"
+  return 0
+}
 
 enterprise_e2e_matrix_log() {
   local host="${SB_E2E_LIVE_RUNTIME:-${SILVER_BULLET_RUNTIME:-}}"
@@ -465,13 +730,18 @@ enterprise_e2e_run_install_claude() {
   local pid deadline
   [[ -n "$sb_root" && -d "$sb_root" ]] || return 1
   enterprise_e2e_prepend_harness_path
+  if grep -qE 'Claude marketplaces registered|Claude marketplace refreshed' "$log" 2>/dev/null; then
+    echo "Plugin install (cached — see ${log}):"
+    tail -2 "$log" || true
+    return 0
+  fi
   echo "Plugin install (latest SB checkout):"
   if [[ -t 1 && -t 0 ]]; then
     (cd "$sb_root" && bash scripts/install-claude.sh)
     return $?
   fi
   : >"$log"
-  pid="$(sb_run_detached --log "$log" -- bash -c "cd $(printf '%q' "$sb_root") && exec bash scripts/install-claude.sh </dev/null")"
+  pid="$(sb_run_detached_pty --log "$log" -- bash -c "cd $(printf '%q' "$sb_root") && exec bash scripts/install-claude.sh </dev/null")"
   deadline=$((SECONDS + 300))
   while (( SECONDS < deadline )); do
     if grep -qE 'Claude marketplaces registered|Claude marketplace refreshed' "$log" 2>/dev/null; then
@@ -628,9 +898,35 @@ PY
 
 
 
+
+# Pin SB plugin routing/state under isolated CLAUDE_CONFIG_DIR (honest R9 matrix).
+enterprise_e2e_apply_isolated_claude_runtime_paths() {
+  [[ "${SB_E2E_ISOLATED_CLAUDE_CONFIG:-}" == "1" ]] || return 0
+  [[ -n "${CLAUDE_CONFIG_DIR:-}" ]] || return 0
+  local config_root="$CLAUDE_CONFIG_DIR"
+  if [[ -d "${config_root}/.claude" ]]; then
+    export SB_RUNTIME_HOME_ROOT="${config_root}/.claude"
+  else
+    export SB_RUNTIME_HOME_ROOT="${config_root}"
+  fi
+  export SB_RUNTIME_STATE_DIR="$HOME/.codex/.silver-bullet"
+  export SB_RUNTIME_PRESERVE_STATE_DIR=1
+  mkdir -p "$SB_RUNTIME_STATE_DIR"
+  # Hook audit + state guards only accept state-scoped paths (runtime-paths.sh).
+  if [[ -n "${SB_RUNTIME_EXTRA_STATE_ROOTS:-}" ]]; then
+    case ":${SB_RUNTIME_EXTRA_STATE_ROOTS}:" in
+      *":$HOME/.codex/.silver-bullet:"*) ;;
+      *) export SB_RUNTIME_EXTRA_STATE_ROOTS="${SB_RUNTIME_EXTRA_STATE_ROOTS}:$HOME/.codex/.silver-bullet" ;;
+    esac
+  else
+    export SB_RUNTIME_EXTRA_STATE_ROOTS="$HOME/.codex/.silver-bullet"
+  fi
+}
+
 enterprise_e2e_export_live_defaults() {
   enterprise_e2e_prepend_harness_path
   enterprise_e2e_apply_matrix_host_defaults
+  enterprise_e2e_apply_isolated_claude_runtime_paths
   export SB_E2E_MATRIX_CLEAN_ENV="${SB_E2E_MATRIX_CLEAN_ENV:-0}"
   export SB_E2E_MATRIX_DRY_RUN="${SB_E2E_MATRIX_DRY_RUN:-}"
   unset SB_E2E_MATRIX_DRY_RUN 2>/dev/null || true

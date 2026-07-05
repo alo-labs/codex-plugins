@@ -13,6 +13,8 @@ set -euo pipefail
 
 SB_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export SB_ROOT
+# shellcheck source=scripts/lib/enterprise-e2e-live-common.sh
+source "${SB_ROOT}/scripts/lib/enterprise-e2e-live-common.sh"
 # shellcheck source=scripts/lib/enterprise-e2e-ledger-reconcile.sh
 source "${SB_ROOT}/scripts/lib/enterprise-e2e-ledger-reconcile.sh"
 # shellcheck source=scripts/lib/enterprise-e2e-outcome-assessment.sh
@@ -51,7 +53,7 @@ if [[ ! -f "$LEDGER" ]]; then
 fi
 
 reconcile_status="$(enterprise_e2e_ledger_reconcile_status)"
-read -r pass_count total_count _ < <(enterprise_e2e_ledger_pass_summary "$ledger")
+read -r pass_count total_count _ < <(enterprise_e2e_ledger_pass_summary "$LEDGER")
 
 echo "Ledger reconcile status: ${reconcile_status}"
 echo "Ledger Pass rows: ${pass_count:-0}/${total_count:-0}"
@@ -67,8 +69,8 @@ outcome_pass=0
 while read -r row status; do
   [[ -z "$row" ]] && continue
   [[ "$status" == "pass" ]] || continue
-  row_log="${SB_ROOT}/.e2e-row${row}-attempt.log"
-  [[ -f "$row_log" ]] || row_log=""
+  row_log="$(enterprise_e2e_row_attempt_log "$row" 2>/dev/null || true)"
+  [[ -n "$row_log" && -f "$row_log" ]] || row_log=""
   if enterprise_e2e_outcome_row_passes "$row" "$fixture" "$state_dir" "$row_log" "$LEDGER" "" 2>/dev/null; then
     outcome_pass=$((outcome_pass + 1))
   else

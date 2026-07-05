@@ -39,7 +39,8 @@ if ! "$cli" --version >/dev/null 2>&1; then
 fi
 
 if ! sb_smoke_cursor_cli_auth_env; then
-  printf 'ERROR: CURSOR_API_KEY required (env or %s/.cursor-api-key in smoke root)\n' "$(sb_smoke_root)" >&2
+  printf 'ERROR: CURSOR_API_KEY required (env HOST_API_KEY/CURSOR_API_KEY, %s/.cursor-api-key, or ~/.silver-bullet/cursor-api-key)\n' "$(sb_smoke_root)" >&2
+  printf 'Mint a user API key at https://cursor.com/dashboard/integrations (cursor_... prefix).\n' >&2
   printf 'Do not use cursor-agent login — Keychain storage is disabled for pre-release smoke.\n' >&2
   exit 1
 fi
@@ -55,7 +56,7 @@ if [[ ! -d "$plugin_dir" ]]; then
   exit 1
 fi
 
-timeout_seconds="${CURSOR_AGENT_TIMEOUT:-120}"
+timeout_seconds="${CURSOR_AGENT_TIMEOUT:-300}"
 model="${CURSOR_AGENT_MODEL:-${CURSOR_MODEL:-}}"
 
 out="$(
@@ -77,7 +78,7 @@ import sys
 cli = os.environ["CURSOR_AGENT_CLI"]
 api_key = os.environ["CURSOR_API_KEY"]
 prompt = os.environ["CURSOR_AGENT_PROMPT"]
-timeout = int(os.environ.get("CURSOR_AGENT_TIMEOUT") or "120")
+timeout = int(os.environ.get("CURSOR_AGENT_TIMEOUT") or "300")
 model = os.environ.get("CURSOR_AGENT_MODEL") or ""
 workspace = os.environ["CURSOR_AGENT_WORKSPACE"]
 plugin_dir = os.environ["CURSOR_AGENT_PLUGIN_DIR"]

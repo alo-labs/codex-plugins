@@ -126,6 +126,7 @@ sb_orchestrator_worker_template_for_skill() {
     silver-validate) printf 'VALIDATE' ;;
     silver-fast) printf 'FAST' ;;
     silver|silver-orchestrator) printf 'ROUTER' ;;
+    silver-agent-codex|silver-agent-cursor) printf 'AGENT-DELEGATE' ;;
     *)
       if [[ "$skill" == silver-* ]]; then
         printf '%s' "$(printf '%s' "${skill#silver-}" | tr '[:lower:]' '[:upper:]')"
@@ -330,6 +331,20 @@ if skill:
 PY
 }
 
+# Parsed argv check — basename must be agent-*-delegate.sh (no substring spoof).
+sb_orchestrator_parent_delegate_bash_allowed() {
+  local command_str="$1"
+  [[ -n "$command_str" ]] || return 1
+
+  if ! printf '%s' "$command_str" | grep -qE '(^|[[:space:]/])(\./)?scripts/agent-(codex|cursor)-delegate\.sh([[:space:]]|$)|(^|[[:space:]/])(\./)?scripts/agent-codex/invoke\.sh([[:space:]]|$)'; then
+    return 1
+  fi
+
+  # Stage 6: direct parent delegate Bash only via degraded fallback (SB OVERRIDE bypasses at guard layer).
+  [[ "${SB_AGENT_DELEGATE_DIRECT_FALLBACK:-0}" == "1" ]] && return 0
+  return 1
+}
+
 # Parent may use Bash for Codex invoke-skill router adapter or read-only state inspection.
 sb_orchestrator_parent_bash_allowed() {
   local command_str="$1"
@@ -340,6 +355,10 @@ sb_orchestrator_parent_bash_allowed() {
   if [[ -n "$adapter_skill" ]]; then
     sb_orchestrator_parent_skill_allowed "$adapter_skill"
     return $?
+  fi
+
+  if sb_orchestrator_parent_delegate_bash_allowed "$command_str"; then
+    return 0
   fi
 
   local _tool_input_lib
@@ -364,7 +383,7 @@ sb_orchestrator_parent_skill_allowed() {
     canonical="${canonical//:/-}"
   fi
   case "$canonical" in
-    silver|silver-orchestrator) return 0 ;;
+    silver|silver-orchestrator|silver-agent-codex|silver-agent-cursor) return 0 ;;
     *) return 1 ;;
   esac
 }

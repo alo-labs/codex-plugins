@@ -296,7 +296,15 @@ enterprise_e2e_outcome_log_matches() {
 enterprise_e2e_outcome_log_has_babysitting() {
   local row_log="${1:-}"
   if enterprise_e2e_outcome_log_matches "$row_log" \
-    'waiting for (your|user)( input| to)|need your input before|babysit'; then
+    'waiting for (your|user)( input| to)|need your input before'; then
+    return 0
+  fi
+  # babysit — exclude negated acceptance-criteria / autonomy summaries (agent-claude brief echo).
+  if enterprise_e2e_outcome_log_matches "$row_log" 'babysit'; then
+    if enterprise_e2e_outcome_log_matches "$row_log" \
+      'without[[:space:]]*(operator[[:space:]]+)?babysit|no[[:space:]]*(operator[[:space:]]+)?babysit|withoutbabysit|withoutoperatorbabysit|nobabysit|nooperatorbabysit'; then
+      return 1
+    fi
     return 0
   fi
   # operator pause(s) — exclude negated autonomy summaries (row 10 stream-json false positive).
@@ -382,7 +390,7 @@ enterprise_e2e_outcome_matrix_workflow_slug() {
   local row_num="${1:-}"
   case "$row_num" in
     1) printf 'silver-router\n' ;;
-    2) printf 'silver-research\n' ;;
+    2) printf 'silver-deep-research\n' ;;
     3) printf 'silver-feature\n' ;;
     4) printf 'silver-bugfix\n' ;;
     5) printf 'silver-ui\n' ;;
@@ -435,10 +443,131 @@ enterprise_e2e_outcome_matrix_evidence_path() {
   esac
 }
 
-# Evidence at live path, archive, or slug-adjacent workflow artifact.
+# Evidence at live path, archive, slug-adjacent workflow artifact, or tri-criteria run evidence.
+enterprise_e2e_outcome_is_tri_criteria_row() {
+  case "${1:-}" in TC-01|TC-02|TC-03) return 0 ;; *) return 1 ;; esac
+}
+
+enterprise_e2e_outcome_tri_criteria_run_dir() {
+  [[ -n "${SB_TRI_CRITERIA_RUN_DIR:-}" && -d "${SB_TRI_CRITERIA_RUN_DIR}" ]] || return 1
+  printf '%s\n' "${SB_TRI_CRITERIA_RUN_DIR}"
+}
+
+enterprise_e2e_outcome_composer_catalog_workflow_id() {
+  local composer="${1#silver:}"
+  composer="${composer//:/-}"
+  case "$composer" in
+    silver-feature) printf 'WF-SILVER-FEATURE' ;;
+    silver-fast) printf 'WF-SILVER-FAST' ;;
+    silver-devops) printf 'WF-SILVER-DEVOPS' ;;
+    silver-release) printf 'WF-SILVER-RELEASE' ;;
+    silver-new-workflow) printf 'WF-SILVER-NEW-WORKFLOW' ;;
+    silver-ui) printf 'WF-SILVER-UI' ;;
+    silver-bugfix) printf 'WF-SILVER-BUGFIX' ;;
+    silver-router) printf 'WF-SILVER-ROUTER' ;;
+    silver-research) printf 'WF-SILVER-DEEP-RESEARCH' ;;
+    silver-ship) printf 'WF-SILVER-SHIP' ;;
+    silver-*)
+      local slug="${composer#silver-}"
+      slug="$(printf '%s' "$slug" | tr '[:lower:]' '[:upper:]')"
+      printf 'WF-SILVER-%s' "$slug"
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+enterprise_e2e_outcome_tri_criteria_product_present() {
+  local row_id="$1" work_dir="$2"
+  [[ -n "$work_dir" && -d "$work_dir/.git" ]] || return 1
+  case "$row_id" in
+    TC-01)
+      if compgen -G "${work_dir}/api/src/*waitlist*" >/dev/null 2>&1; then
+        return 0
+      fi
+      git -C "$work_dir" rev-parse --verify feature/tc01-waitlist-saas >/dev/null 2>&1 && return 0
+      ;;
+    TC-02)
+      if [[ -f "${work_dir}/README.md" ]] && grep -qEi 'runbook|correlation|structured|observability' "${work_dir}/README.md" 2>/dev/null; then
+        return 0
+      fi
+      if compgen -G "${work_dir}/api/src/*log*" >/dev/null 2>&1; then
+        return 0
+      fi
+      git -C "$work_dir" rev-parse --verify feature/tc02-observability-runbook >/dev/null 2>&1 && return 0
+      git -C "$work_dir" rev-parse --verify feature/tc02-readme-badge >/dev/null 2>&1 && return 0
+      ;;
+    TC-03)
+      if compgen -G "${work_dir}/scripts/*compliance*" >/dev/null 2>&1; then
+        return 0
+      fi
+      git -C "$work_dir" rev-parse --verify feature/tc03-compliance-snapshot >/dev/null 2>&1 && return 0
+      ;;
+  esac
+  return 1
+}
+
+enterprise_e2e_outcome_tri_criteria_session_evidence_present() {
+  local row_id="$1" row_log="${2:-}"
+  [[ -n "$row_log" && -f "$row_log" ]] || return 1
+  case "$row_id" in
+    TC-01)
+      grep -qEi 'WF-SILVER-(FEATURE|DEVOPS|RELEASE)|waitlist|multi.?workflow' "$row_log" 2>/dev/null && return 0
+      ;;
+    TC-02)
+      grep -qEi 'WF-SILVER-FAST|observability|structured logging|DR-SUBSTITUTE|correlation' "$row_log" 2>/dev/null && return 0
+      ;;
+    TC-03)
+      grep -qEi 'NEW-WORKFLOW|posture audit|compliance|net.?new.?workflow|silver-new-workflow' "$row_log" 2>/dev/null && return 0
+      ;;
+  esac
+  return 1
+}
+
+enterprise_e2e_outcome_composition_log_candidates() {
+  local work_dir="$1"
+  local run_dir path seen=""
+  [[ -n "$work_dir" ]] || return 0
+  run_dir="$(enterprise_e2e_outcome_tri_criteria_run_dir 2>/dev/null || true)"
+  if [[ -n "$run_dir" ]]; then
+    for path in \
+      "${run_dir}/orchestrator-composition-log.jsonl" \
+      "${run_dir}/composition_log.jsonl"; do
+      if [[ -f "$path" ]]; then
+        printf '%s\n' "$path"
+        seen=1
+      fi
+    done
+  fi
+  path="$(enterprise_e2e_outcome_composition_log_path "$work_dir")"
+  if [[ -f "$path" ]]; then
+    printf '%s\n' "$path"
+  elif [[ -z "$seen" && -n "$run_dir" ]]; then
+    return 1
+  fi
+}
+
 enterprise_e2e_outcome_evidence_resolved() {
   local work_dir="$1" evidence_path="${2:-}" row_num="${3:-}"
-  local base="" slug=""
+  local base="" slug="" run_dir comp_log
+  if enterprise_e2e_outcome_is_tri_criteria_row "$row_num"; then
+    run_dir="$(enterprise_e2e_outcome_tri_criteria_run_dir 2>/dev/null || true)"
+    if [[ -n "${SB_TRI_CRITERIA_SESSION_LOG:-}" && -f "${SB_TRI_CRITERIA_SESSION_LOG}" ]]; then
+      printf '%s\n' "${SB_TRI_CRITERIA_SESSION_LOG}"
+      return 0
+    fi
+    if [[ -n "$run_dir" ]]; then
+      while IFS= read -r comp_log; do
+        [[ -n "$comp_log" && -f "$comp_log" ]] || continue
+        printf '%s\n' "$comp_log"
+        return 0
+      done < <(enterprise_e2e_outcome_composition_log_candidates "$work_dir" 2>/dev/null || true)
+    fi
+    if enterprise_e2e_outcome_tri_criteria_product_present "$row_num" "$work_dir"; then
+      printf '%s\n' ".planning/sb-tri-criteria-e2e/runs/${row_num}/product-evidence"
+      return 0
+    fi
+    return 1
+  fi
   [[ -n "$evidence_path" ]] || evidence_path="$(enterprise_e2e_outcome_matrix_evidence_path "$row_num")"
   [[ -n "$evidence_path" ]] || return 1
   if [[ -f "${work_dir}/${evidence_path}" || -d "${work_dir}/${evidence_path}" ]]; then
@@ -522,6 +651,18 @@ enterprise_e2e_outcome_score_auto() {
       printf 'partial\n'; return 0
     fi
     printf 'fail\n'; return 0
+  fi
+  if enterprise_e2e_outcome_is_tri_criteria_row "$row_num"; then
+    if enterprise_e2e_outcome_tri_criteria_session_evidence_present "$row_num" "$row_log" && \
+       { enterprise_e2e_outcome_evidence_resolved "$work_dir" "$evidence" "$row_num" >/dev/null 2>&1 || \
+         enterprise_e2e_outcome_tri_criteria_product_present "$row_num" "$work_dir"; }; then
+      printf 'pass\n'; return 0
+    fi
+    if [[ "${SB_E2E_ENTERPRISE_MATRIX:-}" == "1" ]] && \
+       enterprise_e2e_outcome_log_has_autonomous "$row_log" && \
+       enterprise_e2e_outcome_log_has_worker_completion "$row_log"; then
+      printf 'pass\n'; return 0
+    fi
   fi
   if enterprise_e2e_outcome_evidence_resolved "$work_dir" "$evidence" "$row_num" >/dev/null 2>&1; then
     if enterprise_e2e_outcome_log_has_autonomous "$row_log"; then
@@ -844,7 +985,17 @@ enterprise_e2e_outcome_row_failures() {
 enterprise_e2e_outcome_score_tailor() {
   local work_dir="$1" state_dir="$2" row_log="$3" row_num="${4:-}"
   local state_file="${state_dir}/state"
-  [[ "$row_num" == "6" ]] && { printf 'n/a\n'; return 0; }
+  if [[ "$row_num" == "6" ]]; then
+    if [[ -f "${work_dir}/.planning/workflows/fast-readme.md" ]] || \
+       [[ -f "${work_dir}/.planning/orchestrator-composition-log.jsonl" ]]; then
+      printf 'pass\n'; return 0
+    fi
+    if [[ -n "$row_log" && -f "$row_log" ]] && \
+       grep -qEi '/silver:fast|silver-fast|fast-readme|catalog workflow' "$row_log" 2>/dev/null; then
+      printf 'pass\n'; return 0
+    fi
+    printf 'n/a\n'; return 0
+  fi
   if [[ -f "$state_file" ]] && grep -qE 'silver-context|silver-router|silver-feature' "$state_file" 2>/dev/null; then
     printf 'pass\n'; return 0
   fi
@@ -1308,6 +1459,249 @@ enterprise_e2e_outcome_score_decide() {
   printf 'n/a\n'
 }
 
+# --- Tri-criteria E2E scorers (TC-01/02/03) ---
+
+enterprise_e2e_outcome_composition_log_path() {
+  local work_dir="$1"
+  printf '%s/.planning/orchestrator-composition-log.jsonl' "$work_dir"
+}
+
+enterprise_e2e_outcome_event_log_path() {
+  local state_dir="${1:-${SB_RUNTIME_STATE_DIR:-/tmp}}"
+  local run_dir
+  run_dir="$(enterprise_e2e_outcome_tri_criteria_run_dir 2>/dev/null || true)"
+  if [[ -n "$run_dir" && -f "${run_dir}/orchestrator-events.jsonl" ]]; then
+    printf '%s/orchestrator-events.jsonl' "$run_dir"
+    return 0
+  fi
+  printf '%s/orchestrator-events.jsonl' "$state_dir"
+}
+
+enterprise_e2e_outcome_count_distinct_workflow_ids() {
+  local work_dir="$1" state_dir="${2:-${SB_RUNTIME_STATE_DIR:-/tmp}}"
+  local comp_log state_file event_file
+  local -a extra_logs=() py_args=() logpath
+  comp_log="$(enterprise_e2e_outcome_composition_log_path "$work_dir")"
+  state_file="${state_dir}/orchestrator.json"
+  event_file="$(enterprise_e2e_outcome_event_log_path "$state_dir")"
+  while IFS= read -r logpath; do
+    [[ -n "$logpath" && -f "$logpath" && "$logpath" != "$comp_log" ]] && extra_logs+=("$logpath")
+  done < <(enterprise_e2e_outcome_composition_log_candidates "$work_dir" 2>/dev/null || true)
+  command -v jq >/dev/null 2>&1 || { printf '0'; return 0; }
+  py_args=("$comp_log" "$state_file" "$event_file")
+  if [[ ${#extra_logs[@]} -gt 0 ]]; then
+    py_args+=("${extra_logs[@]}")
+  fi
+  python3 - "${py_args[@]}" <<'PY'
+import json, sys, re
+from pathlib import Path
+
+comp_log, state_file, event_file = sys.argv[1:4]
+extra_logs = [p for p in sys.argv[4:] if p]
+ids = set()
+
+def add(val):
+    if not val or not isinstance(val, str):
+        return
+    v = val.strip()
+    if v.startswith("WF-"):
+        ids.add(v)
+
+def composer_to_wf(composer):
+    if not composer or not isinstance(composer, str):
+        return
+    c = composer.strip().replace("silver:", "silver-")
+    mapping = {
+        "silver-feature": "WF-SILVER-FEATURE",
+        "silver-fast": "WF-SILVER-FAST",
+        "silver-devops": "WF-SILVER-DEVOPS",
+        "silver-release": "WF-SILVER-RELEASE",
+        "silver-new-workflow": "WF-SILVER-NEW-WORKFLOW",
+        "silver-ui": "WF-SILVER-UI",
+        "silver-bugfix": "WF-SILVER-BUGFIX",
+        "silver-router": "WF-SILVER-ROUTER",
+        "silver-research": "WF-SILVER-DEEP-RESEARCH",
+        "silver-ship": "WF-SILVER-SHIP",
+    }
+    if c in mapping:
+        ids.add(mapping[c])
+        return
+    m = re.match(r"silver-(.+)$", c)
+    if m:
+        ids.add("WF-SILVER-" + m.group(1).upper().replace("-", "-"))
+
+def instance_to_wf(wid):
+    if not wid or not isinstance(wid, str):
+        return
+    m = re.search(r"-(silver-[a-z0-9-]+)$", wid)
+    if m:
+        composer_to_wf(m.group(1))
+
+def ingest_line(line):
+    line = line.strip()
+    if not line:
+        return
+    try:
+        doc = json.loads(line)
+    except json.JSONDecodeError:
+        return
+    add(doc.get("selected_workflow"))
+    add(doc.get("workflow_id"))
+    composer_to_wf(doc.get("composer"))
+    instance_to_wf(doc.get("workflow_id"))
+    for op in doc.get("operations") or []:
+        ref = op.get("target_ref") or ""
+        if ref.startswith("WF-"):
+            ids.add(ref)
+    payload = doc.get("payload") or {}
+    for key in ("workflow_id", "selected_workflow", "next_flow"):
+        add(payload.get(key))
+    instance_to_wf(payload.get("instance_workflow_id"))
+
+log_paths = []
+if Path(comp_log).is_file():
+    log_paths.append(Path(comp_log))
+for raw in extra_logs:
+    p = Path(raw)
+    if p.is_file() and p not in log_paths:
+        log_paths.append(p)
+
+for path in log_paths:
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        ingest_line(line)
+
+if Path(state_file).is_file():
+    try:
+        doc = json.loads(Path(state_file).read_text(encoding="utf-8"))
+        add(doc.get("workflow_id"))
+        add(doc.get("selected_workflow"))
+        for key in ("completed_flows", "flow_queue"):
+            val = doc.get(key)
+            if isinstance(val, list):
+                for item in val:
+                    if isinstance(item, str) and item.startswith("WF-"):
+                        ids.add(item)
+    except (json.JSONDecodeError, OSError):
+        pass
+
+if Path(event_file).is_file():
+    for line in Path(event_file).read_text(encoding="utf-8", errors="replace").splitlines():
+        ingest_line(line)
+
+print(len(ids))
+PY
+}
+
+enterprise_e2e_outcome_score_multiwf() {
+  local work_dir="$1" state_dir="$2" row_log="${3:-}"
+  local min_ids="${SB_TRI_CRITERIA_MIN_WORKFLOW_IDS:-3}"
+  local count adv_count=0
+  count="$(enterprise_e2e_outcome_count_distinct_workflow_ids "$work_dir" "$state_dir")"
+  if command -v jq >/dev/null 2>&1; then
+    local event_file
+    event_file="$(enterprise_e2e_outcome_event_log_path "$state_dir")"
+    if [[ -f "$event_file" ]]; then
+      adv_count="$(jq -s '[.[] | select(.type=="advance")] | length' "$event_file" 2>/dev/null || echo 0)"
+    fi
+  fi
+  if [[ "${count:-0}" -ge "$min_ids" ]]; then
+    printf 'pass\n'; return 0
+  fi
+  if [[ "${count:-0}" -ge 2 && "${adv_count:-0}" -ge 2 ]] && \
+     [[ -n "$row_log" && -f "$row_log" ]] && \
+     grep -qEi 'WF-SILVER-(FEATURE|DEVOPS|RELEASE|UI|DEPLOY)|multi.?workflow|workflow.?chain' "$row_log" 2>/dev/null; then
+    printf 'partial\n'; return 0
+  fi
+  printf 'fail\n'
+}
+
+enterprise_e2e_outcome_score_dynamic() {
+  local work_dir="$1" state_dir="${2:-}" row_log="${3:-}"
+  local comp_log sb_root valid_ops=0 distinct_ops=0 bad_refs=0
+  local -a comp_logs=() logpath
+  while IFS= read -r logpath; do
+    [[ -n "$logpath" && -f "$logpath" ]] && comp_logs+=("$logpath")
+  done < <(enterprise_e2e_outcome_composition_log_candidates "$work_dir" 2>/dev/null || true)
+  comp_log="$(enterprise_e2e_outcome_composition_log_path "$work_dir")"
+  if [[ ${#comp_logs[@]} -eq 0 && -f "$comp_log" ]]; then
+    comp_logs=("$comp_log")
+  fi
+  sb_root="$(enterprise_e2e_outcome_repo_root)"
+  if [[ ${#comp_logs[@]} -eq 0 ]]; then
+    printf 'fail\n'; return 0
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    valid_ops="$(jq -s '
+      [.[] | .operations[]? |
+        select((.catalog_rule_ref // "") != "" and (.rationale // "") != "")] | length
+    ' "${comp_logs[@]}" 2>/dev/null || echo 0)"
+    distinct_ops="$(jq -s '
+      [.[] | .operations[]?.op] | unique | length
+    ' "${comp_logs[@]}" 2>/dev/null || echo 0)"
+    if [[ -f "${sb_root}/docs/apo-catalog.json" ]]; then
+      bad_refs="$(jq -s --slurpfile cat "${sb_root}/docs/apo-catalog.json" '
+        def ids: [$cat[0].dynamic_rules[]?.id];
+        [.[] | .operations[]? | select((.catalog_rule_ref // "") != "") |
+          select(.catalog_rule_ref as $r | (ids | index($r)) | not)] | length
+      ' "${comp_logs[@]}" 2>/dev/null || echo 1)"
+    fi
+    if [[ "${valid_ops:-0}" -ge 2 && "${distinct_ops:-0}" -ge 2 && "${bad_refs:-1}" -eq 0 ]]; then
+      printf 'pass\n'; return 0
+    fi
+    if [[ "${valid_ops:-0}" -ge 1 ]]; then
+      printf 'partial\n'; return 0
+    fi
+  fi
+  if [[ -n "$row_log" && -f "$row_log" ]] && \
+     grep -qEi 'DR-(PRUNE|INSERT|SUBSTITUTE|PARALLELIZE|LOOP)|catalog_rule_ref|dynamic.?compos' "$row_log" 2>/dev/null; then
+    printf 'partial\n'; return 0
+  fi
+  printf 'fail\n'
+}
+
+enterprise_e2e_outcome_score_newwf() {
+  local work_dir="$1" state_dir="${2:-${SB_RUNTIME_STATE_DIR:-/tmp}}" row_log="${3:-}"
+  local has_worker=0 has_artifact=0 event_file
+  event_file="$(enterprise_e2e_outcome_event_log_path "$state_dir")"
+  if [[ -f "$event_file" ]] && command -v jq >/dev/null 2>&1; then
+    if jq -e '
+      [.[] | select(.type=="dispatch" and (
+        (.payload.worker_template // "") == "NEW-WORKFLOW" or
+        (.payload.skill // "") == "silver-new-workflow"
+      ))] | length > 0
+    ' "$event_file" >/dev/null 2>&1; then
+      has_worker=1
+    fi
+  fi
+  if [[ -n "$row_log" && -f "$row_log" ]] && \
+     grep -qEi 'NEW-WORKFLOW|silver-new-workflow|net.?new.?workflow' "$row_log" 2>/dev/null; then
+    has_worker=1
+  fi
+  if [[ -f "${state_dir}/orchestrator.json" ]] && \
+     grep -qE 'NEW-WORKFLOW|silver-new-workflow' "${state_dir}/orchestrator.json" 2>/dev/null; then
+    has_worker=1
+  fi
+  if find "${work_dir}/.planning/workflows" -name '*.md' 2>/dev/null | head -1 | grep -q .; then
+    if find "${work_dir}/.planning/workflows" -name '*.md' -exec grep -lEi 'compliance.?snapshot|WF-.*COMPLIANCE|net.?new|Flow Log' {} + 2>/dev/null | grep -q .; then
+      has_artifact=1
+    fi
+  fi
+  if [[ -d "${work_dir}/docs/apo-catalog.d" ]] && compgen -G "${work_dir}/docs/apo-catalog.d/*.json" >/dev/null 2>&1; then
+    has_artifact=1
+  fi
+  if compgen -G "${work_dir}/.planning/compliance/*.md" >/dev/null 2>&1 && \
+     compgen -G "${work_dir}/scripts/*compliance*" >/dev/null 2>&1; then
+    has_artifact=1
+  fi
+  if [[ "$has_worker" -eq 1 && "$has_artifact" -eq 1 ]]; then
+    printf 'pass\n'; return 0
+  fi
+  if [[ "$has_worker" -eq 1 || "$has_artifact" -eq 1 ]]; then
+    printf 'partial\n'; return 0
+  fi
+  printf 'fail\n'
+}
+
 enterprise_e2e_outcome_score_forens() {
   local work_dir="$1" row_num="${2:-}"
   [[ "$row_num" != "19" ]] && { printf 'n/a\n'; return 0; }
@@ -1356,6 +1750,9 @@ enterprise_e2e_outcome_score_criterion() {
     OUT-SUPER-01) enterprise_e2e_outcome_score_super "$state_dir" "$row_log" "$row_num" ;;
     OUT-HEAL-01) enterprise_e2e_outcome_score_heal "$sb_root" "$row_log" "$row_num" ;;
     OUT-RELEASE-01) enterprise_e2e_outcome_score_release "$work_dir" "$row_num" "$ledger" ;;
+    OUT-MULTIWF-01) enterprise_e2e_outcome_score_multiwf "$work_dir" "$state_dir" "$row_log" ;;
+    OUT-DYNAMIC-01) enterprise_e2e_outcome_score_dynamic "$work_dir" "$state_dir" "$row_log" ;;
+    OUT-NEWWF-01) enterprise_e2e_outcome_score_newwf "$work_dir" "$state_dir" "$row_log" ;;
     *) printf 'n/a\n' ;;
   esac
 }

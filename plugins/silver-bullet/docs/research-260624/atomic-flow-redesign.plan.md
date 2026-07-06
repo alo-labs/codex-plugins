@@ -409,7 +409,7 @@ Primary composers to rebuild:
 - `silver:ui`
 - `silver:devops`
 - `silver:bugfix`
-- `silver:research`
+- `silver:deep-research`
 - `silver:release`
 - `silver:fast`
 

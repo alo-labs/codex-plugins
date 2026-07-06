@@ -57,9 +57,9 @@ Flow numbers are stable identifiers — not always runtime order. For `silver:fe
 | `AF-BOOTSTRAP` | project_bootstrap | `templates/orchestrator-workers/BOOTSTRAP.md` | `silver-bootstrap-milestone`, `silver-bootstrap-project`, `silver-init` |
 | `AF-ORIENT` | context_orientation | `templates/orchestrator-workers/ORIENT.md` | `silver-context`, `silver-orient`, `silver-review-stats`, `silver-scan` |
 | `AF-CLARIFY` | scope_clarification | `templates/orchestrator-workers/CLARIFY.md` | `silver-clarify` |
-| `AF-DECIDE` | decision_research | `templates/orchestrator-workers/DECIDE.md` | `review-research`, `silver-multi-ai`, `silver-research` |
+| `AF-DECIDE` | decision_research | `templates/orchestrator-workers/DECIDE.md` | `review-research`, `silver-deep-research` |
 | `AF-SPECIFY` | requirements_specification | `templates/orchestrator-workers/SPECIFY.md` | `review-ingestion-manifest`, `review-requirements`, `review-spec`, `silver-ingest` |
-| `AF-PLAN` | execution_planning | `templates/orchestrator-workers/PLAN.md` | `review-context`, `review-plan`, `silver-plan` |
+| `AF-PLAN` | execution_planning | `templates/orchestrator-workers/PLAN.md` | `review-context`, `review-plan`, `silver-new-workflow`, `silver-plan` |
 | `AF-DESIGN-CONTRACT` | design_contract | `templates/orchestrator-workers/DESIGN-CONTRACT.md` | `review-design`, `silver-ui-contract` |
 | `AF-EXECUTE` | implementation_execution | `templates/orchestrator-workers/EXECUTE.md` | `silver-execute`, `silver-refactor`, `silver-spike`, `silver-worktree` |
 | `AF-UI-QUALITY` | ui_quality_review | `templates/orchestrator-workers/UI-QUALITY.md` | `silver-ui`, `silver-ui-review`, `usability` |
@@ -80,7 +80,7 @@ Flow numbers are stable identifiers — not always runtime order. For `silver:fe
 | `AF-VALIDATE` | gap_validation | `templates/orchestrator-workers/VALIDATE.md` | `silver-validate` |
 | `AF-PHASE-MANAGE` | phase_and_state_management | `templates/orchestrator-workers/PHASE.md` | `silver-add`, `silver-doctor`, `silver-migrate`, `silver-phase` |
 | `AF-FAST-PATH` | bounded_fast_path | `templates/orchestrator-workers/FAST.md` | `silver-benchmark`, `silver-fast`, `silver-feature`, `silver-incident` |
-| `AF-AGENT-DELEGATE` | external_agent_delegation | `templates/orchestrator-workers/AGENT-DELEGATE.md` | `silver-agent-codex`, `silver-agent-cursor` |
+| `AF-AGENT-DELEGATE` | external_agent_delegation | `templates/orchestrator-workers/AGENT-DELEGATE.md` | `silver-agent-codex`, `silver-agent-cursor`, `silver-agent-claude` |
 
 ## Skill-Dispatched Worker Templates
 
@@ -213,9 +213,9 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 - atomic_flow: `AF-EXECUTE`
 - workflow: `WF-POST-EXEC-GATES`
 
-### `WF-SILVER-RESEARCH`
+### `WF-SILVER-DEEP-RESEARCH`
 
-- Slug: `silver-research`
+- Slug: `silver-deep-research`
 - Type: `precomposed`
 - Final intent gate: `INTENT-GATE-DEFAULT`
 
@@ -223,6 +223,22 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 - atomic_flow: `AF-DECIDE`
 - atomic_flow: `AF-DOCUMENT`
 - atomic_flow: `AF-VALIDATE`
+
+### `WF-SILVER-NEW-WORKFLOW`
+
+- Slug: `silver-new-workflow`
+- Type: `precomposed`
+- Final intent gate: `INTENT-GATE-DEFAULT`
+
+- atomic_flow: `AF-CLARIFY`
+- atomic_flow: `AF-ORIENT`
+- atomic_flow: `AF-DECIDE`
+- atomic_flow: `AF-PLAN`
+- atomic_flow: `AF-REVIEW-TRIAGE`
+- atomic_flow: `AF-EXECUTE`
+- atomic_flow: `AF-VERIFY`
+- atomic_flow: `AF-VALIDATE`
+- atomic_flow: `AF-DOCUMENT`
 
 ### `WF-SILVER-FAST`
 
@@ -390,15 +406,18 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-context` | `AF-ORIENT` |
 | `silver-create-release` | `AF-RELEASE` |
 | `silver-debug` | `AF-DEBUG` |
+| `silver-deep-research` | `AF-DECIDE` |
 | `silver-ensure-docs` | `AF-DOCUMENT` |
 | `silver-execute` | `AF-EXECUTE` |
 | `silver-handoff` | `AF-DOCUMENT` |
+| `silver-new-workflow` | `AF-PLAN` |
 | `silver-plan` | `AF-PLAN` |
 | `silver-quality-gates` | `AF-QUALITY-GATE` |
-| `silver-research` | `AF-DECIDE` |
 | `silver-review` | `AF-REVIEW` |
+| `silver-review-fix-ladder` | `AF-REVIEW-TRIAGE` |
 | `silver-review-request` | `AF-REVIEW-REQUEST` |
 | `silver-review-triage` | `AF-REVIEW-TRIAGE` |
+| `silver-scan` | `AF-ORIENT` |
 | `silver-secure` | `AF-SECURE` |
 | `silver-ship` | `AF-SHIP` |
 | `silver-spec` | `AF-SPECIFY` |
@@ -414,8 +433,10 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-AI_LLM_SAFETY` | `ai-llm-safety` | `AF-SECURE` | `EV-FS-AI_LLM_SAFETY` |
 | `FS-ARTIFACT_REVIEWER` | `artifact-reviewer` | `AF-REVIEW` | `EV-FS-ARTIFACT_REVIEWER` |
 | `FS-ARTIFACT_REVIEW_ASSESSOR` | `artifact-review-assessor` | `AF-REVIEW` | `EV-FS-ARTIFACT_REVIEW_ASSESSOR` |
-| `FS-DELEGATE-BRIEF` | `silver-agent-codex|silver-agent-cursor` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-BRIEF` |
+| `FS-DELEGATE-BRIEF` | `silver-agent-codex|silver-agent-cursor|silver-agent-claude` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-BRIEF` |
 | `FS-DELEGATE-CHECKPOINT` | `distribution-only` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-CHECKPOINT` |
+| `FS-DELEGATE-CLAUDE-LAUNCH` | `silver-agent-claude` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
+| `FS-DELEGATE-CLAUDE-ROUTE` | `silver-agent-claude` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
 | `FS-DELEGATE-CODEX-LAUNCH` | `silver-agent-codex` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
 | `FS-DELEGATE-CODEX-ROUTE` | `silver-agent-codex` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
 | `FS-DELEGATE-CURSOR-LAUNCH` | `silver-agent-cursor` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
@@ -424,7 +445,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-DELEGATE-GUARD_OFF` | `distribution-only` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-GUARD_OFF` |
 | `FS-DELEGATE-GUARD_ON` | `distribution-only` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-GUARD_ON` |
 | `FS-DELEGATE-LAUNCH` | `silver-agent-worker` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-LAUNCH` |
-| `FS-DELEGATE-MENTOR` | `silver-agent-codex|silver-agent-cursor` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-MENTOR` |
+| `FS-DELEGATE-MENTOR` | `silver-agent-codex|silver-agent-cursor|silver-agent-claude` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-MENTOR` |
 | `FS-DELEGATE-RELAUNCH` | `silver-agent-worker` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-RELAUNCH` |
 | `FS-DELEGATE-VERIFY` | `distribution-only` | `AF-AGENT-DELEGATE` | `EV-FS-DELEGATE-VERIFY` |
 | `FS-DEVOPS_QUALITY_GATES` | `devops-quality-gates` | `AF-QUALITY-GATE` | `EV-FS-DEVOPS_QUALITY_GATES` |
@@ -448,6 +469,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SECURITY` | `security` | `AF-SECURE` | `EV-FS-SECURITY` |
 | `FS-SILVER` | `silver` | `AF-ROUTE` | `EV-FS-SILVER` |
 | `FS-SILVER_ADD` | `silver-add` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_ADD` |
+| `FS-SILVER_AGENT_CLAUDE` | `silver-agent-claude` | `AF-AGENT-DELEGATE` | `EV-FS-SILVER_AGENT_CLAUDE` |
 | `FS-SILVER_AGENT_CODEX` | `silver-agent-codex` | `AF-AGENT-DELEGATE` | `EV-FS-SILVER_AGENT_CODEX` |
 | `FS-SILVER_AGENT_CURSOR` | `silver-agent-cursor` | `AF-AGENT-DELEGATE` | `EV-FS-SILVER_AGENT_CURSOR` |
 | `FS-SILVER_BENCHMARK` | `silver-benchmark` | `AF-FAST-PATH` | `EV-FS-SILVER_BENCHMARK` |
@@ -463,6 +485,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SILVER_CONTEXT` | `silver-context` | `AF-ORIENT` | `EV-FS-SILVER_CONTEXT` |
 | `FS-SILVER_CREATE_RELEASE` | `silver-create-release` | `AF-RELEASE` | `EV-FS-SILVER_CREATE_RELEASE` |
 | `FS-SILVER_DEBUG` | `silver-debug` | `AF-DEBUG` | `EV-FS-SILVER_DEBUG` |
+| `FS-SILVER_DEEP_RESEARCH` | `silver-deep-research` | `AF-DECIDE` | `EV-FS-SILVER_DEEP_RESEARCH` |
 | `FS-SILVER_DEPLOY` | `silver-deploy` | `AF-SHIP` | `EV-FS-SILVER_DEPLOY` |
 | `FS-SILVER_DEVOPS` | `silver-devops` | `AF-DEVOPS-ROUTE` | `EV-FS-SILVER_DEVOPS` |
 | `FS-SILVER_DOCTOR` | `silver-doctor` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_DOCTOR` |
@@ -477,7 +500,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SILVER_INGEST` | `silver-ingest` | `AF-SPECIFY` | `EV-FS-SILVER_INGEST` |
 | `FS-SILVER_INIT` | `silver-init` | `AF-BOOTSTRAP` | `EV-FS-SILVER_INIT` |
 | `FS-SILVER_MIGRATE` | `silver-migrate` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_MIGRATE` |
-| `FS-SILVER_MULTI_AI` | `silver-multi-ai` | `AF-DECIDE` | `EV-FS-SILVER_MULTI_AI` |
+| `FS-SILVER_NEW_WORKFLOW` | `silver-new-workflow` | `AF-PLAN` | `EV-FS-SILVER_NEW_WORKFLOW` |
 | `FS-SILVER_ORCHESTRATOR` | `silver-orchestrator` | `AF-ROUTE` | `EV-FS-SILVER_ORCHESTRATOR` |
 | `FS-SILVER_ORIENT` | `silver-orient` | `AF-ORIENT` | `EV-FS-SILVER_ORIENT` |
 | `FS-SILVER_PHASE` | `silver-phase` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_PHASE` |
@@ -487,7 +510,6 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `FS-SILVER_RELEASE` | `silver-release` | `AF-RELEASE` | `EV-FS-SILVER_RELEASE` |
 | `FS-SILVER_REM` | `silver-rem` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_REM` |
 | `FS-SILVER_REMOVE` | `silver-remove` | `AF-PHASE-MANAGE` | `EV-FS-SILVER_REMOVE` |
-| `FS-SILVER_RESEARCH` | `silver-research` | `AF-DECIDE` | `EV-FS-SILVER_RESEARCH` |
 | `FS-SILVER_RETRO` | `silver-retro` | `AF-DOCUMENT` | `EV-FS-SILVER_RETRO` |
 | `FS-SILVER_REVIEW` | `silver-review` | `AF-REVIEW` | `EV-FS-SILVER_REVIEW` |
 | `FS-SILVER_REVIEW_FIX_LADDER` | `silver-review-fix-ladder` | `AF-REVIEW-TRIAGE` | `EV-FS-SILVER_REVIEW_FIX_LADDER` |
@@ -560,6 +582,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `security` | `AF-SECURE` |
 | `silver` | `AF-ROUTE` |
 | `silver-add` | `AF-PHASE-MANAGE` |
+| `silver-agent-claude` | `AF-AGENT-DELEGATE` |
 | `silver-agent-codex` | `AF-AGENT-DELEGATE` |
 | `silver-agent-cursor` | `AF-AGENT-DELEGATE` |
 | `silver-agent-worker` | `AF-AGENT-DELEGATE` |
@@ -576,6 +599,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-context` | `AF-ORIENT` |
 | `silver-create-release` | `AF-RELEASE` |
 | `silver-debug` | `AF-DEBUG` |
+| `silver-deep-research` | `AF-DECIDE` |
 | `silver-deploy` | `AF-SHIP` |
 | `silver-devops` | `AF-DEVOPS-ROUTE` |
 | `silver-doctor` | `AF-PHASE-MANAGE` |
@@ -590,7 +614,7 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-ingest` | `AF-SPECIFY` |
 | `silver-init` | `AF-BOOTSTRAP` |
 | `silver-migrate` | `AF-PHASE-MANAGE` |
-| `silver-multi-ai` | `AF-DECIDE` |
+| `silver-new-workflow` | `AF-PLAN` |
 | `silver-orchestrator` | `AF-ROUTE` |
 | `silver-orient` | `AF-ORIENT` |
 | `silver-phase` | `AF-PHASE-MANAGE` |
@@ -600,7 +624,6 @@ Runtime resolution: `hooks/lib/orchestrator-parent.sh` → project copy under `.
 | `silver-release` | `AF-RELEASE` |
 | `silver-rem` | `AF-PHASE-MANAGE` |
 | `silver-remove` | `AF-PHASE-MANAGE` |
-| `silver-research` | `AF-DECIDE` |
 | `silver-retro` | `AF-DOCUMENT` |
 | `silver-review` | `AF-REVIEW` |
 | `silver-review-fix-ladder` | `AF-REVIEW-TRIAGE` |

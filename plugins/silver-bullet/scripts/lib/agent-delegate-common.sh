@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared delegate wrapper behavior for agent-codex-delegate.sh and agent-cursor-delegate.sh.
+# Shared delegate wrapper behavior for agent-codex-delegate.sh, agent-cursor-delegate.sh, and agent-claude-delegate.sh.
 # shellcheck shell=bash
 
 # Canonicalize a repo-relative path to absolute.
@@ -149,6 +149,30 @@ agent_delegate_check_log_floor() {
   return 0
 }
 
+# Fail false-complete delegations: brief-only logs without agent activity.
+# Enable with SB_AGENT_CLAUDE_REQUIRE_WORKFLOW_MARKERS=1 (AUTO-E2E track).
+agent_delegate_check_workflow_markers() {
+  local log_file="$1" host_label="$2"
+  [[ "${SB_AGENT_CLAUDE_REQUIRE_WORKFLOW_MARKERS:-0}" == "1" ]] || return 0
+  [[ -n "$log_file" && -f "$log_file" ]] || return 0
+
+  local has_tokens=0 has_tool_activity=0
+  if grep -qE '[1-9][0-9]*[^0-9]{0,40}tokens' "$log_file" 2>/dev/null; then
+    has_tokens=1
+  fi
+  if grep -qE '⏺|Bash\(|Read\(|Write\(|Edit\(' "$log_file" 2>/dev/null; then
+    has_tool_activity=1
+  fi
+
+  if [[ "$has_tokens" -eq 1 || "$has_tool_activity" -eq 1 ]]; then
+    return 0
+  fi
+
+  printf '[%s] ERROR: log lacks workflow activity markers (need token counter >0 or tool-use lines) — failure_class=no-workflow-markers\n' \
+    "$host_label" >&2
+  return 1
+}
+
 agent_delegate_write_result_skeleton() {
   local result_file="$1" host="$2" task_id="$3" exit_code="$4"
   [[ -n "$result_file" ]] || return 0
@@ -226,4 +250,35 @@ agent_delegate_write_degraded_fallback_evidence() {
   printf '{"evidence_id":"EV-DELEGATE-DEGRADED-FALLBACK","host":"%s","trigger":"%s","task_id":"%s","timestamp":"%s","reason":"%s"}\n' \
     "$host" "$trigger" "$task_id" "$ts" "$(printf '%s' "$reason" | sed 's/"/\\"/g')" \
     >>"${artifact_dir}/degraded-fallback.jsonl"
+}
+
+# Pre-delegation bootstrap for opted-in Graphify + agentmemory (Claude/Codex/Cursor delegates).
+# Ensures graphify index/query freshness and agentmemory server/export exist before substantive edits.
+agent_delegate_preflight_recommended_tools() {
+  local work_dir="${1:-}" sb_root="${2:-}" host="${3:-claude}"
+  [[ -n "$work_dir" && -d "$work_dir" ]] || return 0
+  [[ -n "$sb_root" && -d "$sb_root" ]] || return 0
+
+  local core="${sb_root}/scripts/enterprise-e2e/lib/core.sh"
+  [[ -f "$core" ]] || {
+    printf '[agent-delegate] WARN: missing enterprise preflight lib at %s\n' "$core" >&2
+    return 0
+  }
+
+  # shellcheck source=scripts/enterprise-e2e/lib/core.sh
+  source "$core"
+  export SILVER_BULLET_RUNTIME="$host"
+  export SB_RUNTIME_HOST="$host"
+
+  if ! enterprise_e2e_code_intel_preflight "$sb_root" "$work_dir" 0; then
+    printf '[agent-delegate] ERROR: recommended-tools preflight failed (host=%s work_dir=%s)\n' \
+      "$host" "$work_dir" >&2
+    return 1
+  fi
+
+  local config_file="${work_dir}/.silver-bullet.json"
+  if [[ -f "$config_file" ]] && declare -f sb_agentmemory_record_usage >/dev/null 2>&1; then
+    sb_agentmemory_record_usage "$config_file" || true
+  fi
+  return 0
 }

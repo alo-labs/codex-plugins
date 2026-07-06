@@ -72,6 +72,7 @@ HOOKS_ROOT = "hooks"
 STRICT_ALLOWLIST = {
     "skills/silver-agent-codex/SKILL.md",
     "skills/silver-agent-cursor/SKILL.md",
+    "skills/silver-agent-claude/SKILL.md",
     "skills/silver-agent-worker/SKILL.md",
     "skills/silver/SKILL.md",
     ".silver-bullet/orchestrator-workers/AGENT-DELEGATE.md",
@@ -103,7 +104,6 @@ SCRIPTS_ALLOWLIST = {
     "scripts/lib/rtk-cm-hosts.json",
     "scripts/lib/claude-matrix-auth.sh",
     "scripts/lib/merge-token-compression-config.py",
-    "scripts/multi-ai-task-models.py",
     "scripts/generate-apo-catalog.py",
     "scripts/lib/codex-cli.sh",
 }

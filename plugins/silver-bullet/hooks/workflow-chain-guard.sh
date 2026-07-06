@@ -6,7 +6,7 @@ trap 'exit 0' ERR
 # workflows.
 #
 # The workflow tracker (.planning/workflows/<id>.md) is the admission ticket.
-# Once a silver:feature / silver:ui / silver:devops / silver:research
+# Once a silver:feature / silver:ui / silver:devops / silver:deep-research
 # composition is active, this hook blocks implementation edits until the
 # pre-execution dependency chain has been recorded in the Silver Bullet state
 # file. It deliberately does not require execute, review, verify, or ship
@@ -143,8 +143,11 @@ case "$composer_slug" in
   silver-devops)
     required_markers=(silver-blast-radius devops-skill-router devops-quality-gates security silver-context silver-plan)
     ;;
-  silver-research)
-    required_markers=(silver-clarify silver-research)
+  silver-deep-research)
+    required_markers=(silver-clarify silver-deep-research)
+    ;;
+  silver-new-workflow)
+    required_markers=(silver-clarify silver-scan silver-plan)
     ;;
   silver-bugfix)
     # Bugfix is diagnosis-first: the documented pre-execution chain is
@@ -163,6 +166,36 @@ case "$composer_slug" in
     # Milestone release: Step 0 is quality-gates before any release artifact edits.
     required_markers=(silver-quality-gates)
     ;;
+  silver)
+    required_markers=(silver-context)
+    ;;
+  silver-benchmark)
+    required_markers=(silver-context silver-plan)
+    ;;
+  silver-canary)
+    required_markers=(silver-blast-radius silver-plan)
+    ;;
+  silver-content)
+    required_markers=(silver-clarify silver-plan)
+    ;;
+  silver-deploy)
+    required_markers=(silver-blast-radius devops-quality-gates silver-plan)
+    ;;
+  silver-forensics)
+    required_markers=(silver-debug)
+    ;;
+  silver-incident)
+    required_markers=(silver-blast-radius silver-debug silver-plan)
+    ;;
+  silver-refactor)
+    required_markers=(silver-plan silver-validate)
+    ;;
+  silver-retro)
+    required_markers=(silver-context)
+    ;;
+  silver-test)
+    required_markers=(silver-plan silver-validate)
+    ;;
   *)
     exit 0
     ;;
@@ -177,7 +210,7 @@ fi
 
 # Post-plan validation gate for feature/ui/devops/fast composers.
 case "$composer_slug" in
-  silver-feature|silver-ui|silver-devops|silver-fast)
+  silver-feature|silver-ui|silver-devops|silver-fast|silver-new-workflow|silver-refactor|silver-test)
     required_markers+=("silver-validate")
     ;;
 esac

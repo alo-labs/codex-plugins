@@ -58,9 +58,14 @@ DELEGATE_FLOW_STEP_ORDER = [
     "FS-DELEGATE-LAUNCH",
     "FS-DELEGATE-CODEX-LAUNCH",
     "FS-DELEGATE-CODEX-ROUTE",
+    "FS-SILVER_AGENT_CODEX",
     "FS-DELEGATE-CURSOR-LAUNCH",
     "FS-DELEGATE-CURSOR-ROUTE",
     "FS-DELEGATE-CURSOR-SUBAGENT-POLICY",
+    "FS-SILVER_AGENT_CURSOR",
+    "FS-DELEGATE-CLAUDE-LAUNCH",
+    "FS-DELEGATE-CLAUDE-ROUTE",
+    "FS-SILVER_AGENT_CLAUDE",
     "FS-DELEGATE-CHECKPOINT",
     "FS-DELEGATE-VERIFY",
     "FS-DELEGATE-RELAUNCH",
@@ -70,7 +75,7 @@ DELEGATE_FLOW_STEP_ORDER = [
 
 DELEGATE_STEP_DEFS: dict[str, dict[str, str]] = {
     "FS-DELEGATE-BRIEF": {
-        "skill": "silver-agent-codex|silver-agent-cursor",
+        "skill": "silver-agent-codex|silver-agent-cursor|silver-agent-claude",
         "purpose": "Host prepares bounded brief, ownership scope, and acceptance criteria.",
         "classification": "flow-step-skill",
         "evidence_suffix": "BRIEF",
@@ -117,6 +122,18 @@ DELEGATE_STEP_DEFS: dict[str, dict[str, str]] = {
         "classification": "flow-step-skill",
         "evidence_suffix": "LAUNCH",
     },
+    "FS-DELEGATE-CLAUDE-LAUNCH": {
+        "skill": "silver-agent-claude",
+        "purpose": "Spawn agent-claude-delegate.sh with CLAUDE_CONFIG_DIR isolation and OAuth auth.",
+        "classification": "flow-step-skill",
+        "evidence_suffix": "LAUNCH",
+    },
+    "FS-DELEGATE-CLAUDE-ROUTE": {
+        "skill": "silver-agent-claude",
+        "purpose": "Inject /silver:* route syntax into external agent brief.",
+        "classification": "flow-step-skill",
+        "evidence_suffix": "LAUNCH",
+    },
     "FS-DELEGATE-CHECKPOINT": {
         "skill": "distribution-only",
         "purpose": "Record checkpoint evidence from delegate supervision.",
@@ -136,7 +153,7 @@ DELEGATE_STEP_DEFS: dict[str, dict[str, str]] = {
         "evidence_suffix": "RELAUNCH",
     },
     "FS-DELEGATE-MENTOR": {
-        "skill": "silver-agent-codex|silver-agent-cursor",
+        "skill": "silver-agent-codex|silver-agent-cursor|silver-agent-claude",
         "purpose": "Host mentor capture and user-facing report preparation.",
         "classification": "flow-step-skill",
         "evidence_suffix": "MENTOR",
@@ -171,9 +188,8 @@ SKILL_TO_FLOW = {
     "silver-context": "AF-ORIENT",
     "silver-review-stats": "AF-ORIENT",
     "silver-clarify": "AF-CLARIFY",
-    "silver-research": "AF-DECIDE",
+    "silver-deep-research": "AF-DECIDE",
     "silver-doctor": "AF-PHASE-MANAGE",
-    "silver-multi-ai": "AF-DECIDE",
     "review-research": "AF-DECIDE",
     "silver-spec": "AF-SPECIFY",
     "silver-ingest": "AF-SPECIFY",
@@ -245,17 +261,19 @@ SKILL_TO_FLOW = {
     "silver-update": "AF-PHASE-MANAGE",
     "silver-migrate": "AF-PHASE-MANAGE",
     "silver-fast": "AF-FAST-PATH",
+    "silver-new-workflow": "AF-PLAN",
     "silver-feature": "AF-FAST-PATH",
     "silver-benchmark": "AF-FAST-PATH",
     "silver-incident": "AF-FAST-PATH",
     "silver-agent-codex": "AF-AGENT-DELEGATE",
     "silver-agent-cursor": "AF-AGENT-DELEGATE",
+    "silver-agent-claude": "AF-AGENT-DELEGATE",
     "silver-agent-worker": "AF-AGENT-DELEGATE",
 }
 
 PRECOMPOSED = {
-    "silver-feature", "silver-ui", "silver-devops", "silver-bugfix", "silver-research",
-    "silver-release", "silver-fast", "silver-incident", "silver-deploy", "silver-canary",
+    "silver-feature", "silver-ui", "silver-devops", "silver-bugfix", "silver-deep-research",
+    "silver-release", "silver-fast", "silver-new-workflow", "silver-incident", "silver-deploy", "silver-canary",
     "silver-content", "silver-retro", "silver-benchmark", "silver-refactor",
     "silver-test", "silver-forensics",
 }
@@ -336,7 +354,7 @@ def build_flow_steps(skill_names: list[str]) -> tuple[list[dict], dict[str, list
         evidence_class = EVIDENCE_CLASSES[idx % len(EVIDENCE_CLASSES)]
         flow_to_steps[flow_id].append(step_id)
         evidence_records.append(evidence_record(ev_id, step_id, v_id, evidence_class, f"skills/{name}/SKILL.md"))
-        flow_steps.append({
+        step = {
             "id": step_id,
             "skill": name,
             "purpose": f"Execute the {name} skill as a catalog-backed step in {flow_id}.",
@@ -357,7 +375,29 @@ def build_flow_steps(skill_names: list[str]) -> tuple[list[dict], dict[str, list
             },
             "reusable_by_flows": [flow_id],
             "canonical_catalog_entity": flow_id,
-        })
+        }
+        if name == "silver-deep-research":
+            step["purpose"] = "Execute the nested SB deep-research workflow as FS-SILVER_DEEP_RESEARCH inside AF-DECIDE."
+            step["outputs"] = [
+                "research_report.md",
+                "decision-record.md",
+                "handoff.md",
+                "sources.jsonl",
+                "evidence.jsonl",
+                "claims.jsonl",
+                "vloop-rollup.json",
+            ]
+            step["v_loop"]["work_product"] = "Phase-level deep research artifacts plus ART-DECIDE rollup under .planning/research/."
+            step["v_loop"]["verification"]["artifact_refs"] = [
+                "skills/silver-deep-research/SKILL.md",
+                ".planning/research/<date>-<slug>/vloop-rollup.json",
+                ".planning/research/<date>-<slug>/decision-record.md",
+            ]
+            step["v_loop"]["validation"]["methods"] = [
+                "confirm nested DR-* phase V-loops passed or were mode-skipped",
+                "trace decision-record.md to parent AF-DECIDE input",
+            ]
+        flow_steps.append(step)
     return sorted(flow_steps, key=lambda item: item["id"]), flow_to_steps, evidence_records
 
 
@@ -443,7 +483,7 @@ def merge_delegate_catalog(
     for flow in atomic_flows:
         if flow.get("id") != "AF-AGENT-DELEGATE":
             continue
-        flow["owning_skills"] = ["silver-agent-codex", "silver-agent-cursor"]
+        flow["owning_skills"] = ["silver-agent-codex", "silver-agent-cursor", "silver-agent-claude"]
         flow["flow_steps"] = list(DELEGATE_FLOW_STEP_ORDER)
         flow["artifacts"] = ["ART-AGENT-DELEGATE"]
         flow["execution"]["parallelizable"] = False
@@ -489,7 +529,11 @@ def build_atomic_flows(flow_steps: list[dict], flow_to_steps: dict[str, list[str
                 "escalation": {"condition": "verification or validation fails after repair attempts or a required tool/evidence source is blocked", "blocker_artifact": ".planning/BLOCKERS.md"},
                 "evidence_refs": [ev_id],
             },
-            "tools": ["TP-GRAPHIFY"] if flow_id in {"AF-ORIENT", "AF-DECIDE", "AF-PLAN", "AF-VERIFY"} else [],
+            "tools": (
+                ["TP-GRAPHIFY", "TP-SEARCH-CLI"]
+                if flow_id == "AF-DECIDE"
+                else (["TP-GRAPHIFY"] if flow_id in {"AF-ORIENT", "AF-PLAN", "AF-VERIFY"} else [])
+            ),
             "owning_skills": owning_skills,
             "flow_steps": step_ids,
             "exit_condition": "all owned flow-step V-loops pass, the flow V-gate passes, and evidence is recorded for workflow rollup",
@@ -543,7 +587,7 @@ def build_workflows() -> list[dict]:
         n("AF-PLAN"),
     ]
     workflows = [
-        workflow("WF-SILVER-ROUTER", "silver-router", "dynamic_route", [n("AF-ROUTE"), n("WF-SILVER-FEATURE", "workflow", optional=True), n("WF-SILVER-FAST", "workflow", optional=True)], owner="silver", triggers=["/silver", "route"]),
+        workflow("WF-SILVER-ROUTER", "silver", "dynamic_route", [n("AF-ROUTE"), n("WF-SILVER-FEATURE", "workflow", optional=True), n("WF-SILVER-FAST", "workflow", optional=True)], owner="silver", triggers=["/silver", "route"], queue=["silver-context"]),
         workflow("WF-SILVER-FEATURE", "silver-feature", "precomposed", core_prefix + [n("AF-DESIGN-CONTRACT", optional=True, condition="ui_scope"), n("AF-EXECUTE"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-feature", triggers=["feature", "implement", "build feature"], queue=feature_queue),
         post_exec,
         workflow("WF-VALIDATE-SUBSTEP", "validate-substep", "reusable_component", [n("AF-VALIDATE")], reusable=True, triggers=["gap_analysis"], ops=["loop"]),
@@ -552,20 +596,36 @@ def build_workflows() -> list[dict]:
         workflow("WF-SILVER-UI", "silver-ui", "precomposed", core_prefix + [n("AF-DESIGN-CONTRACT"), n("AF-EXECUTE"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-ui", triggers=["ui", "frontend"], queue=["FLOW-QUALITY-GATE", "silver-context", "silver-plan", "silver-ui-contract", "silver-validate", "silver-execute", "silver-ui-review"] + feature_queue[5:]),
         workflow("WF-SILVER-DEVOPS", "silver-devops", "precomposed", [n("AF-BLAST-RADIUS"), n("AF-DEVOPS-ROUTE"), n("AF-QUALITY-GATE"), n("AF-SECURE"), n("AF-ORIENT"), n("AF-PLAN"), n("AF-VALIDATE"), n("AF-EXECUTE"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-devops", triggers=["devops", "infra"], queue=["silver-blast-radius", "devops-skill-router", "devops-quality-gates", "security", "silver-context", "silver-plan", "silver-validate", "silver-execute"] + feature_queue[5:]),
         workflow("WF-SILVER-BUGFIX", "silver-bugfix", "precomposed", [n("AF-ORIENT", optional=True), n("AF-DEBUG"), n("AF-PLAN"), n("AF-EXECUTE"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-bugfix", triggers=["bug", "fix", "debug"], queue=["silver-debug", "silver-plan", "silver-execute"] + feature_queue[5:]),
-        workflow("WF-SILVER-RESEARCH", "silver-research", "precomposed", [n("AF-CLARIFY"), n("AF-DECIDE"), n("AF-DOCUMENT"), n("AF-VALIDATE")], owner="silver-research", triggers=["research", "decide"], queue=["silver-clarify", "silver-research", "silver-ensure-docs", "silver-validate"]),
+        workflow("WF-SILVER-DEEP-RESEARCH", "silver-deep-research", "precomposed", [n("AF-CLARIFY"), n("AF-DECIDE"), n("AF-DOCUMENT"), n("AF-VALIDATE")], owner="silver-deep-research", triggers=["deep research", "research", "decide"], queue=["silver-clarify", "silver-deep-research", "silver-ensure-docs", "silver-validate"]),
+        workflow(
+            "WF-SILVER-NEW-WORKFLOW",
+            "silver-new-workflow",
+            "precomposed",
+            [
+                n("AF-CLARIFY"), n("AF-ORIENT"), n("AF-DECIDE"), n("AF-PLAN"),
+                n("AF-REVIEW-TRIAGE"), n("AF-EXECUTE"), n("AF-VERIFY"), n("AF-VALIDATE"), n("AF-DOCUMENT"),
+            ],
+            owner="silver-new-workflow",
+            triggers=["new workflow", "create workflow", "workflow authoring", "convert workflow"],
+            queue=[
+                "silver-clarify", "silver-scan", "silver-deep-research", "silver-plan",
+                "silver-review-fix-ladder", "silver-execute", "silver-verify",
+                "silver-validate", "silver-ensure-docs",
+            ],
+        ),
         workflow("WF-SILVER-FAST", "silver-fast", "precomposed", [n("AF-FAST-PATH"), n("AF-QUALITY-GATE"), n("AF-PLAN"), n("AF-VALIDATE"), n("AF-EXECUTE"), n("AF-VERIFY")], owner="silver-fast", triggers=["fast", "small change"], queue=["FLOW-QUALITY-GATE", "silver-plan", "silver-validate", "silver-execute", "silver-verify"]),
         workflow("WF-SILVER-RELEASE", "silver-release", "precomposed", [n("AF-QUALITY-GATE"), n("AF-REVIEW-REQUEST"), n("AF-REVIEW"), n("AF-REVIEW-TRIAGE"), n("AF-VERIFY"), n("AF-SECURE"), n("AF-VALIDATE"), n("AF-BRANCH-FINISH"), n("AF-COMPLETION-AUDIT"), n("AF-SHIP"), n("AF-RELEASE")], owner="silver-release", triggers=["release"], queue=["FLOW-QUALITY-GATE", "silver-review-request", "silver-review", "silver-review-triage", "silver-verify", "security", "silver-secure", "silver-validate", "silver-branch-finish", "silver-completion-audit", "silver-ship", "silver-create-release"]),
-        workflow("WF-SILVER-DEPLOY", "silver-deploy", "specialized", [n("AF-BLAST-RADIUS"), n("AF-VERIFY"), n("AF-SECURE"), n("AF-SHIP")], owner="silver-deploy", triggers=["deploy"]),
-        workflow("WF-SILVER-CANARY", "silver-canary", "specialized", [n("AF-BLAST-RADIUS"), n("AF-VERIFY"), n("AF-SHIP")], owner="silver-canary", triggers=["canary"]),
-        workflow("WF-SILVER-INCIDENT", "silver-incident", "specialized", [n("AF-BLAST-RADIUS"), n("AF-DEBUG"), n("AF-SECURE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-incident", triggers=["incident"]),
-        workflow("WF-SILVER-CONTENT", "silver-content", "specialized", [n("AF-CLARIFY"), n("AF-SPECIFY"), n("AF-EXECUTE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-content", triggers=["content", "docs"]),
-        workflow("WF-SILVER-RETRO", "silver-retro", "specialized", [n("AF-ORIENT"), n("AF-DOCUMENT"), n("AF-DECIDE")], owner="silver-retro", triggers=["retro"]),
-        workflow("WF-SILVER-BENCHMARK", "silver-benchmark", "specialized", [n("AF-ORIENT"), n("AF-EXECUTE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-benchmark", triggers=["benchmark"]),
-        workflow("WF-SILVER-REFACTOR", "silver-refactor", "specialized", [n("AF-PLAN"), n("AF-EXECUTE"), n("AF-VERIFY"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-refactor", triggers=["refactor"]),
-        workflow("WF-SILVER-TEST", "silver-test", "specialized", [n("AF-PLAN"), n("AF-EXECUTE"), n("AF-VERIFY")], owner="silver-test", triggers=["test", "test hardening"]),
-        workflow("WF-SILVER-FORENSICS", "silver-forensics", "specialized", [n("AF-DEBUG"), n("AF-DOCUMENT"), n("AF-VALIDATE")], owner="silver-forensics", triggers=["forensics"]),
+        workflow("WF-SILVER-DEPLOY", "silver-deploy", "specialized", [n("AF-BLAST-RADIUS"), n("AF-VERIFY"), n("AF-SECURE"), n("AF-SHIP")], owner="silver-deploy", triggers=["deploy"], queue=["silver-blast-radius", "devops-quality-gates", "silver-plan", "silver-execute", "silver-verify", "security", "silver-secure", "silver-ship"]),
+        workflow("WF-SILVER-CANARY", "silver-canary", "specialized", [n("AF-BLAST-RADIUS"), n("AF-VERIFY"), n("AF-SHIP")], owner="silver-canary", triggers=["canary"], queue=["silver-blast-radius", "silver-plan", "silver-execute", "silver-verify", "silver-ship"]),
+        workflow("WF-SILVER-INCIDENT", "silver-incident", "specialized", [n("AF-BLAST-RADIUS"), n("AF-DEBUG"), n("AF-SECURE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-incident", triggers=["incident"], queue=["silver-blast-radius", "silver-debug", "silver-plan", "silver-execute", "security", "silver-secure", "silver-verify", "silver-ensure-docs"]),
+        workflow("WF-SILVER-CONTENT", "silver-content", "specialized", [n("AF-CLARIFY"), n("AF-SPECIFY"), n("AF-EXECUTE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-content", triggers=["content", "docs"], queue=["silver-clarify", "silver-plan", "silver-execute", "silver-verify", "silver-ensure-docs"]),
+        workflow("WF-SILVER-RETRO", "silver-retro", "specialized", [n("AF-ORIENT"), n("AF-DOCUMENT"), n("AF-DECIDE")], owner="silver-retro", triggers=["retro"], queue=["silver-context", "silver-execute", "silver-ensure-docs"]),
+        workflow("WF-SILVER-BENCHMARK", "silver-benchmark", "specialized", [n("AF-ORIENT"), n("AF-EXECUTE"), n("AF-VERIFY"), n("AF-DOCUMENT")], owner="silver-benchmark", triggers=["benchmark"], queue=["silver-context", "silver-plan", "silver-execute", "silver-verify", "silver-ensure-docs"]),
+        workflow("WF-SILVER-REFACTOR", "silver-refactor", "specialized", [n("AF-PLAN"), n("AF-EXECUTE"), n("AF-VERIFY"), n("WF-POST-EXEC-GATES", "workflow")], owner="silver-refactor", triggers=["refactor"], queue=["silver-plan", "silver-validate", "silver-execute"] + feature_queue[5:]),
+        workflow("WF-SILVER-TEST", "silver-test", "specialized", [n("AF-PLAN"), n("AF-EXECUTE"), n("AF-VERIFY")], owner="silver-test", triggers=["test", "test hardening"], queue=["silver-plan", "silver-validate", "silver-execute", "silver-verify"]),
+        workflow("WF-SILVER-FORENSICS", "silver-forensics", "specialized", [n("AF-DEBUG"), n("AF-DOCUMENT"), n("AF-VALIDATE")], owner="silver-forensics", triggers=["forensics"], queue=["silver-debug", "silver-execute", "silver-ensure-docs", "silver-validate"]),
         workflow("WF-PROCESS-MAINTENANCE", "process-maintenance", "specialized", [n("AF-PHASE-MANAGE"), n("AF-DOCUMENT"), n("AF-VALIDATE")], triggers=["phase", "thread", "backlog", "migration"]),
-        workflow("WF-AGENT-DELEGATE-ENTRY", "agent-delegate-entry", "specialized", [n("AF-AGENT-DELEGATE")], owner="silver-agent", triggers=["agent-delegate", "agent-codex", "agent-cursor"]),
+        workflow("WF-AGENT-DELEGATE-ENTRY", "agent-delegate-entry", "specialized", [n("AF-AGENT-DELEGATE")], owner="silver-agent", triggers=["agent-delegate", "agent-codex", "agent-cursor", "agent-claude"]),
     ]
     return workflows
 
@@ -613,7 +673,7 @@ def build_catalog() -> dict:
             "id": "PROC-SB-SE-DEVOPS",
             "name": "Silver Bullet Software Engineering and DevOps",
             "domain": "mixed",
-            "default_workflows": ["WF-SILVER-FEATURE", "WF-SILVER-UI", "WF-SILVER-DEVOPS", "WF-SILVER-BUGFIX", "WF-SILVER-RESEARCH", "WF-SILVER-RELEASE", "WF-SILVER-FAST"],
+            "default_workflows": ["WF-SILVER-FEATURE", "WF-SILVER-UI", "WF-SILVER-DEVOPS", "WF-SILVER-BUGFIX", "WF-SILVER-DEEP-RESEARCH", "WF-SILVER-RELEASE", "WF-SILVER-FAST"],
             "team_override_policy": "process packs may add, remove, gate, or reorder workflows without forking atomic flow definitions",
             "mandatory_gates": ["INTENT-GATE-DEFAULT", "VR-WORKFLOW-DEFAULT"],
         }],
@@ -621,7 +681,7 @@ def build_catalog() -> dict:
             "id": "PP-SB-DEFAULT",
             "name": "Default Silver Bullet SE/DevOps Process Pack",
             "process_ref": "PROC-SB-SE-DEVOPS",
-            "workflow_refs": ["WF-SILVER-FEATURE", "WF-SILVER-UI", "WF-SILVER-DEVOPS", "WF-SILVER-BUGFIX", "WF-SILVER-RELEASE", "WF-SILVER-FAST"],
+            "workflow_refs": ["WF-SILVER-FEATURE", "WF-SILVER-UI", "WF-SILVER-DEVOPS", "WF-SILVER-BUGFIX", "WF-SILVER-DEEP-RESEARCH", "WF-SILVER-RELEASE", "WF-SILVER-FAST"],
             "override_rules": ["teams may reorder workflows, mandate gates, require tools, and set risk thresholds", "teams must not define local atomic flows outside docs/apo-catalog.json"],
             "conflict_resolution": "catalog safety gates override user shortcuts; explicit user scope can choose a smaller workflow when dynamic rules permit",
             "versioning": "catalog_version governs migration; process pack changes require migration_map update",
@@ -648,7 +708,7 @@ def build_catalog() -> dict:
         "intent_ledgers": [{
             "id": "IL-DEFAULT-USER-INTENT",
             "material_claims": ["requested outcome", "scope boundaries", "verification and release expectations"],
-            "mapped_entities": ["WF-SILVER-FEATURE", "WF-SILVER-RELEASE", "AF-COMPLETION-AUDIT", "AF-RELEASE"],
+            "mapped_entities": ["WF-SILVER-FEATURE", "WF-SILVER-DEEP-RESEARCH", "WF-SILVER-RELEASE", "AF-COMPLETION-AUDIT", "AF-RELEASE"],
             "validation_status": "pending",
             "final_gate_result": "pending",
             "producers": ["AF-ROUTE", "AF-CLARIFY"],
@@ -678,6 +738,7 @@ def build_catalog() -> dict:
             {"id": "TP-AGENTMEMORY", "tool_id": "agentmemory", "policy_name": "once-opted-in-then-mandatory-when-relevant", "opt_in_state_source": ".silver-bullet.json tools.agentmemory", "relevance_rules": ["long-lived project memory lookup", "knowledge capture"], "required_evidence": "memory lookup/write result or irrelevance rationale", "failure_policy": "warn"},
             {"id": "TP-BROWSER", "tool_id": "browser", "policy_name": "once-opted-in-then-mandatory-when-relevant", "opt_in_state_source": ".silver-bullet.json tools.browser", "relevance_rules": ["UI verification", "E2E demonstration"], "required_evidence": "snapshot, screenshot, or E2E command output", "failure_policy": "repair"},
             {"id": "TP-GITHUB", "tool_id": "github", "policy_name": "once-opted-in-then-mandatory-when-relevant", "opt_in_state_source": "repository remote and gh authentication", "relevance_rules": ["PR, CI, release, issue traceability"], "required_evidence": "gh command output or auth blocker", "failure_policy": "degrade"},
+            {"id": "TP-SEARCH-CLI", "tool_id": "search_cli", "policy_name": "optional-primary-when-configured", "opt_in_state_source": ".silver-bullet.json recommended_tools.search_cli", "relevance_rules": ["deep research retrieval", "ultradeep state-of-the-art review", "external source triangulation"], "required_evidence": "run_manifest.json provider status or fallback rationale", "failure_policy": "degrade"},
         ],
         "dynamic_rules": [
             {"id": "DR-PRUNE-SATISFIED-ATOM", "workflow_ref": "WF-SILVER-FEATURE", "operation": "prune", "condition": "existing evidence proves selected atom already satisfied and not stale", "rationale_required": True},
@@ -716,8 +777,9 @@ def build_catalog() -> dict:
                 "silver-ship": "AF-SHIP", "silver-create-release": "AF-RELEASE", "silver-debug": "AF-DEBUG",
                 "silver-ui-contract": "AF-DESIGN-CONTRACT", "silver-ui-review": "AF-UI-QUALITY", "silver-blast-radius": "AF-BLAST-RADIUS",
                 "devops-quality-gates": "AF-QUALITY-GATE", "devops-skill-router": "AF-DEVOPS-ROUTE", "silver-spec": "AF-SPECIFY",
-                "silver-clarify": "AF-CLARIFY", "silver-research": "AF-DECIDE", "silver-ensure-docs": "AF-DOCUMENT",
-                "silver-handoff": "AF-DOCUMENT",
+                "silver-clarify": "AF-CLARIFY", "silver-deep-research": "AF-DECIDE", "silver-ensure-docs": "AF-DOCUMENT",
+                "silver-handoff": "AF-DOCUMENT", "silver-scan": "AF-ORIENT",
+                "silver-review-fix-ladder": "AF-REVIEW-TRIAGE", "silver-new-workflow": "AF-PLAN",
             },
         },
     }

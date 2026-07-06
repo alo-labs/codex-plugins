@@ -1,6 +1,6 @@
 # Silver Bullet
 
-[![version](https://img.shields.io/badge/version-v0.50.5-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.50.5)
+[![version](https://img.shields.io/badge/version-v0.51.0-blue)](https://github.com/alo-exp/silver-bullet/releases/tag/v0.51.0)
 [![license](https://img.shields.io/badge/license-BUSL--1.1-blue)](LICENSE)
 [![website](https://img.shields.io/badge/site-sb.alolabs.dev-green)](https://sb.alolabs.dev)
 
@@ -170,7 +170,7 @@ Silver Bullet ships **85 canonical skills** under `skills/`. The plugin exposes 
 | `/silver:devops` | Infrastructure workflow with blast radius and IaC gates |
 | `/silver:deploy` | Deployment with platform detection, health checks, rollback evidence |
 | `/silver:canary` | Post-deploy runtime watch |
-| `/silver:research` | Research and decision workflow |
+| `/silver:deep-research` | Research and decision workflow |
 | `/silver:spec` | Spec and requirements elicitation |
 | `/silver:release` | Release preparation workflow |
 | `/silver:fast` | Small, low-risk work through a routed fast path |
